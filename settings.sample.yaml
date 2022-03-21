@@ -1,0 +1,26 @@
+ENVIRONMENT: dev
+PORT: 3000
+LOG_LEVEL: info
+DB_USER: dimo
+DB_PASSWORD: dimo
+DB_PORT: 5432
+DB_HOST: localhost
+DB_NAME: devices_api
+DB_MAX_OPEN_CONNECTIONS: 5
+DB_MAX_IDLE_CONNECTIONS: 5
+SERVICE_NAME: devices-api
+JWT_KEY_SET_URL: http://127.0.0.1:5556/dex/keys
+TOR_PROXY_URL: socks5://127.0.0.1:9050
+KAFKA_BROKERS: 127.0.0.1:9092
+INGEST_SMARTCAR_TOPIC: topic.interface.ingest.smartcar
+DEVICE_STATUS_TOPIC: topic.device.status
+TASK_RUN_NOW_TOPIC: topic.task.run.now
+TASK_STOP_TOPIC: table.task.stop
+TASK_CREDENTIAL_TOPIC: table.task.credential
+PRIVACY_FENCE_TOPIC: table.device.privacyfence
+REDIS_URL: localhost:6379
+REDIS_PASSWORD:
+REDIS_TLS: false
+EVENTS_TOPIC: topic.event
+ELASTIC_SEARCH_APP_SEARCH_HOST: http://localhost:9200
+ELASTIC_SEARCH_APP_SEARCH_TOKEN: private-

@@ -1,0 +1,5 @@
+# Used by containers
+resources/data/
+
+# For local testing
+settings.yaml
