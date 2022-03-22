@@ -17,8 +17,6 @@ type Settings struct {
 	ServiceName                    string `yaml:"SERVICE_NAME"`
 	JwtKeySetURL                   string `yaml:"JWT_KEY_SET_URL"`
 	SwaggerBaseURL                 string `yaml:"SWAGGER_BASE_URL"`
-	ElasticSearchAppSearchHost     string `yaml:"ELASTIC_SEARCH_APP_SEARCH_HOST"`
-	ElasticSearchAppSearchToken    string `yaml:"ELASTIC_SEARCH_APP_SEARCH_TOKEN"`
 	ElasticSearchAnalyticsHost     string `yaml:"ELASTIC_SEARCH_ANALYTICS_HOST"`
 	ElasticSearchAnalyticsUsername string `yaml:"ELASTIC_SEARCH_ANALYTICS_USERNAME"`
 	ElasticSearchAnalyticsPassword string `yaml:"ELASTIC_SEARCH_ANALYTICS_PASSWORD"`
