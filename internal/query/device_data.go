@@ -69,7 +69,7 @@ func (c *elasticDeviceDataClient) GetMilesDriven(userDeviceID string, start, end
 			Query(
 				esquery.Bool().
 					Filter(
-						esquery.Term("subject", "AX"),
+						esquery.Term("subject", userDeviceID),
 						esquery.Exists("data.odometer"),
 						esquery.Range("data.timestamp").Gte(start).Lt(end),
 					),
@@ -138,8 +138,8 @@ func (c *elasticDeviceDataClient) UsesElectricity(userDeviceID string, start, en
 				esquery.Bool().
 					Must(
 						esquery.Term("subject", userDeviceID),
-						esquery.Exists("data.fuelPercentRemaining"),
-						esquery.Range("data.soc").Gte(start).Lt(end),
+						esquery.Exists("data.soc"),
+						esquery.Range("data.timestamp").Gte(start).Lt(end),
 					),
 			).
 			Size(1)
