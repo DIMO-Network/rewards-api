@@ -1,4 +1,4 @@
-package points
+package services
 
 import (
 	"testing"

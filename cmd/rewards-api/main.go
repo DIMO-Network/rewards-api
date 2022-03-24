@@ -1,55 +1,77 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
-	"github.com/DIMO-Network/rewards-api/internal/query"
+	"github.com/DIMO-Network/rewards-api/internal/database"
+	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/rs/zerolog"
 )
 
 func main() {
-	// ctx := context.Background()
+	ctx := context.Background()
 	settings, err := config.LoadConfig("settings.yaml")
 	if err != nil {
 		os.Exit(1)
 	}
 
-	// userDeviceID := os.Args[1]
-	// fmt.Println(userDeviceID)
+	logger := zerolog.New(os.Stdout).With().
+		Timestamp().
+		Str("app", "rewards-api").
+		Logger()
 
-	client := query.NewDeviceDataClient(settings)
-	// driven, err := client.GetMilesDriven(userDeviceID, time.Now().Add(-24*time.Hour), time.Now().Add(24*time.Hour))
-	// if err != nil {
-	// 	log.Fatalf("Bad")
-	// }
-	// fuel, err := client.UsesFuel(userDeviceID, time.Now().Add(-24*time.Hour), time.Now().Add(24*time.Hour))
-	// if err != nil {
-	// 	log.Fatalf("Bad")
-	// }
-	// elec, err := client.UsesElectricity(userDeviceID, time.Now().Add(-24*time.Hour), time.Now().Add(24*time.Hour))
-	// if err != nil {
-	// 	log.Fatalf("Bad")
-	// }
-	// fmt.Printf("device=%s, miles=%f, fuel=%t, elec=%t\n", userDeviceID, driven, fuel, elec)
+	if len(os.Args) == 1 {
+		logger.Fatal().Msg("Sub-command required.")
+	}
 
-	// fmt.Println(settings.DevicesAPIGRPCAddr)
-	// conn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// defer conn.Close()
-	// integs, err := pb.NewIntegrationServiceClient(conn).ListIntegrations(ctx, &emptypb.Empty{})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(integs)
-
-	s, err := client.ListActiveUserDeviceIDs(time.Now().Add(-7*24*time.Hour), time.Now())
-	for _, d := range s {
-		fmt.Println(d)
-		fmt.Println(client.GetMilesDriven(d, time.Now().Add(-7*24*time.Hour), time.Now()))
+	switch subCommand := os.Args[1]; subCommand {
+	case "migrate":
+		migrateDatabase(logger, settings)
+	case "getweek":
+		if len(os.Args) < 3 {
+			logger.Fatal().Msg("Date string required.")
+		}
+		dateString := os.Args[2]
+		t, err := time.Parse(time.RFC3339, dateString)
+		if err != nil {
+			logger.Fatal().Err(err).Msgf("Could not parse date string %v.", dateString)
+		}
+		fmt.Printf("Issuance week: %d\n", services.GetWeekNum(t))
+	case "calc":
+		if len(os.Args) < 3 {
+			logger.Fatal().Msg("Issuance week required.")
+		}
+		weekStr := os.Args[2]
+		week, err := strconv.Atoi(weekStr)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Could not parse week number.")
+		}
+		if week < 0 {
+			logger.Fatal().Msgf("Negative week number %d.", week)
+		}
+		pdb := database.NewDbConnectionFromSettings(ctx, settings)
+		totalTime := 0
+		for !pdb.IsReady() {
+			if totalTime > 30 {
+				logger.Fatal().Msg("could not connect to postgres after 30 seconds")
+			}
+			time.Sleep(time.Second)
+			totalTime++
+		}
+		task := services.RewardsTask{
+			Settings:    settings,
+			DataService: services.NewDeviceDataClient(settings),
+			DB:          pdb.DBS,
+		}
+		if err := task.Calculate(week); err != nil {
+			logger.Fatal().Err(err).Msg("Failed to calculate rewards for week %d.")
+		}
+	default:
+		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
 }
