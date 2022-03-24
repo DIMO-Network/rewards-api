@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 )
 
@@ -67,11 +69,20 @@ func main() {
 			Settings:    settings,
 			DataService: services.NewDeviceDataClient(settings),
 			DB:          pdb.DBS,
+			Logger:      &logger,
 		}
 		if err := task.Calculate(week); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to calculate rewards for week %d.")
 		}
 	default:
-		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
+		pdb := database.NewDbConnectionFromSettings(ctx, settings)
+		app := fiber.New(fiber.Config{
+			DisableStartupMessage: true,
+		})
+		rewardsController := controllers.RewardsController{
+			DB: pdb.DBS,
+		}
+		v1 := app.Group("/v1/rewards")
+		v1.Get("/", rewardsController.GetRewards)
 	}
 }

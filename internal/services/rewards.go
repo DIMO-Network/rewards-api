@@ -11,6 +11,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb "github.com/DIMO-Network/shared/api/devices"
+	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -32,6 +33,7 @@ func GetWeekNum(t time.Time) int {
 
 type RewardsTask struct {
 	Settings    *config.Settings
+	Logger      *zerolog.Logger
 	DataService DeviceDataClient
 	DB          func() *database.DBReaderWriter
 }
@@ -39,7 +41,6 @@ type RewardsTask struct {
 func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	ctx := context.Background()
 
-	// WARNING
 	// Not production ready, obviously.
 	if _, err := models.DeviceWeekRewards(models.DeviceWeekRewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.DB().Writer); err != nil {
 		return err
@@ -80,12 +81,12 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	deviceClient := pb.NewUserDeviceServiceClient(conn)
 
-	integMap := make(map[string]string)
+	integrationVendors := make(map[string]string)
 	for _, i := range integs.Integrations {
-		integMap[i.Id] = i.Vendor
+		integrationVendors[i.Id] = i.Vendor
 	}
 
-	evDDCounts := make(map[string]int)
+	greenDeviceCounts := make(map[string]int)
 
 	total := len(devIDs)
 	for i, devID := range devIDs {
@@ -144,12 +145,15 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 			methodReward := 0
 			for _, d := range di {
-				vend, ok := integMap[d]
+				vend, ok := integrationVendors[d]
 				if !ok {
-					fmt.Println("Unknown integration d")
+					t.Logger.Warn().Msgf("Unknown integration %d.", d)
 					continue
 				}
+				// TODO: Allow an AutoPi + SmartCar combination.
 				switch vend {
+				case "AutoPi":
+					methodReward = 6000
 				case "Tesla":
 					methodReward = 4000
 				case "SmartCar":
@@ -180,7 +184,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 					fmt.Println(err)
 				} else {
 					thisWeek.DeviceDefinitionID = ud.DeviceDefinitionId
-					evDDCounts[ud.DeviceDefinitionId] += 1
+					greenDeviceCounts[ud.DeviceDefinitionId] += 1
 				}
 			}
 		}
@@ -190,7 +194,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 	}
 
-	for dd, ct := range evDDCounts {
+	for dd, ct := range greenDeviceCounts {
 		bonus := 0
 		switch {
 		case ct <= 10:
@@ -205,13 +209,18 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		_, err := models.DeviceWeekRewards(
 			models.DeviceWeekRewardWhere.IssuanceWeekID.EQ(issuanceWeek),
 			models.DeviceWeekRewardWhere.DeviceDefinitionID.EQ(dd),
-			models.DeviceWeekRewardWhere.EngineTypePoints.GT(0),
+			models.DeviceWeekRewardWhere.EngineTypePoints.GT(0), // A proxy for "connected and is an EV or PHEV".
 		).UpdateAll(ctx, t.DB().Writer.DB, models.M{
 			"rarity_points": bonus,
 		})
 		if err != nil {
 			panic(err)
 		}
+	}
+
+	week.JobStatus = models.IssuanceWeekJobStatusFinished
+	if _, err := week.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
+		return err
 	}
 
 	return nil

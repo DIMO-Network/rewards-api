@@ -15,7 +15,7 @@ type Settings struct {
 	DBMaxOpenConnections           int    `yaml:"DB_MAX_OPEN_CONNECTIONS"`
 	DBMaxIdleConnections           int    `yaml:"DB_MAX_IDLE_CONNECTIONS"`
 	ServiceName                    string `yaml:"SERVICE_NAME"`
-	JwtKeySetURL                   string `yaml:"JWT_KEY_SET_URL"`
+	JWTKeySetURL                   string `yaml:"JWT_KEY_SET_URL"`
 	SwaggerBaseURL                 string `yaml:"SWAGGER_BASE_URL"`
 	ElasticSearchAnalyticsHost     string `yaml:"ELASTIC_SEARCH_ANALYTICS_HOST"`
 	ElasticSearchAnalyticsUsername string `yaml:"ELASTIC_SEARCH_ANALYTICS_USERNAME"`
