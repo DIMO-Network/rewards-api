@@ -22,6 +22,8 @@ var startTime = time.Date(2022, time.February, 28, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
 
+const miToKmFactor = 1.609344
+
 // GeetWeekNum calculates the number of the week in which the given time lies for DIMO point
 // issuance, which at the time of writing starts at 05:00 March 14, 2022 UTC. Indexing is
 // zero-based.
@@ -42,7 +44,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	ctx := context.Background()
 
 	// Not production ready, obviously.
-	if _, err := models.DeviceWeekRewards(models.DeviceWeekRewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.DB().Writer); err != nil {
+	if _, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.DB().Writer); err != nil {
 		return err
 	}
 
@@ -52,7 +54,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	week := models.IssuanceWeek{
 		ID:        issuanceWeek,
-		JobStatus: models.IssuanceWeekJobStatusStarted,
+		JobStatus: models.IssuanceWeeksJobStatusStarted,
 	}
 
 	if err := week.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
@@ -62,7 +64,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
 	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
 
-	devIDs, err := t.DataService.ListActiveUserDeviceIDs(weekStart, weekEnd)
+	devices, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
 		return err
 	}
@@ -88,11 +90,11 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	greenDeviceCounts := make(map[string]int)
 
-	total := len(devIDs)
-	for i, devID := range devIDs {
+	total := len(devices)
+	for i, device := range devices {
 		fmt.Printf("%d/%d\n", i+1, total)
 
-		ud, err := deviceClient.GetUserDevice(ctx, &pb.GetUserDeviceRequest{Id: devID})
+		ud, err := deviceClient.GetUserDevice(ctx, &pb.GetUserDeviceRequest{Id: device.ID})
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -102,48 +104,38 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			continue
 		}
 
-		thisWeek := models.DeviceWeekReward{
-			UserDeviceID:       devID,
+		thisWeek := models.Reward{
+			UserDeviceID:       device.ID,
 			IssuanceWeekID:     issuanceWeek,
 			DeviceDefinitionID: ud.DeviceDefinitionId,
 			Vin:                *ud.VinIdentifier,
 			UserID:             ud.UserId,
+			DrivenKM:           device.Driven,
 		}
-		driven, err := t.DataService.GetMilesDriven(devID, weekStart, weekEnd)
-		if err != nil {
-			return err
-		}
-
-		thisWeek.MilesDriven = driven
 
 		var x Input
-		last, err := models.FindDeviceWeekReward(ctx, t.DB().Reader, issuanceWeek-1, devID)
+		last, err := models.FindReward(ctx, t.DB().Reader, issuanceWeek-1, device.ID)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return err
 			}
 		} else {
-			x.ExistingDisconnectionStreak = last.WeeksDisconnectedStreak
-			x.ExistingConnectionStreak = last.WeeksConnectedStreak
+			x.ExistingDisconnectionStreak = last.DisconnectionStreak
+			x.ExistingConnectionStreak = last.ConnectionStreak
 		}
 
-		if driven >= 10 {
+		connected := false
+		if device.Driven >= 10*miToKmFactor {
 			x.ConnectedThisWeek = true
-			thisWeek.Connected = true
+			connected = true
 		}
 
 		o := ComputeStreak(x)
-		thisWeek.WeeksConnectedStreak = o.ConnectionStreak
-		thisWeek.WeeksDisconnectedStreak = o.DisconnectionStreak
-		thisWeek.StreakPoints = o.Points
+		thisWeek.ConnectionStreak = o.ConnectionStreak
+		thisWeek.DisconnectionStreak = o.DisconnectionStreak
 
-		if thisWeek.Connected {
-			di, err := t.DataService.ListActiveIntegrations(devID, weekStart, weekEnd)
-			if err != nil {
-				panic(err)
-			}
-
-			methodReward := 0
+		if connected {
+			device.Integrations
 			for _, d := range di {
 				vend, ok := integrationVendors[d]
 				if !ok {
@@ -161,14 +153,12 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 				}
 			}
 
-			thisWeek.ConnectionMethodPoints = methodReward
-
-			electric, err := t.DataService.UsesElectricity(devID, weekStart, weekEnd)
+			electric, err := t.DataService.UsesElectricity(device, weekStart, weekEnd)
 			if err != nil {
 				return err
 			}
 			if electric {
-				gas, err := t.DataService.UsesFuel(devID, weekStart, weekEnd)
+				gas, err := t.DataService.UsesFuel(device, weekStart, weekEnd)
 				if err != nil {
 					return err
 				}
@@ -179,7 +169,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 					thisWeek.EngineTypePoints = 5000
 				}
 
-				ud, err := deviceClient.GetUserDevice(ctx, &pb.GetUserDeviceRequest{Id: devID})
+				ud, err := deviceClient.GetUserDevice(ctx, &pb.GetUserDeviceRequest{Id: device})
 				if err != nil {
 					fmt.Println(err)
 				} else {
@@ -207,9 +197,8 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			continue
 		}
 		_, err := models.DeviceWeekRewards(
-			models.DeviceWeekRewardWhere.IssuanceWeekID.EQ(issuanceWeek),
-			models.DeviceWeekRewardWhere.DeviceDefinitionID.EQ(dd),
-			models.DeviceWeekRewardWhere.EngineTypePoints.GT(0), // A proxy for "connected and is an EV or PHEV".
+			models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
+			models.RewardWhere.DeviceDefinitionID.EQ(dd),
 		).UpdateAll(ctx, t.DB().Writer.DB, models.M{
 			"rarity_points": bonus,
 		})
@@ -218,7 +207,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 	}
 
-	week.JobStatus = models.IssuanceWeekJobStatusFinished
+	week.JobStatus = models.IssuanceWeeksJobStatusFinished
 	if _, err := week.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}

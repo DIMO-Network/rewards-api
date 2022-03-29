@@ -12,6 +12,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/gofiber/fiber/v2"
+	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/rs/zerolog"
 )
 
@@ -80,9 +81,19 @@ func main() {
 			DisableStartupMessage: true,
 		})
 		rewardsController := controllers.RewardsController{
-			DB: pdb.DBS,
+			DB:     pdb.DBS,
+			Logger: &logger,
 		}
-		v1 := app.Group("/v1/rewards")
+
+		// secured paths
+		keyRefreshInterval := time.Hour
+		keyRefreshUnknownKID := true
+		jwtAuth := jwtware.New(jwtware.Config{
+			KeySetURL:            settings.JWTKeySetURL,
+			KeyRefreshInterval:   &keyRefreshInterval,
+			KeyRefreshUnknownKID: &keyRefreshUnknownKID,
+		})
+		v1 := app.Group("/v1/rewards", jwtAuth)
 		v1.Get("/", rewardsController.GetRewards)
 	}
 }

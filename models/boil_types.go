@@ -51,9 +51,15 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	return str
 }
 
-// Enum values for IssuanceWeekJobStatus
+// Enum values for IssuanceWeeksJobStatus
 const (
-	IssuanceWeekJobStatusStarted  = "Started"
-	IssuanceWeekJobStatusFailed   = "Failed"
-	IssuanceWeekJobStatusFinished = "Finished"
+	IssuanceWeeksJobStatusStarted  = "Started"
+	IssuanceWeeksJobStatusFailed   = "Failed"
+	IssuanceWeeksJobStatusFinished = "Finished"
+)
+
+// Enum values for RewardsGreenEngineType
+const (
+	RewardsGreenEngineTypePHEV = "PHEV"
+	RewardsGreenEngineTypeEV   = "EV"
 )

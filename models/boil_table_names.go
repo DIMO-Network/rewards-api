@@ -4,9 +4,9 @@
 package models
 
 var TableNames = struct {
-	DeviceWeekRewards string
-	IssuanceWeek      string
+	IssuanceWeeks string
+	Rewards       string
 }{
-	DeviceWeekRewards: "device_week_rewards",
-	IssuanceWeek:      "issuance_week",
+	IssuanceWeeks: "issuance_weeks",
+	Rewards:       "rewards",
 }
