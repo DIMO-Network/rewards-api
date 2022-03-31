@@ -32,6 +32,11 @@ func main() {
 		app := fiber.New(fiber.Config{
 			DisableStartupMessage: true,
 		})
+
+		app.Get("/", func(c *fiber.Ctx) error {
+			return c.SendStatus(fiber.StatusOK)
+		})
+
 		rewardsController := controllers.RewardsController{
 			DB:     pdb.DBS,
 			Logger: &logger,
