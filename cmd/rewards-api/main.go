@@ -48,7 +48,7 @@ func main() {
 		v1 := app.Group("/v1/rewards", jwtAuth)
 		v1.Get("/", rewardsController.GetRewards)
 
-		logger.Info().Msgf("Starting HTTP server on port %s", settings.Port)
+		logger.Info().Msgf("Starting HTTP server on port %s.", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {
 			logger.Fatal().Err(err).Msgf("Fiber server failed.")
 		}
