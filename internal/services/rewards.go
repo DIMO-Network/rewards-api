@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -14,11 +13,13 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var startTime = time.Date(2022, time.February, 28, 5, 0, 0, 0, time.UTC)
+var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
 
@@ -33,11 +34,34 @@ func GetWeekNum(t time.Time) int {
 	return weekNum
 }
 
+func NumToWeekStart(n int) time.Time {
+	return startTime.Add(time.Duration(n) * weekDuration)
+}
+
+func NumToWeekEnd(n int) time.Time {
+	return startTime.Add(time.Duration(n+1) * weekDuration)
+}
+
 type RewardsTask struct {
 	Settings    *config.Settings
 	Logger      *zerolog.Logger
 	DataService DeviceDataClient
 	DB          func() *database.DBReaderWriter
+}
+
+type ConnectionMethod struct {
+	DevicesAPIVendor string
+	DBConstant       string
+	Points           int
+}
+
+func ContainsString(v []string, x string) bool {
+	for _, y := range v {
+		if y == x {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *RewardsTask) Calculate(issuanceWeek int) error {
@@ -64,6 +88,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
 	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
 
+	// These devices have each sent some signal during the issuance week.
 	devices, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
 		return err
@@ -83,12 +108,35 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	deviceClient := pb.NewUserDeviceServiceClient(conn)
 
-	integrationVendors := make(map[string]string)
+	vendorToIntegration := make(map[string]string)
 	for _, i := range integs.Integrations {
-		integrationVendors[i.Id] = i.Vendor
+		vendorToIntegration[i.Vendor] = i.Id
 	}
 
-	greenDeviceCounts := make(map[string]int)
+	smartcarIntegrationID, ok := vendorToIntegration["SmartCar"]
+	if !ok {
+		t.Logger.Warn().Msg("Device service did not return a Smartcar integration.")
+	}
+	teslaIntegrationID, ok := vendorToIntegration["Tesla"]
+	if !ok {
+		t.Logger.Warn().Msg("Device service did not return a Tesla integration.")
+	}
+	autoPiIntegrationID := vendorToIntegration["AutoPi"]
+	if !ok {
+		return errors.New("Devices service did not return an AutoPi integration.")
+	}
+
+	fmt.Println(smartcarIntegrationID, teslaIntegrationID, autoPiIntegrationID)
+
+	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	lastWeekByDevice := make(map[string]*models.Reward)
+	for _, reward := range lastWeekRewards {
+		lastWeekByDevice[reward.UserDeviceID] = reward
+	}
 
 	total := len(devices)
 	for i, device := range devices {
@@ -96,87 +144,51 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 		ud, err := deviceClient.GetUserDevice(ctx, &pb.GetUserDeviceRequest{Id: device.ID})
 		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		if ud.VinIdentifier == nil {
-			continue
+			if s, ok := status.FromError(err); ok {
+				if s.Code() == codes.NotFound {
+					t.Logger.Info().Str("userDeviceId", device.ID).Msg("Device was active during the week but was later deleted.")
+					continue
+				} else {
+					return err
+				}
+			} else {
+				return err
+			}
 		}
 
 		thisWeek := models.Reward{
-			UserDeviceID:       device.ID,
-			IssuanceWeekID:     issuanceWeek,
-			DeviceDefinitionID: ud.DeviceDefinitionId,
-			Vin:                *ud.VinIdentifier,
-			UserID:             ud.UserId,
-			DrivenKM:           device.Driven,
+			UserDeviceID:   device.ID,
+			IssuanceWeekID: issuanceWeek,
+			UserID:         ud.UserId,
 		}
 
-		var x Input
-		last, err := models.FindReward(ctx, t.DB().Reader, issuanceWeek-1, device.ID)
-		if err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				return err
-			}
-		} else {
-			x.ExistingDisconnectionStreak = last.DisconnectionStreak
-			x.ExistingConnectionStreak = last.ConnectionStreak
-		}
-
-		connected := false
-		if device.Driven >= 10*miToKmFactor {
-			x.ConnectedThisWeek = true
-			connected = true
+		// Streak rewards.
+		x := Input{ConnectedThisWeek: true}
+		lastWeek, ok := lastWeekByDevice[device.ID]
+		if ok {
+			x.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
+			x.ExistingConnectionStreak = lastWeek.EffectiveConnectionStreak
+			delete(lastWeekByDevice, device.ID)
 		}
 
 		o := ComputeStreak(x)
-		thisWeek.ConnectionStreak = o.ConnectionStreak
+		thisWeek.EffectiveConnectionStreak = o.ConnectionStreak
 		thisWeek.DisconnectionStreak = o.DisconnectionStreak
+		thisWeek.StreakPoints = o.Points
 
-		if connected {
-			device.Integrations
-			for _, d := range di {
-				vend, ok := integrationVendors[d]
-				if !ok {
-					t.Logger.Warn().Msgf("Unknown integration %d.", d)
-					continue
-				}
-				// TODO: Allow an AutoPi + SmartCar combination.
-				switch vend {
-				case "AutoPi":
-					methodReward = 6000
-				case "Tesla":
-					methodReward = 4000
-				case "SmartCar":
-					methodReward = 1000
-				}
+		// Integration or "connected method" rewards.
+		thisWeek.IntegrationIds = device.Integrations
+
+		if ContainsString(device.Integrations, autoPiIntegrationID) {
+			if ContainsString(device.Integrations, smartcarIntegrationID) {
+				thisWeek.IntegrationPoints = 7000
+			} else {
+				thisWeek.IntegrationPoints = 6000
 			}
-
-			electric, err := t.DataService.UsesElectricity(device, weekStart, weekEnd)
-			if err != nil {
-				return err
-			}
-			if electric {
-				gas, err := t.DataService.UsesFuel(device, weekStart, weekEnd)
-				if err != nil {
-					return err
-				}
-
-				if gas {
-					thisWeek.EngineTypePoints = 3000
-				} else {
-					thisWeek.EngineTypePoints = 5000
-				}
-
-				ud, err := deviceClient.GetUserDevice(ctx, &pb.GetUserDeviceRequest{Id: device})
-				if err != nil {
-					fmt.Println(err)
-				} else {
-					thisWeek.DeviceDefinitionID = ud.DeviceDefinitionId
-					greenDeviceCounts[ud.DeviceDefinitionId] += 1
-				}
-			}
+		} else if ContainsString(device.Integrations, teslaIntegrationID) {
+			thisWeek.IntegrationPoints = 4000
+		} else if ContainsString(device.Integrations, smartcarIntegrationID) {
+			thisWeek.IntegrationPoints = 1000
 		}
 
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
@@ -184,26 +196,22 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 	}
 
-	for dd, ct := range greenDeviceCounts {
-		bonus := 0
-		switch {
-		case ct <= 10:
-			bonus = 5000
-		case ct <= 50:
-			bonus = 3000
-		case ct <= 200:
-			bonus = 1000
-		default:
-			continue
+	for _, lastWeek := range lastWeekByDevice {
+		x := Input{
+			ExistingDisconnectionStreak: lastWeek.DisconnectionStreak,
+			ExistingConnectionStreak:    lastWeek.EffectiveConnectionStreak,
+			ConnectedThisWeek:           false,
 		}
-		_, err := models.DeviceWeekRewards(
-			models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
-			models.RewardWhere.DeviceDefinitionID.EQ(dd),
-		).UpdateAll(ctx, t.DB().Writer.DB, models.M{
-			"rarity_points": bonus,
-		})
-		if err != nil {
-			panic(err)
+		o := ComputeStreak(x)
+		thisWeek := models.Reward{
+			UserDeviceID:              lastWeek.UserDeviceID,
+			IssuanceWeekID:            issuanceWeek,
+			UserID:                    lastWeek.UserID,
+			EffectiveConnectionStreak: o.ConnectionStreak,
+			DisconnectionStreak:       o.DisconnectionStreak,
+		}
+		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
+			return err
 		}
 	}
 

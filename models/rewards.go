@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -25,109 +24,70 @@ import (
 
 // Reward is an object representing the database table.
 type Reward struct {
-	IssuanceWeekID      int               `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
-	UserDeviceID        string            `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
-	UserID              string            `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	DeviceDefinitionID  string            `boil:"device_definition_id" json:"device_definition_id" toml:"device_definition_id" yaml:"device_definition_id"`
-	Vin                 string            `boil:"vin" json:"vin" toml:"vin" yaml:"vin"`
-	DrivenKM            float64           `boil:"driven_km" json:"driven_km" toml:"driven_km" yaml:"driven_km"`
-	ConnectionStreak    int               `boil:"connection_streak" json:"connection_streak" toml:"connection_streak" yaml:"connection_streak"`
-	DisconnectionStreak int               `boil:"disconnection_streak" json:"disconnection_streak" toml:"disconnection_streak" yaml:"disconnection_streak"`
-	ConnectionMethods   types.StringArray `boil:"connection_methods" json:"connection_methods" toml:"connection_methods" yaml:"connection_methods"`
-	GreenEngineType     null.String       `boil:"green_engine_type" json:"green_engine_type,omitempty" toml:"green_engine_type" yaml:"green_engine_type,omitempty"`
-	CreatedAt           time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt           time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	IssuanceWeekID            int               `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
+	UserDeviceID              string            `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
+	UserID                    string            `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	EffectiveConnectionStreak int               `boil:"effective_connection_streak" json:"effective_connection_streak" toml:"effective_connection_streak" yaml:"effective_connection_streak"`
+	DisconnectionStreak       int               `boil:"disconnection_streak" json:"disconnection_streak" toml:"disconnection_streak" yaml:"disconnection_streak"`
+	StreakPoints              int               `boil:"streak_points" json:"streak_points" toml:"streak_points" yaml:"streak_points"`
+	IntegrationIds            types.StringArray `boil:"integration_ids" json:"integration_ids" toml:"integration_ids" yaml:"integration_ids"`
+	IntegrationPoints         int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
+	CreatedAt                 time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt                 time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *rewardR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L rewardL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var RewardColumns = struct {
-	IssuanceWeekID      string
-	UserDeviceID        string
-	UserID              string
-	DeviceDefinitionID  string
-	Vin                 string
-	DrivenKM            string
-	ConnectionStreak    string
-	DisconnectionStreak string
-	ConnectionMethods   string
-	GreenEngineType     string
-	CreatedAt           string
-	UpdatedAt           string
+	IssuanceWeekID            string
+	UserDeviceID              string
+	UserID                    string
+	EffectiveConnectionStreak string
+	DisconnectionStreak       string
+	StreakPoints              string
+	IntegrationIds            string
+	IntegrationPoints         string
+	CreatedAt                 string
+	UpdatedAt                 string
 }{
-	IssuanceWeekID:      "issuance_week_id",
-	UserDeviceID:        "user_device_id",
-	UserID:              "user_id",
-	DeviceDefinitionID:  "device_definition_id",
-	Vin:                 "vin",
-	DrivenKM:            "driven_km",
-	ConnectionStreak:    "connection_streak",
-	DisconnectionStreak: "disconnection_streak",
-	ConnectionMethods:   "connection_methods",
-	GreenEngineType:     "green_engine_type",
-	CreatedAt:           "created_at",
-	UpdatedAt:           "updated_at",
+	IssuanceWeekID:            "issuance_week_id",
+	UserDeviceID:              "user_device_id",
+	UserID:                    "user_id",
+	EffectiveConnectionStreak: "effective_connection_streak",
+	DisconnectionStreak:       "disconnection_streak",
+	StreakPoints:              "streak_points",
+	IntegrationIds:            "integration_ids",
+	IntegrationPoints:         "integration_points",
+	CreatedAt:                 "created_at",
+	UpdatedAt:                 "updated_at",
 }
 
 var RewardTableColumns = struct {
-	IssuanceWeekID      string
-	UserDeviceID        string
-	UserID              string
-	DeviceDefinitionID  string
-	Vin                 string
-	DrivenKM            string
-	ConnectionStreak    string
-	DisconnectionStreak string
-	ConnectionMethods   string
-	GreenEngineType     string
-	CreatedAt           string
-	UpdatedAt           string
+	IssuanceWeekID            string
+	UserDeviceID              string
+	UserID                    string
+	EffectiveConnectionStreak string
+	DisconnectionStreak       string
+	StreakPoints              string
+	IntegrationIds            string
+	IntegrationPoints         string
+	CreatedAt                 string
+	UpdatedAt                 string
 }{
-	IssuanceWeekID:      "rewards.issuance_week_id",
-	UserDeviceID:        "rewards.user_device_id",
-	UserID:              "rewards.user_id",
-	DeviceDefinitionID:  "rewards.device_definition_id",
-	Vin:                 "rewards.vin",
-	DrivenKM:            "rewards.driven_km",
-	ConnectionStreak:    "rewards.connection_streak",
-	DisconnectionStreak: "rewards.disconnection_streak",
-	ConnectionMethods:   "rewards.connection_methods",
-	GreenEngineType:     "rewards.green_engine_type",
-	CreatedAt:           "rewards.created_at",
-	UpdatedAt:           "rewards.updated_at",
+	IssuanceWeekID:            "rewards.issuance_week_id",
+	UserDeviceID:              "rewards.user_device_id",
+	UserID:                    "rewards.user_id",
+	EffectiveConnectionStreak: "rewards.effective_connection_streak",
+	DisconnectionStreak:       "rewards.disconnection_streak",
+	StreakPoints:              "rewards.streak_points",
+	IntegrationIds:            "rewards.integration_ids",
+	IntegrationPoints:         "rewards.integration_points",
+	CreatedAt:                 "rewards.created_at",
+	UpdatedAt:                 "rewards.updated_at",
 }
 
 // Generated where
-
-type whereHelperfloat64 struct{ field string }
-
-func (w whereHelperfloat64) EQ(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperfloat64) NEQ(x float64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelperfloat64) LT(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperfloat64) LTE(x float64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelperfloat64) GT(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperfloat64) GTE(x float64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-func (w whereHelperfloat64) IN(slice []float64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelperfloat64) NIN(slice []float64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
 
 type whereHelpertypes_StringArray struct{ field string }
 
@@ -150,56 +110,28 @@ func (w whereHelpertypes_StringArray) GTE(x types.StringArray) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-type whereHelpernull_String struct{ field string }
-
-func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 var RewardWhere = struct {
-	IssuanceWeekID      whereHelperint
-	UserDeviceID        whereHelperstring
-	UserID              whereHelperstring
-	DeviceDefinitionID  whereHelperstring
-	Vin                 whereHelperstring
-	DrivenKM            whereHelperfloat64
-	ConnectionStreak    whereHelperint
-	DisconnectionStreak whereHelperint
-	ConnectionMethods   whereHelpertypes_StringArray
-	GreenEngineType     whereHelpernull_String
-	CreatedAt           whereHelpertime_Time
-	UpdatedAt           whereHelpertime_Time
+	IssuanceWeekID            whereHelperint
+	UserDeviceID              whereHelperstring
+	UserID                    whereHelperstring
+	EffectiveConnectionStreak whereHelperint
+	DisconnectionStreak       whereHelperint
+	StreakPoints              whereHelperint
+	IntegrationIds            whereHelpertypes_StringArray
+	IntegrationPoints         whereHelperint
+	CreatedAt                 whereHelpertime_Time
+	UpdatedAt                 whereHelpertime_Time
 }{
-	IssuanceWeekID:      whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
-	UserDeviceID:        whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
-	UserID:              whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_id\""},
-	DeviceDefinitionID:  whereHelperstring{field: "\"rewards_api\".\"rewards\".\"device_definition_id\""},
-	Vin:                 whereHelperstring{field: "\"rewards_api\".\"rewards\".\"vin\""},
-	DrivenKM:            whereHelperfloat64{field: "\"rewards_api\".\"rewards\".\"driven_km\""},
-	ConnectionStreak:    whereHelperint{field: "\"rewards_api\".\"rewards\".\"connection_streak\""},
-	DisconnectionStreak: whereHelperint{field: "\"rewards_api\".\"rewards\".\"disconnection_streak\""},
-	ConnectionMethods:   whereHelpertypes_StringArray{field: "\"rewards_api\".\"rewards\".\"connection_methods\""},
-	GreenEngineType:     whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"green_engine_type\""},
-	CreatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
-	UpdatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
+	IssuanceWeekID:            whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
+	UserDeviceID:              whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
+	UserID:                    whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_id\""},
+	EffectiveConnectionStreak: whereHelperint{field: "\"rewards_api\".\"rewards\".\"effective_connection_streak\""},
+	DisconnectionStreak:       whereHelperint{field: "\"rewards_api\".\"rewards\".\"disconnection_streak\""},
+	StreakPoints:              whereHelperint{field: "\"rewards_api\".\"rewards\".\"streak_points\""},
+	IntegrationIds:            whereHelpertypes_StringArray{field: "\"rewards_api\".\"rewards\".\"integration_ids\""},
+	IntegrationPoints:         whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
+	CreatedAt:                 whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
+	UpdatedAt:                 whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
 }
 
 // RewardRels is where relationship names are stored.
@@ -223,9 +155,9 @@ func (*rewardR) NewStruct() *rewardR {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "device_definition_id", "vin", "driven_km", "connection_streak", "disconnection_streak", "connection_methods", "green_engine_type", "created_at", "updated_at"}
-	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "device_definition_id", "vin", "driven_km", "connection_streak", "disconnection_streak"}
-	rewardColumnsWithDefault    = []string{"connection_methods", "green_engine_type", "created_at", "updated_at"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "effective_connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at"}
+	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "effective_connection_streak", "disconnection_streak", "streak_points", "integration_points"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )

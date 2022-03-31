@@ -14,7 +14,7 @@ import (
 )
 
 type DeviceDataClient interface {
-	DescribeActiveDevices(start, end time.Time) ([]*Return, error)
+	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
 }
 
 type elasticDeviceDataClient struct {
@@ -43,16 +43,15 @@ func NewDeviceDataClient(settings *config.Settings) DeviceDataClient {
 
 type jsonMap map[string]interface{}
 
-type Return struct {
+type DeviceData struct {
 	ID           string
-	Driven       float64
 	Integrations []string
 }
 
-func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([]*Return, error) {
+func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error) {
 	ctx := context.Background()
 
-	out := make([]*Return, 0)
+	out := make([]*DeviceData, 0)
 	var afterKey *string
 
 	for {
@@ -79,9 +78,18 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 			Query(
 				esquery.Bool().
 					Filter(
-						esquery.Exists("data.odometer"),
 						esquery.Range("data.timestamp").Gte(start).Lt(end),
-					),
+					).
+					Should(
+						esquery.Exists("data.odometer"),
+						esquery.Exists("data.soc"),
+						esquery.Exists("data.latitude"),
+						esquery.Exists("data.oil"),
+						esquery.Exists("data.fuelPercentRemaining"),
+						esquery.Exists("data.tires.frontLeft"),
+						esquery.Exists("data.charging"),
+					).
+					MinimumShouldMatch(1),
 			).
 			Aggs(
 				esquery.CustomAgg("active_devices", jsonMap{
@@ -90,45 +98,6 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 						"integrations": jsonMap{
 							"terms": jsonMap{
 								"field": "source",
-							},
-						},
-						"with_odometer": jsonMap{
-							"filter": jsonMap{
-								"exists": jsonMap{
-									"field": "data.odometer",
-								},
-							},
-							"aggs": jsonMap{
-								"odometer_high": jsonMap{
-									"top_hits": jsonMap{
-										"sort": []jsonMap{
-											jsonMap{
-												"data.timestamp": jsonMap{
-													"order": "desc",
-												},
-											},
-										},
-										"_source": jsonMap{
-											"includes": []string{"data.odometer"},
-										},
-										"size": 1,
-									},
-								},
-								"odometer_low": jsonMap{
-									"top_hits": jsonMap{
-										"sort": []jsonMap{
-											jsonMap{
-												"data.timestamp": jsonMap{
-													"order": "asc",
-												},
-											},
-										},
-										"_source": jsonMap{
-											"includes": []string{"data.odometer"},
-										},
-										"size": 1,
-									},
-								},
 							},
 						},
 					},
@@ -154,12 +123,6 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 
 		for _, dv := range respBody.Aggregations.ActiveDevices.Buckets {
 			deviceID := dv.Key.Subject
-			var drivenKM float64
-			highHits := dv.WithOdometer.OdometerHigh.Hits.Hits
-			lowHits := dv.WithOdometer.OdometerLow.Hits.Hits
-			if len(highHits) > 0 && len(lowHits) > 0 {
-				drivenKM = highHits[0].Source.Data.Odometer - lowHits[0].Source.Data.Odometer
-			}
 			integrations := make([]string, 0)
 			for _, bucket := range dv.Integrations.Buckets {
 				key := bucket.Key
@@ -167,15 +130,13 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 					integrations = append(integrations, strings.TrimPrefix(key, integPrefix))
 				}
 			}
-			out = append(out, &Return{
+			out = append(out, &DeviceData{
 				ID:           deviceID,
-				Driven:       drivenKM,
 				Integrations: integrations,
 			})
 		}
 
 		if respBody.Aggregations.ActiveDevices.AfterKey.Subject != nil {
-			fmt.Println("AFTER KEY", *respBody.Aggregations.ActiveDevices.AfterKey.Subject)
 			afterKey = respBody.Aggregations.ActiveDevices.AfterKey.Subject
 		} else {
 			break
@@ -202,30 +163,6 @@ type DeviceListResp struct {
 						Key string `json:"key"`
 					} `json:"buckets"`
 				} `json:"integrations"`
-				WithOdometer struct {
-					OdometerHigh struct {
-						Hits struct {
-							Hits []struct {
-								Source struct {
-									Data struct {
-										Odometer float64 `json:"odometer"`
-									} `json:"data"`
-								} `json:"_source"`
-							} `json:"hits"`
-						} `json:"hits"`
-					} `json:"odometer_high"`
-					OdometerLow struct {
-						Hits struct {
-							Hits []struct {
-								Source struct {
-									Data struct {
-										Odometer float64 `json:"odometer"`
-									} `json:"data"`
-								} `json:"_source"`
-							} `json:"hits"`
-						} `json:"hits"`
-					} `json:"odometer_low"`
-				} `json:"with_odometer"`
 			} `json:"buckets"`
 		} `json:"active_devices"`
 	} `json:"aggregations"`

@@ -29,7 +29,32 @@ func main() {
 		Logger()
 
 	if len(os.Args) == 1 {
-		logger.Fatal().Msg("Sub-command required.")
+		pdb := database.NewDbConnectionFromSettings(ctx, settings)
+		app := fiber.New(fiber.Config{
+			DisableStartupMessage: true,
+		})
+		rewardsController := controllers.RewardsController{
+			DB:     pdb.DBS,
+			Logger: &logger,
+		}
+
+		// secured paths
+		keyRefreshInterval := time.Hour
+		keyRefreshUnknownKID := true
+		jwtAuth := jwtware.New(jwtware.Config{
+			KeySetURL:            settings.JWTKeySetURL,
+			KeyRefreshInterval:   &keyRefreshInterval,
+			KeyRefreshUnknownKID: &keyRefreshUnknownKID,
+		})
+		v1 := app.Group("/v1/rewards", jwtAuth)
+		v1.Get("/", rewardsController.GetRewards)
+
+		app.Get("/admin/:userID", rewardsController.AdminGetRewards)
+
+		if err := app.Listen(":" + settings.Port); err != nil {
+			logger.Fatal().Err(err).Msgf("Fiber server failed.")
+		}
+		return
 	}
 
 	switch subCommand := os.Args[1]; subCommand {
@@ -76,24 +101,6 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to calculate rewards for week %d.")
 		}
 	default:
-		pdb := database.NewDbConnectionFromSettings(ctx, settings)
-		app := fiber.New(fiber.Config{
-			DisableStartupMessage: true,
-		})
-		rewardsController := controllers.RewardsController{
-			DB:     pdb.DBS,
-			Logger: &logger,
-		}
 
-		// secured paths
-		keyRefreshInterval := time.Hour
-		keyRefreshUnknownKID := true
-		jwtAuth := jwtware.New(jwtware.Config{
-			KeySetURL:            settings.JWTKeySetURL,
-			KeyRefreshInterval:   &keyRefreshInterval,
-			KeyRefreshUnknownKID: &keyRefreshUnknownKID,
-		})
-		v1 := app.Group("/v1/rewards", jwtAuth)
-		v1.Get("/", rewardsController.GetRewards)
 	}
 }

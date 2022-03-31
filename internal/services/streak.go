@@ -55,13 +55,12 @@ func ComputeStreak(i Input) Output {
 
 	connStreak := i.ExistingConnectionStreak
 	discStreak := i.ExistingDisconnectionStreak + 1
-	if discStreak == 3 {
+	if discStreak%3 == 0 {
 		level := findLevel(connStreak)
 		if level > 0 {
 			level--
 		}
 		connStreak = levelInfos[level].MinWeeks
-		discStreak = 0
 	}
 	return Output{
 		ConnectionStreak:    connStreak,

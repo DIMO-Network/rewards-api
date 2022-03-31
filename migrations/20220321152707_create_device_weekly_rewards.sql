@@ -9,30 +9,25 @@ CREATE TABLE issuance_weeks (
             -- beginning of issuance. Right now the beginning is 0900 UTC on March 14,
             -- 2022. We start counting at 0.
     job_status issuance_weeks_job_status NOT NULL,
+
     created_at timestamptz NOT NULL DEFAULT current_timestamp,
     updated_at timestamptz NOT NULL DEFAULT current_timestamp
 );
 
 ALTER TABLE issuance_weeks ADD CONSTRAINT issuance_weeks_id_pkey PRIMARY KEY (id);
 
-CREATE TYPE rewards_connection_method AS ENUM ('Smartcar', 'Tesla', 'AutoPi');
-CREATE TYPE rewards_green_engine_type AS ENUM ('PHEV', 'EV');
-
 CREATE TABLE rewards (
     issuance_week_id int NOT NULL,
     user_device_id char(27) NOT NULL,
 
     user_id text NOT NULL,
-    device_definition_id char(27) NOT NULL,
-    vin char(17) NOT NULL,
 
-    driven_km double precision NOT NULL,
-
-    connection_streak int NOT NULL,
+    effective_connection_streak int NOT NULL,
     disconnection_streak int NOT NULL,
+    streak_points int NOT NULL,
 
-    connection_methods rewards_connection_method[] NOT NULL DEFAULT '{}',
-    green_engine_type rewards_green_engine_type,
+    integration_ids text[] NOT NULL DEFAULT '{}',
+    integration_points int NOT NULL,
 
     created_at timestamptz NOT NULL DEFAULT current_timestamp,
     updated_at timestamptz NOT NULL DEFAULT current_timestamp

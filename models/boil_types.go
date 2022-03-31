@@ -57,9 +57,3 @@ const (
 	IssuanceWeeksJobStatusFailed   = "Failed"
 	IssuanceWeeksJobStatusFinished = "Finished"
 )
-
-// Enum values for RewardsGreenEngineType
-const (
-	RewardsGreenEngineTypePHEV = "PHEV"
-	RewardsGreenEngineTypeEV   = "EV"
-)
