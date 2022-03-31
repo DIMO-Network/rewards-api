@@ -36,7 +36,7 @@ env:
   DEPLOYMENT_BASE_URL: https://rewards-api.dev.dimo.zone
   DEVICE_DATA_INDEX_NAME: device-status-dev*
   AWS_REGION: us-east-2
-  DEVICES_API_GRPC_ADDR: devices-api.dev.dimo.zone:8086
+  DEVICES_API_GRPC_ADDR: devices-api-dev:8086
 service:
   type: ClusterIP
   ports:
