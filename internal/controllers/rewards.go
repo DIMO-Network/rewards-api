@@ -34,21 +34,6 @@ func (r *RewardsController) GetRewards(c *fiber.Ctx) error {
 	rewards, err := models.Rewards(
 		models.RewardWhere.UserID.EQ(userID),
 		qm.OrderBy(
-			models.RewardColumns.IssuanceWeekID+" desc",
-			models.RewardColumns.UserDeviceID+" asc",
-		),
-	).All(c.Context(), r.DB().Reader)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Internal error.")
-	}
-	return c.JSON(rewards)
-}
-
-func (r *RewardsController) AdminGetRewards(c *fiber.Ctx) error {
-	userID := c.Params("userID")
-	rewards, err := models.Rewards(
-		models.RewardWhere.UserID.EQ(userID),
-		qm.OrderBy(
 			models.RewardColumns.IssuanceWeekID+" desc, "+models.RewardColumns.UserDeviceID+" asc",
 		),
 	).All(c.Context(), r.DB().Reader)
@@ -74,7 +59,7 @@ func (r *RewardsController) AdminGetRewards(c *fiber.Ctx) error {
 		}
 		week.Devices = append(week.Devices, &IssuanceWeekDeviceResponse{
 			DeviceID:                  reward.UserDeviceID,
-			EffectiveConnectionStreak: reward.EffectiveConnectionStreak,
+			EffectiveConnectionStreak: reward.ConnectionStreak,
 			DisconnectionStreak:       reward.DisconnectionStreak,
 			StreakPoints:              reward.StreakPoints,
 			IntegrationIDs:            reward.IntegrationIds,
@@ -86,16 +71,14 @@ func (r *RewardsController) AdminGetRewards(c *fiber.Ctx) error {
 	}
 
 	resp := UserResponse{
-		UserID:        userID,
-		IssuanceWeeks: weeks,
 		Points:        points,
+		IssuanceWeeks: weeks,
 	}
 
 	return c.JSON(resp)
 }
 
 type UserResponse struct {
-	UserID        string                  `json:"userId"`
 	Points        int                     `json:"points"`
 	IssuanceWeeks []*IssuanceWeekResponse `json:"issuanceWeeks"`
 }

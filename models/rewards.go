@@ -24,67 +24,67 @@ import (
 
 // Reward is an object representing the database table.
 type Reward struct {
-	IssuanceWeekID            int               `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
-	UserDeviceID              string            `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
-	UserID                    string            `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	EffectiveConnectionStreak int               `boil:"effective_connection_streak" json:"effective_connection_streak" toml:"effective_connection_streak" yaml:"effective_connection_streak"`
-	DisconnectionStreak       int               `boil:"disconnection_streak" json:"disconnection_streak" toml:"disconnection_streak" yaml:"disconnection_streak"`
-	StreakPoints              int               `boil:"streak_points" json:"streak_points" toml:"streak_points" yaml:"streak_points"`
-	IntegrationIds            types.StringArray `boil:"integration_ids" json:"integration_ids" toml:"integration_ids" yaml:"integration_ids"`
-	IntegrationPoints         int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
-	CreatedAt                 time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt                 time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	IssuanceWeekID      int               `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
+	UserDeviceID        string            `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
+	UserID              string            `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	ConnectionStreak    int               `boil:"connection_streak" json:"connection_streak" toml:"connection_streak" yaml:"connection_streak"`
+	DisconnectionStreak int               `boil:"disconnection_streak" json:"disconnection_streak" toml:"disconnection_streak" yaml:"disconnection_streak"`
+	StreakPoints        int               `boil:"streak_points" json:"streak_points" toml:"streak_points" yaml:"streak_points"`
+	IntegrationIds      types.StringArray `boil:"integration_ids" json:"integration_ids" toml:"integration_ids" yaml:"integration_ids"`
+	IntegrationPoints   int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
+	CreatedAt           time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt           time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *rewardR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L rewardL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var RewardColumns = struct {
-	IssuanceWeekID            string
-	UserDeviceID              string
-	UserID                    string
-	EffectiveConnectionStreak string
-	DisconnectionStreak       string
-	StreakPoints              string
-	IntegrationIds            string
-	IntegrationPoints         string
-	CreatedAt                 string
-	UpdatedAt                 string
+	IssuanceWeekID      string
+	UserDeviceID        string
+	UserID              string
+	ConnectionStreak    string
+	DisconnectionStreak string
+	StreakPoints        string
+	IntegrationIds      string
+	IntegrationPoints   string
+	CreatedAt           string
+	UpdatedAt           string
 }{
-	IssuanceWeekID:            "issuance_week_id",
-	UserDeviceID:              "user_device_id",
-	UserID:                    "user_id",
-	EffectiveConnectionStreak: "effective_connection_streak",
-	DisconnectionStreak:       "disconnection_streak",
-	StreakPoints:              "streak_points",
-	IntegrationIds:            "integration_ids",
-	IntegrationPoints:         "integration_points",
-	CreatedAt:                 "created_at",
-	UpdatedAt:                 "updated_at",
+	IssuanceWeekID:      "issuance_week_id",
+	UserDeviceID:        "user_device_id",
+	UserID:              "user_id",
+	ConnectionStreak:    "connection_streak",
+	DisconnectionStreak: "disconnection_streak",
+	StreakPoints:        "streak_points",
+	IntegrationIds:      "integration_ids",
+	IntegrationPoints:   "integration_points",
+	CreatedAt:           "created_at",
+	UpdatedAt:           "updated_at",
 }
 
 var RewardTableColumns = struct {
-	IssuanceWeekID            string
-	UserDeviceID              string
-	UserID                    string
-	EffectiveConnectionStreak string
-	DisconnectionStreak       string
-	StreakPoints              string
-	IntegrationIds            string
-	IntegrationPoints         string
-	CreatedAt                 string
-	UpdatedAt                 string
+	IssuanceWeekID      string
+	UserDeviceID        string
+	UserID              string
+	ConnectionStreak    string
+	DisconnectionStreak string
+	StreakPoints        string
+	IntegrationIds      string
+	IntegrationPoints   string
+	CreatedAt           string
+	UpdatedAt           string
 }{
-	IssuanceWeekID:            "rewards.issuance_week_id",
-	UserDeviceID:              "rewards.user_device_id",
-	UserID:                    "rewards.user_id",
-	EffectiveConnectionStreak: "rewards.effective_connection_streak",
-	DisconnectionStreak:       "rewards.disconnection_streak",
-	StreakPoints:              "rewards.streak_points",
-	IntegrationIds:            "rewards.integration_ids",
-	IntegrationPoints:         "rewards.integration_points",
-	CreatedAt:                 "rewards.created_at",
-	UpdatedAt:                 "rewards.updated_at",
+	IssuanceWeekID:      "rewards.issuance_week_id",
+	UserDeviceID:        "rewards.user_device_id",
+	UserID:              "rewards.user_id",
+	ConnectionStreak:    "rewards.connection_streak",
+	DisconnectionStreak: "rewards.disconnection_streak",
+	StreakPoints:        "rewards.streak_points",
+	IntegrationIds:      "rewards.integration_ids",
+	IntegrationPoints:   "rewards.integration_points",
+	CreatedAt:           "rewards.created_at",
+	UpdatedAt:           "rewards.updated_at",
 }
 
 // Generated where
@@ -111,27 +111,27 @@ func (w whereHelpertypes_StringArray) GTE(x types.StringArray) qm.QueryMod {
 }
 
 var RewardWhere = struct {
-	IssuanceWeekID            whereHelperint
-	UserDeviceID              whereHelperstring
-	UserID                    whereHelperstring
-	EffectiveConnectionStreak whereHelperint
-	DisconnectionStreak       whereHelperint
-	StreakPoints              whereHelperint
-	IntegrationIds            whereHelpertypes_StringArray
-	IntegrationPoints         whereHelperint
-	CreatedAt                 whereHelpertime_Time
-	UpdatedAt                 whereHelpertime_Time
+	IssuanceWeekID      whereHelperint
+	UserDeviceID        whereHelperstring
+	UserID              whereHelperstring
+	ConnectionStreak    whereHelperint
+	DisconnectionStreak whereHelperint
+	StreakPoints        whereHelperint
+	IntegrationIds      whereHelpertypes_StringArray
+	IntegrationPoints   whereHelperint
+	CreatedAt           whereHelpertime_Time
+	UpdatedAt           whereHelpertime_Time
 }{
-	IssuanceWeekID:            whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
-	UserDeviceID:              whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
-	UserID:                    whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_id\""},
-	EffectiveConnectionStreak: whereHelperint{field: "\"rewards_api\".\"rewards\".\"effective_connection_streak\""},
-	DisconnectionStreak:       whereHelperint{field: "\"rewards_api\".\"rewards\".\"disconnection_streak\""},
-	StreakPoints:              whereHelperint{field: "\"rewards_api\".\"rewards\".\"streak_points\""},
-	IntegrationIds:            whereHelpertypes_StringArray{field: "\"rewards_api\".\"rewards\".\"integration_ids\""},
-	IntegrationPoints:         whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
-	CreatedAt:                 whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
-	UpdatedAt:                 whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
+	IssuanceWeekID:      whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
+	UserDeviceID:        whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
+	UserID:              whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_id\""},
+	ConnectionStreak:    whereHelperint{field: "\"rewards_api\".\"rewards\".\"connection_streak\""},
+	DisconnectionStreak: whereHelperint{field: "\"rewards_api\".\"rewards\".\"disconnection_streak\""},
+	StreakPoints:        whereHelperint{field: "\"rewards_api\".\"rewards\".\"streak_points\""},
+	IntegrationIds:      whereHelpertypes_StringArray{field: "\"rewards_api\".\"rewards\".\"integration_ids\""},
+	IntegrationPoints:   whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
+	CreatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
+	UpdatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
 }
 
 // RewardRels is where relationship names are stored.
@@ -155,8 +155,8 @@ func (*rewardR) NewStruct() *rewardR {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "effective_connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at"}
-	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "effective_connection_streak", "disconnection_streak", "streak_points", "integration_points"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at"}
+	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
 	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}

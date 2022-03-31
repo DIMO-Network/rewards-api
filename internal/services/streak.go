@@ -1,68 +1,61 @@
 package services
 
-type EngineType int
-
-const (
-	ICE EngineType = iota
-	PHEV
-	EV
-)
-
 type LevelInfo struct {
+	Level    int
 	MinWeeks int
 	Points   int
 }
 
-var levelInfos = []LevelInfo{
-	{MinWeeks: 0, Points: 0},
-	{MinWeeks: 4, Points: 1000},
-	{MinWeeks: 21, Points: 2000},
-	{MinWeeks: 36, Points: 3000},
+var levelInfos = []*LevelInfo{
+	{Level: 1, MinWeeks: 0, Points: 0},
+	{Level: 2, MinWeeks: 4, Points: 1000},
+	{Level: 3, MinWeeks: 21, Points: 2000},
+	{Level: 4, MinWeeks: 36, Points: 3000},
 }
 
-func findLevel(weeksConnected int) int {
-	lastLevel := 0
-	for level, levelInfo := range levelInfos {
-		if weeksConnected < levelInfo.MinWeeks {
+func GetLevel(connStreak int) *LevelInfo {
+	levelInfo := levelInfos[0]
+	for _, nextLevelInfo := range levelInfos {
+		if connStreak < nextLevelInfo.MinWeeks {
 			break
 		}
-		lastLevel = level
+		levelInfo = nextLevelInfo
 	}
-	return lastLevel
+	return levelInfo
 }
 
-type Input struct {
-	ExistingDisconnectionStreak int
-	ExistingConnectionStreak    int
+type StreakInput struct {
 	ConnectedThisWeek           bool
+	ExistingConnectionStreak    int
+	ExistingDisconnectionStreak int
 }
 
-type Output struct {
+type StreakOutput struct {
 	DisconnectionStreak int
 	ConnectionStreak    int
 	Points              int
 }
 
-func ComputeStreak(i Input) Output {
+func ComputeStreak(i StreakInput) StreakOutput {
 	if i.ConnectedThisWeek {
 		connStreak := i.ExistingConnectionStreak + 1
-		return Output{
-			DisconnectionStreak: 0,
+		return StreakOutput{
 			ConnectionStreak:    connStreak,
-			Points:              levelInfos[findLevel(connStreak)].Points,
+			DisconnectionStreak: 0,
+			Points:              GetLevel(connStreak).Points,
 		}
 	}
 
 	connStreak := i.ExistingConnectionStreak
 	discStreak := i.ExistingDisconnectionStreak + 1
 	if discStreak%3 == 0 {
-		level := findLevel(connStreak)
-		if level > 0 {
-			level--
+		levelIndex := GetLevel(connStreak).Level - 1
+		if levelIndex > 0 {
+			levelIndex--
 		}
-		connStreak = levelInfos[level].MinWeeks
+		connStreak = levelInfos[levelIndex].MinWeeks
 	}
-	return Output{
+	return StreakOutput{
 		ConnectionStreak:    connStreak,
 		DisconnectionStreak: discStreak,
 		Points:              0,

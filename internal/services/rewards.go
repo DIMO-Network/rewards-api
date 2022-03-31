@@ -2,8 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -64,8 +62,51 @@ func ContainsString(v []string, x string) bool {
 	return false
 }
 
+type integrationPointsCalculator struct {
+	autoPiID, teslaID, smartcarID string
+}
+
+func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
+	if ContainsString(integrationIDs, i.autoPiID) {
+		if ContainsString(integrationIDs, i.smartcarID) {
+			return 7000
+		} else {
+			return 6000
+		}
+	} else if ContainsString(integrationIDs, i.teslaID) {
+		return 4000
+	} else if ContainsString(integrationIDs, i.smartcarID) {
+		return 1000
+	}
+	return 0
+}
+
+func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb.ListIntegrationsResponse) *integrationPointsCalculator {
+	calc := new(integrationPointsCalculator)
+
+	for _, integration := range resp.Integrations {
+		switch integration.Vendor {
+		case "AutoPi":
+			calc.autoPiID = integration.Id
+		case "Tesla":
+			calc.teslaID = integration.Id
+		case "SmartCar":
+			calc.smartcarID = integration.Id
+		default:
+			t.Logger.Warn().Msgf("Unrecognized integration %s with vendor %s", integration.Id, integration.Vendor)
+		}
+	}
+
+	return calc
+}
+
 func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	ctx := context.Background()
+
+	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
+	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
+
+	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
 	// Not production ready, obviously.
 	if _, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.DB().Writer); err != nil {
@@ -85,9 +126,6 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		return err
 	}
 
-	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
-	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
-
 	// These devices have each sent some signal during the issuance week.
 	devices, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
@@ -106,27 +144,13 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		return err
 	}
 
-	deviceClient := pb.NewUserDeviceServiceClient(conn)
-
+	integCalc := t.createIntegrationPointsCalculator(integs)
 	vendorToIntegration := make(map[string]string)
 	for _, i := range integs.Integrations {
 		vendorToIntegration[i.Vendor] = i.Id
 	}
 
-	smartcarIntegrationID, ok := vendorToIntegration["SmartCar"]
-	if !ok {
-		t.Logger.Warn().Msg("Device service did not return a Smartcar integration.")
-	}
-	teslaIntegrationID, ok := vendorToIntegration["Tesla"]
-	if !ok {
-		t.Logger.Warn().Msg("Device service did not return a Tesla integration.")
-	}
-	autoPiIntegrationID := vendorToIntegration["AutoPi"]
-	if !ok {
-		return errors.New("Devices service did not return an AutoPi integration.")
-	}
-
-	fmt.Println(smartcarIntegrationID, teslaIntegrationID, autoPiIntegrationID)
+	deviceClient := pb.NewUserDeviceServiceClient(conn)
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB().Reader)
 	if err != nil {
@@ -138,10 +162,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
 
-	total := len(devices)
-	for i, device := range devices {
-		fmt.Printf("%d/%d\n", i+1, total)
-
+	for _, device := range devices {
 		ud, err := deviceClient.GetUserDevice(ctx, &pb.GetUserDeviceRequest{Id: device.ID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok {
@@ -156,43 +177,33 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			}
 		}
 
-		thisWeek := models.Reward{
+		thisWeek := &models.Reward{
 			UserDeviceID:   device.ID,
 			IssuanceWeekID: issuanceWeek,
 			UserID:         ud.UserId,
 		}
 
 		// Streak rewards.
-		x := Input{ConnectedThisWeek: true}
+		streakInput := StreakInput{
+			ConnectedThisWeek:           true,
+			ExistingConnectionStreak:    0,
+			ExistingDisconnectionStreak: 0,
+		}
 		if lastWeek, ok := lastWeekByDevice[device.ID]; ok {
 			if lastWeek.UserID != ud.UserId {
 				t.Logger.Warn().Str("userDeviceId", ud.Id).Msgf("Device changed ownership from %s to %s, resetting streaks.", lastWeek.UserID, ud.UserId)
 			} else {
-				x.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
-				x.ExistingConnectionStreak = lastWeek.EffectiveConnectionStreak
+				streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
+				streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
 			}
 			delete(lastWeekByDevice, device.ID)
 		}
 
-		o := ComputeStreak(x)
-		thisWeek.EffectiveConnectionStreak = o.ConnectionStreak
-		thisWeek.DisconnectionStreak = o.DisconnectionStreak
-		thisWeek.StreakPoints = o.Points
+		setStreakFields(thisWeek, ComputeStreak(streakInput))
 
 		// Integration or "connected method" rewards.
 		thisWeek.IntegrationIds = device.Integrations
-
-		if ContainsString(device.Integrations, autoPiIntegrationID) {
-			if ContainsString(device.Integrations, smartcarIntegrationID) {
-				thisWeek.IntegrationPoints = 7000
-			} else {
-				thisWeek.IntegrationPoints = 6000
-			}
-		} else if ContainsString(device.Integrations, teslaIntegrationID) {
-			thisWeek.IntegrationPoints = 4000
-		} else if ContainsString(device.Integrations, smartcarIntegrationID) {
-			thisWeek.IntegrationPoints = 1000
-		}
+		thisWeek.IntegrationPoints = integCalc.Calculate(device.Integrations)
 
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
@@ -201,19 +212,17 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	// We didn't see any data for these remaining devices this week.
 	for _, lastWeek := range lastWeekByDevice {
-		x := Input{
-			ExistingDisconnectionStreak: lastWeek.DisconnectionStreak,
-			ExistingConnectionStreak:    lastWeek.EffectiveConnectionStreak,
+		thisWeek := &models.Reward{
+			IssuanceWeekID: issuanceWeek,
+			UserDeviceID:   lastWeek.UserDeviceID,
+			UserID:         lastWeek.UserID,
+		}
+		streakInput := StreakInput{
 			ConnectedThisWeek:           false,
+			ExistingConnectionStreak:    lastWeek.ConnectionStreak,
+			ExistingDisconnectionStreak: lastWeek.DisconnectionStreak,
 		}
-		o := ComputeStreak(x)
-		thisWeek := models.Reward{
-			UserDeviceID:              lastWeek.UserDeviceID,
-			IssuanceWeekID:            issuanceWeek,
-			UserID:                    lastWeek.UserID,
-			EffectiveConnectionStreak: o.ConnectionStreak,
-			DisconnectionStreak:       o.DisconnectionStreak,
-		}
+		setStreakFields(thisWeek, ComputeStreak(streakInput))
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
 		}
@@ -225,4 +234,10 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 
 	return nil
+}
+
+func setStreakFields(reward *models.Reward, streakOutput StreakOutput) {
+	reward.ConnectionStreak = streakOutput.ConnectionStreak
+	reward.DisconnectionStreak = streakOutput.DisconnectionStreak
+	reward.StreakPoints = streakOutput.Points
 }

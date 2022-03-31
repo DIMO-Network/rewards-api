@@ -22,7 +22,7 @@ CREATE TABLE rewards (
 
     user_id text NOT NULL,
 
-    effective_connection_streak int NOT NULL,
+    connection_streak int NOT NULL,
     disconnection_streak int NOT NULL,
     streak_points int NOT NULL,
 

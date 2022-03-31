@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -49,8 +48,7 @@ func main() {
 		v1 := app.Group("/v1/rewards", jwtAuth)
 		v1.Get("/", rewardsController.GetRewards)
 
-		app.Get("/admin/:userID", rewardsController.AdminGetRewards)
-
+		logger.Info().Msgf("Starting HTTP server on port %s", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {
 			logger.Fatal().Err(err).Msgf("Fiber server failed.")
 		}
@@ -60,27 +58,16 @@ func main() {
 	switch subCommand := os.Args[1]; subCommand {
 	case "migrate":
 		migrateDatabase(logger, settings)
-	case "getweek":
-		if len(os.Args) < 3 {
-			logger.Fatal().Msg("Date string required.")
-		}
-		dateString := os.Args[2]
-		t, err := time.Parse(time.RFC3339, dateString)
-		if err != nil {
-			logger.Fatal().Err(err).Msgf("Could not parse date string %v.", dateString)
-		}
-		fmt.Printf("Issuance week: %d\n", services.GetWeekNum(t))
-	case "calc":
-		if len(os.Args) < 3 {
-			logger.Fatal().Msg("Issuance week required.")
-		}
-		weekStr := os.Args[2]
-		week, err := strconv.Atoi(weekStr)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Could not parse week number.")
-		}
-		if week < 0 {
-			logger.Fatal().Msgf("Negative week number %d.", week)
+	case "calculate":
+		var week int
+		if len(os.Args) == 2 {
+			week = services.GetWeekNum(time.Now()) - 1
+		} else {
+			var err error
+			week, err = strconv.Atoi(os.Args[2])
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Could not parse week number.")
+			}
 		}
 		pdb := database.NewDbConnectionFromSettings(ctx, settings)
 		totalTime := 0
@@ -101,6 +88,6 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to calculate rewards for week %d.")
 		}
 	default:
-
+		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
 }
