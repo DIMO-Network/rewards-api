@@ -164,10 +164,13 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 		// Streak rewards.
 		x := Input{ConnectedThisWeek: true}
-		lastWeek, ok := lastWeekByDevice[device.ID]
-		if ok {
-			x.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
-			x.ExistingConnectionStreak = lastWeek.EffectiveConnectionStreak
+		if lastWeek, ok := lastWeekByDevice[device.ID]; ok {
+			if lastWeek.UserID != ud.UserId {
+				t.Logger.Warn().Str("userDeviceId", ud.Id).Msgf("Device changed ownership from %s to %s, resetting streaks.", lastWeek.UserID, ud.UserId)
+			} else {
+				x.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
+				x.ExistingConnectionStreak = lastWeek.EffectiveConnectionStreak
+			}
 			delete(lastWeekByDevice, device.ID)
 		}
 
@@ -196,6 +199,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 	}
 
+	// We didn't see any data for these remaining devices this week.
 	for _, lastWeek := range lastWeekByDevice {
 		x := Input{
 			ExistingDisconnectionStreak: lastWeek.DisconnectionStreak,

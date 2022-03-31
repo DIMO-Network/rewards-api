@@ -38,7 +38,7 @@ func TestStreaks(t *testing.T) {
 		{
 			Name:   "Conn3Disc",
 			Input:  Input{ExistingDisconnectionStreak: 2, ExistingConnectionStreak: 1, ConnectedThisWeek: false},
-			Output: Output{DisconnectionStreak: 0, ConnectionStreak: 0, Points: 0},
+			Output: Output{DisconnectionStreak: 3, ConnectionStreak: 0, Points: 0},
 		},
 		{
 			Name:   "4Conn",
@@ -53,7 +53,12 @@ func TestStreaks(t *testing.T) {
 		{
 			Name:   "22Conn3Disc",
 			Input:  Input{ExistingDisconnectionStreak: 2, ExistingConnectionStreak: 22, ConnectedThisWeek: false},
-			Output: Output{DisconnectionStreak: 0, ConnectionStreak: 4, Points: 0},
+			Output: Output{DisconnectionStreak: 3, ConnectionStreak: 4, Points: 0},
+		},
+		{
+			Name:   "36Conn6Disc",
+			Input:  Input{ExistingDisconnectionStreak: 5, ExistingConnectionStreak: 21, ConnectedThisWeek: false},
+			Output: Output{DisconnectionStreak: 6, ConnectionStreak: 4, Points: 0},
 		},
 	}
 
