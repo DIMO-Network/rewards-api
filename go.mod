@@ -5,14 +5,14 @@ go 1.17
 require (
 	github.com/DIMO-Network/shared v0.1.10
 	github.com/aquasecurity/esquery v0.2.0
-	github.com/arsmn/fiber-swagger/v2 v2.31.1
+	github.com/arsmn/fiber-swagger/v2 v2.2.0
 	github.com/elastic/go-elasticsearch/v7 v7.17.1
 	github.com/friendsofgo/errors v0.9.2
 	github.com/lib/pq v1.10.4
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose/v3 v3.5.3
 	github.com/rs/zerolog v1.26.1
-	github.com/swaggo/swag v1.8.1
+	github.com/swaggo/swag v1.8.0
 	github.com/volatiletech/sqlboiler/v4 v4.8.6
 	github.com/volatiletech/strmangle v0.0.2
 	google.golang.org/grpc v1.45.0
@@ -30,7 +30,7 @@ require (
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
 	github.com/go-openapi/spec v0.20.4 // indirect
 	github.com/go-openapi/swag v0.19.15 // indirect
-	github.com/gofrs/uuid v3.2.0+incompatible // indirect
+	github.com/gofrs/uuid v3.3.0+incompatible // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
