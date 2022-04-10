@@ -3,7 +3,7 @@ module github.com/DIMO-Network/rewards-api
 go 1.17
 
 require (
-	github.com/DIMO-Network/shared v0.1.6
+	github.com/DIMO-Network/shared v0.1.10
 	github.com/aquasecurity/esquery v0.2.0
 	github.com/elastic/go-elasticsearch/v7 v7.17.1
 	github.com/friendsofgo/errors v0.9.2
@@ -11,7 +11,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose/v3 v3.5.3
 	github.com/rs/zerolog v1.26.1
-	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.8.6
 	github.com/volatiletech/strmangle v0.0.2
 	google.golang.org/grpc v1.45.0
@@ -27,6 +26,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.34.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
+	github.com/volatiletech/null/v8 v8.1.2 // indirect
 	github.com/volatiletech/randomize v0.0.1 // indirect
 )
 

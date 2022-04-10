@@ -10,9 +10,12 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
+	pb "github.com/DIMO-Network/shared/api/devices"
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -37,9 +40,20 @@ func main() {
 			return c.SendStatus(fiber.StatusOK)
 		})
 
+		conn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
+		}
+		defer conn.Close()
+
+		integClient := pb.NewIntegrationServiceClient(conn)
+		deviceClient := pb.NewUserDeviceServiceClient(conn)
+
 		rewardsController := controllers.RewardsController{
-			DB:     pdb.DBS,
-			Logger: &logger,
+			DB:            pdb.DBS,
+			Logger:        &logger,
+			IntegClient:   integClient,
+			DevicesClient: deviceClient,
 		}
 
 		// secured paths

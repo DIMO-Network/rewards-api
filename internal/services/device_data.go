@@ -14,6 +14,7 @@ import (
 )
 
 type DeviceDataClient interface {
+	GetLastActivity(userDeviceID string) (lastActivity time.Time, seen bool, err error)
 	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
 }
 
@@ -46,6 +47,60 @@ type jsonMap map[string]interface{}
 type DeviceData struct {
 	ID           string
 	Integrations []string
+}
+
+func (c *elasticDeviceDataClient) GetLastActivity(userDeviceID string) (lastActivity time.Time, seen bool, err error) {
+	ctx := context.Background()
+
+	query := esquery.Search().
+		Query(
+			esquery.Bool().
+				Filter(
+					esquery.Term("subject", userDeviceID),
+				).
+				Should(
+					esquery.Exists("data.odometer"),
+					esquery.Exists("data.soc"),
+					esquery.Exists("data.latitude"),
+					esquery.Exists("data.oil"),
+					esquery.Exists("data.fuelPercentRemaining"),
+					esquery.Exists("data.tires.frontLeft"),
+					esquery.Exists("data.charging"),
+				).
+				MinimumShouldMatch(1),
+		).
+		SourceIncludes("data.timestamp").
+		Sort("data.timestamp", esquery.OrderDesc).
+		Size(1)
+
+	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	defer res.Body.Close()
+
+	respb := new(ActivityResp)
+	if err := json.NewDecoder(res.Body).Decode(respb); err != nil {
+		return time.Time{}, false, err
+	}
+
+	if len(respb.Hits.Hits) == 0 {
+		return time.Time{}, false, nil
+	}
+
+	return respb.Hits.Hits[0].Source.Data.Timestamp, true, nil
+}
+
+type ActivityResp struct {
+	Hits struct {
+		Hits []struct {
+			Source struct {
+				Data struct {
+					Timestamp time.Time `json:"timestamp"`
+				} `json:"data"`
+			} `json:"_source"`
+		} `json:"hits"`
+	} `json:"hits"`
 }
 
 func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error) {

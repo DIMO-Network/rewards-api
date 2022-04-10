@@ -6,6 +6,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
+	pb "github.com/DIMO-Network/shared/api/devices"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
@@ -13,8 +14,11 @@ import (
 )
 
 type RewardsController struct {
-	DB     func() *database.DBReaderWriter
-	Logger *zerolog.Logger
+	DB            func() *database.DBReaderWriter
+	Logger        *zerolog.Logger
+	DataClient    services.DeviceDataClient
+	IntegClient   pb.IntegrationServiceClient
+	DevicesClient pb.UserDeviceServiceClient
 }
 
 type RewardsResponse struct {
@@ -29,73 +33,78 @@ func getUserID(c *fiber.Ctx) string {
 	return userID
 }
 
+var opaqueInternalError = fiber.NewError(fiber.StatusInternalServerError, "Internal error.")
+
 func (r *RewardsController) GetRewards(c *fiber.Ctx) error {
 	userID := getUserID(c)
-	rewards, err := models.Rewards(
-		models.RewardWhere.UserID.EQ(userID),
-		qm.OrderBy(
-			models.RewardColumns.IssuanceWeekID+" desc, "+models.RewardColumns.UserDeviceID+" asc",
-		),
-	).All(c.Context(), r.DB().Reader)
+
+	now := time.Now()
+	weekNum := services.GetWeekNum(now)
+	weekStart := services.NumToWeekStart(weekNum)
+
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb.ListUserDevicesForUserRequest{
+		UserId: userID,
+	})
 	if err != nil {
-		r.Logger.Err(err).Msg("")
-		return fiber.NewError(fiber.StatusInternalServerError, "Internal error.")
+		return opaqueInternalError
 	}
 
-	weeks := []*IssuanceWeekResponse{}
-	var week *IssuanceWeekResponse
+	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
 
-	points := 0
+	userPts := 0
 
-	issuanceWeek := -1
-	for _, reward := range rewards {
-		if reward.IssuanceWeekID != issuanceWeek {
-			week = &IssuanceWeekResponse{
-				Start: services.NumToWeekStart(reward.IssuanceWeekID),
-				End:   services.NumToWeekEnd(reward.IssuanceWeekID),
-			}
-			weeks = append(weeks, week)
-			issuanceWeek = reward.IssuanceWeekID
+	for i, device := range devices.UserDevices {
+		lastActive, seen, err := r.DataClient.GetLastActivity(device.Id)
+		if err != nil {
+			return opaqueInternalError
 		}
-		week.Devices = append(week.Devices, &IssuanceWeekDeviceResponse{
-			DeviceID:                  reward.UserDeviceID,
-			EffectiveConnectionStreak: reward.ConnectionStreak,
-			DisconnectionStreak:       reward.DisconnectionStreak,
-			StreakPoints:              reward.StreakPoints,
-			IntegrationIDs:            reward.IntegrationIds,
-			IntegrationPoints:         reward.IntegrationPoints,
-			Points:                    reward.StreakPoints + reward.IntegrationPoints,
-		})
-		week.Points += reward.StreakPoints + reward.IntegrationPoints
-		points += reward.StreakPoints + reward.IntegrationPoints
+		var activeThisWeek = false
+		if seen && !lastActive.Before(weekStart) {
+			activeThisWeek = true
+		}
+		rewards, err := models.Rewards(
+			models.RewardWhere.UserDeviceID.EQ(device.Id),
+			models.RewardWhere.UserID.EQ(userID),
+			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" desc"),
+		).All(c.Context(), r.DB().Reader)
+		if err != nil {
+			return opaqueInternalError
+		}
+
+		pts := 0
+		for _, r := range rewards {
+			pts += r.StreakPoints + r.IntegrationPoints
+		}
+
+		userPts += pts
+
+		lvl := 0
+		if len(rewards) > 0 {
+			lvl = services.GetLevel(rewards[0].ConnectionStreak).Level
+		}
+
+		outLi[i] = &UserResponseDevice{
+			ID:                device.Id,
+			Points:            pts,
+			ConnectedThisWeek: activeThisWeek,
+			Level:             lvl,
+		}
 	}
 
-	resp := UserResponse{
-		Points:        points,
-		IssuanceWeeks: weeks,
-	}
-
-	return c.JSON(resp)
+	return c.JSON(UserResponse{
+		Points:  userPts,
+		Devices: outLi,
+	})
 }
 
 type UserResponse struct {
-	Points        int                     `json:"points"`
-	IssuanceWeeks []*IssuanceWeekResponse `json:"issuanceWeeks"`
+	Points  int                   `json:"points"`
+	Devices []*UserResponseDevice `json:"devices"`
 }
 
-type IssuanceWeekResponse struct {
-	Start   time.Time                     `json:"start"`
-	End     time.Time                     `json:"end"`
-	Points  int                           `json:"points"`
-	Devices []*IssuanceWeekDeviceResponse `json:"devices"`
-}
-
-type IssuanceWeekDeviceResponse struct {
-	DeviceID                  string   `json:"deviceId"`
-	Points                    int      `json:"points"`
-	EffectiveConnectionStreak int      `json:"effectiveConnectionStreak"`
-	DisconnectionStreak       int      `json:"disconnectionStreak"`
-	StreakPoints              int      `json:"streakPoints"`
-	IntegrationIDs            []string `json:"integrationIds"`
-	IntegrationPoints         int      `json:"integrationPoints"`
+type UserResponseDevice struct {
+	ID                string `json:"id"`
+	Points            int    `json:"points"`
+	ConnectedThisWeek bool   `json:"connectedThisWeek"`
+	Level             int    `json:"level"`
 }
