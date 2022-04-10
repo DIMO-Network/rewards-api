@@ -49,11 +49,14 @@ func main() {
 		integClient := pb.NewIntegrationServiceClient(conn)
 		deviceClient := pb.NewUserDeviceServiceClient(conn)
 
+		dataClient := services.NewDeviceDataClient(settings)
+
 		rewardsController := controllers.RewardsController{
 			DB:            pdb.DBS,
 			Logger:        &logger,
 			IntegClient:   integClient,
 			DevicesClient: deviceClient,
+			DataClient:    dataClient,
 		}
 
 		// secured paths
