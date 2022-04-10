@@ -49,24 +49,26 @@ type DeviceData struct {
 	Integrations []string
 }
 
+// activityFieldExists is a list of Elastic exists queries for all of the non-constant fields in
+// the device status update.
+var activityFieldExists = []esquery.Mappable{
+	esquery.Exists("data.odometer"),
+	esquery.Exists("data.soc"),
+	esquery.Exists("data.latitude"),
+	esquery.Exists("data.oil"),
+	esquery.Exists("data.fuelPercentRemaining"),
+	esquery.Exists("data.tires.frontLeft"),
+	esquery.Exists("data.charging"),
+}
+
 func (c *elasticDeviceDataClient) GetLastActivity(userDeviceID string) (lastActivity time.Time, seen bool, err error) {
 	ctx := context.Background()
 
 	query := esquery.Search().
 		Query(
 			esquery.Bool().
-				Filter(
-					esquery.Term("subject", userDeviceID),
-				).
-				Should(
-					esquery.Exists("data.odometer"),
-					esquery.Exists("data.soc"),
-					esquery.Exists("data.latitude"),
-					esquery.Exists("data.oil"),
-					esquery.Exists("data.fuelPercentRemaining"),
-					esquery.Exists("data.tires.frontLeft"),
-					esquery.Exists("data.charging"),
-				).
+				Filter(esquery.Term("subject", userDeviceID)).
+				Should(activityFieldExists...).
 				MinimumShouldMatch(1),
 		).
 		SourceIncludes("data.timestamp").
@@ -132,18 +134,8 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 		query := esquery.Search().
 			Query(
 				esquery.Bool().
-					Filter(
-						esquery.Range("data.timestamp").Gte(start).Lt(end),
-					).
-					Should(
-						esquery.Exists("data.odometer"),
-						esquery.Exists("data.soc"),
-						esquery.Exists("data.latitude"),
-						esquery.Exists("data.oil"),
-						esquery.Exists("data.fuelPercentRemaining"),
-						esquery.Exists("data.tires.frontLeft"),
-						esquery.Exists("data.charging"),
-					).
+					Filter(esquery.Range("data.timestamp").Gte(start).Lt(end)).
+					Should(activityFieldExists...).
 					MinimumShouldMatch(1),
 			).
 			Aggs(
