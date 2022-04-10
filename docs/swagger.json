@@ -1,0 +1,140 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "DIMO Rewards API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/v1",
+    "paths": {
+        "/rewards": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A summary of the user's rewards.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_controllers.UserResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse": {
+            "type": "object",
+            "properties": {
+                "devices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseDevice"
+                    }
+                },
+                "points": {
+                    "type": "integer"
+                },
+                "thisWeek": {
+                    "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek"
+                }
+            }
+        },
+        "github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseDevice": {
+            "type": "object",
+            "properties": {
+                "connectedThisWeek": {
+                    "type": "boolean"
+                },
+                "connectionStreak": {
+                    "type": "integer"
+                },
+                "disconnectionStreak": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "points": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_controllers.UserResponse": {
+            "type": "object",
+            "properties": {
+                "devices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_controllers.UserResponseDevice"
+                    }
+                },
+                "points": {
+                    "type": "integer"
+                },
+                "thisWeek": {
+                    "$ref": "#/definitions/internal_controllers.UserResponseThisWeek"
+                }
+            }
+        },
+        "internal_controllers.UserResponseDevice": {
+            "type": "object",
+            "properties": {
+                "connectedThisWeek": {
+                    "type": "boolean"
+                },
+                "connectionStreak": {
+                    "type": "integer"
+                },
+                "disconnectionStreak": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "points": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_controllers.UserResponseThisWeek": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

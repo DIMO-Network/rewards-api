@@ -12,6 +12,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	pb "github.com/DIMO-Network/shared/api/devices"
+	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/rs/zerolog"
@@ -19,6 +20,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// @title                       DIMO Rewards API
+// @version                     1.0
+// @BasePath                    /v1
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
 func main() {
 	ctx := context.Background()
 	settings, err := config.LoadConfig("settings.yaml")
@@ -68,6 +75,8 @@ func main() {
 			KeyRefreshInterval:   &keyRefreshInterval,
 			KeyRefreshUnknownKID: &keyRefreshUnknownKID,
 		})
+		app.Get("/v1/swagger/*", swagger.HandlerDefault)
+
 		v1 := app.Group("/v1/rewards", jwtAuth)
 		v1.Get("/", rewardsController.GetUserRewards)
 

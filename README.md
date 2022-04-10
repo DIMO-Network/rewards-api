@@ -12,3 +12,9 @@ And then to generate the models:
 ```
 sqlboiler psql --no-tests --wipe
 ```
+
+## Generate API documentation
+
+```
+swag init -g cmd/rewards-api/main.go --parseDependency --parseInternal --generatedTime true --parseDepth 2
+```

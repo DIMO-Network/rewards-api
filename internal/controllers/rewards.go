@@ -35,6 +35,11 @@ func getUserID(c *fiber.Ctx) string {
 
 var opaqueInternalError = fiber.NewError(fiber.StatusInternalServerError, "Internal error.")
 
+// GetUserRewards godoc
+// @Description  A summary of the user's rewards.
+// @Success      200 {object} controllers.UserResponse
+// @Security     BearerAuth
+// @Router       /rewards [get]
 func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	userID := getUserID(c)
 	logger := r.Logger.With().Str("userId", userID).Logger()

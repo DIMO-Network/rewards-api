@@ -1,0 +1,89 @@
+basePath: /v1
+definitions:
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse:
+    properties:
+      devices:
+        items:
+          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseDevice'
+        type: array
+      points:
+        type: integer
+      thisWeek:
+        $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek'
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseDevice:
+    properties:
+      connectedThisWeek:
+        type: boolean
+      connectionStreak:
+        type: integer
+      disconnectionStreak:
+        type: integer
+      id:
+        type: string
+      level:
+        type: integer
+      points:
+        type: integer
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek:
+    properties:
+      end:
+        type: string
+      start:
+        type: string
+    type: object
+  internal_controllers.UserResponse:
+    properties:
+      devices:
+        items:
+          $ref: '#/definitions/internal_controllers.UserResponseDevice'
+        type: array
+      points:
+        type: integer
+      thisWeek:
+        $ref: '#/definitions/internal_controllers.UserResponseThisWeek'
+    type: object
+  internal_controllers.UserResponseDevice:
+    properties:
+      connectedThisWeek:
+        type: boolean
+      connectionStreak:
+        type: integer
+      disconnectionStreak:
+        type: integer
+      id:
+        type: string
+      level:
+        type: integer
+      points:
+        type: integer
+    type: object
+  internal_controllers.UserResponseThisWeek:
+    properties:
+      end:
+        type: string
+      start:
+        type: string
+    type: object
+info:
+  contact: {}
+  title: DIMO Rewards API
+  version: "1.0"
+paths:
+  /rewards:
+    get:
+      description: A summary of the user's rewards.
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_controllers.UserResponse'
+      security:
+      - BearerAuth: []
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
