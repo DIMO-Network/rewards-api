@@ -37,6 +37,7 @@ var opaqueInternalError = fiber.NewError(fiber.StatusInternalServerError, "Inter
 
 func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	userID := getUserID(c)
+	logger := r.Logger.With().Str("userId", userID).Logger()
 
 	now := time.Now()
 	weekNum := services.GetWeekNum(now)
@@ -46,16 +47,18 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		UserId: userID,
 	})
 	if err != nil {
+		logger.Err(err).Msg("Failed to retrieve user's devices.")
 		return opaqueInternalError
 	}
 
 	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
-
 	userPts := 0
 
 	for i, device := range devices.UserDevices {
+		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
 		lastActive, seen, err := r.DataClient.GetLastActivity(device.Id)
 		if err != nil {
+			dlog.Err(err).Msg("Failed to retrieve last activity.")
 			return opaqueInternalError
 		}
 		var activeThisWeek = false
@@ -68,6 +71,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" desc"),
 		).All(c.Context(), r.DB().Reader)
 		if err != nil {
+			dlog.Err(err).Msg("Failed to retrieve previously earned rewards.")
 			return opaqueInternalError
 		}
 
@@ -78,7 +82,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		userPts += pts
 
-		lvl := 0
+		lvl := 1
 		if len(rewards) > 0 {
 			lvl = services.GetLevel(rewards[0].ConnectionStreak).Level
 		}
@@ -91,10 +95,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.JSON(UserResponse{
-		Points:  userPts,
-		Devices: outLi,
-	})
+	return c.JSON(UserResponse{Points: userPts, Devices: outLi})
 }
 
 type UserResponse struct {

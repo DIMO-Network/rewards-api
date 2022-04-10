@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strconv"
 	"time"
@@ -112,4 +113,18 @@ func main() {
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
+}
+
+func ErrorHandler(c *fiber.Ctx, err error) error {
+	code := fiber.StatusInternalServerError // Default.
+
+	var fiberErr *fiber.Error
+	if errors.As(err, &fiberErr) {
+		code = fiberErr.Code
+	}
+
+	return c.Status(code).JSON(fiber.Map{
+		"code":    code,
+		"message": err.Error(),
+	})
 }
