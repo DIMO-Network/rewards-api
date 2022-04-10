@@ -65,7 +65,7 @@ func main() {
 			KeyRefreshUnknownKID: &keyRefreshUnknownKID,
 		})
 		v1 := app.Group("/v1/rewards", jwtAuth)
-		v1.Get("/", rewardsController.GetRewards)
+		v1.Get("/", rewardsController.GetUserRewards)
 
 		logger.Info().Msgf("Starting HTTP server on port %s.", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {

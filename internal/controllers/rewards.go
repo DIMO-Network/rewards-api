@@ -35,7 +35,7 @@ func getUserID(c *fiber.Ctx) string {
 
 var opaqueInternalError = fiber.NewError(fiber.StatusInternalServerError, "Internal error.")
 
-func (r *RewardsController) GetRewards(c *fiber.Ctx) error {
+func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	userID := getUserID(c)
 
 	now := time.Now()

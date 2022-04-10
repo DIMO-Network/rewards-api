@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "rewards-api.fullname" . }}-load-dd
+  name: {{ include "rewards-api.fullname" . }}-calculate-rewards
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "rewards-api.labels" . | nindent 4 }}
@@ -25,17 +25,7 @@ spec:
             securityContext:
               {{- toYaml .Values.securityContext | nindent 14 }}
             image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-            command: ['sh', '-c', "/rewards-api edmunds-vehicles-sync"]
-            envFrom:
-            - configMapRef:
-                name: {{ include "rewards-api.fullname" . }}-config
-            - secretRef:
-                name: {{ include "rewards-api.fullname" . }}-secret
-          - name: search-sync-dds
-            securityContext:
-              {{- toYaml .Values.securityContext | nindent 14 }}
-            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-            command: ['sh', '-c', "/rewards-api search-sync-dds"]
+            command: ['sh', '-c', "/rewards-api calculate"]
             envFrom:
             - configMapRef:
                 name: {{ include "rewards-api.fullname" . }}-config
