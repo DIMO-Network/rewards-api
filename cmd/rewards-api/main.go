@@ -42,6 +42,7 @@ func main() {
 		pdb := database.NewDbConnectionFromSettings(ctx, settings)
 		app := fiber.New(fiber.Config{
 			DisableStartupMessage: true,
+			ErrorHandler:          ErrorHandler,
 		})
 
 		app.Get("/", func(c *fiber.Ctx) error {
