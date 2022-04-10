@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
