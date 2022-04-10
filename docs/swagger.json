@@ -19,7 +19,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_controllers.UserResponse"
+                            "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse"
                         }
                     }
                 }
