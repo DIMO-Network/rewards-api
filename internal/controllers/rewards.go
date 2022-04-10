@@ -117,21 +117,37 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 }
 
 type UserResponse struct {
-	Points   int                   `json:"points"`
-	Devices  []*UserResponseDevice `json:"devices"`
-	ThisWeek UserResponseThisWeek  `json:"thisWeek"`
+	// Points is the user's total number of points, across all devices and issuance weeks.
+	Points int `json:"points" example:"5000"`
+	// Devices is a list of the user's devices, together with some information about their
+	// connectivity.
+	Devices []*UserResponseDevice `json:"devices"`
+	// ThisWeek describes the current issuance week.
+	ThisWeek UserResponseThisWeek `json:"thisWeek"`
 }
 
 type UserResponseDevice struct {
-	ID                  string `json:"id"`
-	Points              int    `json:"points"`
-	ConnectedThisWeek   bool   `json:"connectedThisWeek"`
-	ConnectionStreak    int    `json:"connectionStreak"`
-	DisconnectionStreak int    `json:"disconnectionStreak,omitempty"`
-	Level               int    `json:"level"`
+	// ID is the user device ID used across all services.
+	ID string `json:"id" example:"27cv7gVTh9h4RJuTsmJHpBcr4I9"`
+	// Points is the total number of points that the device has earned across all weeks.
+	Points int `json:"points" example:"5000"`
+	// ConnectedThisWeek is true if we've seen activity from the device during the current issuance
+	// week.
+	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
+	// ConnectionStreak is what we consider the streak of the device to be. This may not literally
+	// be the number of consecutive connected weeks, because the user may disconnect for a week
+	// without penalty, or have the connection streak reduced after three weeks of inactivity.
+	ConnectionStreak int `json:"connectionStreak" example:"4"`
+	// DisconnectionStreak is the number of consecutive issuance weeks that the device has been
+	// disconnected. This number resets to 0 as soon as a device earns rewards for a certain week.
+	DisconnectionStreak int `json:"disconnectionStreak,omitempty" example:"0"`
+	// Level is the level 1-4 of the device. This is fully determined by ConnectionStreak.
+	Level int `json:"level" example:"2"`
 }
 
 type UserResponseThisWeek struct {
-	Start time.Time `json:"start"`
-	End   time.Time `json:"end"`
+	// Start is the timestamp of the start of the issuance week.
+	Start time.Time `json:"start" example:"2022-04-11T05:00:00Z"`
+	// End is the timestamp of the start of the next issuance week.
+	End time.Time `json:"end" example:"2022-04-18T05:00:00Z"`
 }

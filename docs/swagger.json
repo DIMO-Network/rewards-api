@@ -19,7 +19,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse"
+                            "$ref": "#/definitions/internal_controllers.UserResponse"
                         }
                     }
                 }
@@ -31,15 +31,19 @@
             "type": "object",
             "properties": {
                 "devices": {
+                    "description": "Devices is a list of the user's devices, together with some information about their\nconnectivity.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseDevice"
                     }
                 },
                 "points": {
-                    "type": "integer"
+                    "description": "Points is the user's total number of points, across all devices and issuance weeks.",
+                    "type": "integer",
+                    "example": 5000
                 },
                 "thisWeek": {
+                    "description": "ThisWeek describes the current issuance week.",
                     "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek"
                 }
             }
@@ -48,22 +52,34 @@
             "type": "object",
             "properties": {
                 "connectedThisWeek": {
-                    "type": "boolean"
+                    "description": "ConnectedThisWeek is true if we've seen activity from the device during the current issuance\nweek.",
+                    "type": "boolean",
+                    "example": true
                 },
                 "connectionStreak": {
-                    "type": "integer"
+                    "description": "ConnectionStreak is what we consider the streak of the device to be. This may not literally\nbe the number of consecutive connected weeks, because the user may disconnect for a week\nwithout penalty, or have the connection streak reduced after three weeks of inactivity.",
+                    "type": "integer",
+                    "example": 4
                 },
                 "disconnectionStreak": {
-                    "type": "integer"
+                    "description": "DisconnectionStreak is the number of consecutive issuance weeks that the device has been\ndisconnected. This number resets to 0 as soon as a device earns rewards for a certain week.",
+                    "type": "integer",
+                    "example": 0
                 },
                 "id": {
-                    "type": "string"
+                    "description": "ID is the user device ID used across all services.",
+                    "type": "string",
+                    "example": "27cv7gVTh9h4RJuTsmJHpBcr4I9"
                 },
                 "level": {
-                    "type": "integer"
+                    "description": "Level is the level 1-4 of the device. This is fully determined by ConnectionStreak.",
+                    "type": "integer",
+                    "example": 2
                 },
                 "points": {
-                    "type": "integer"
+                    "description": "Points is the total number of points that the device has earned across all weeks.",
+                    "type": "integer",
+                    "example": 5000
                 }
             }
         },
@@ -71,10 +87,14 @@
             "type": "object",
             "properties": {
                 "end": {
-                    "type": "string"
+                    "description": "End is the timestamp of the start of the next issuance week.",
+                    "type": "string",
+                    "example": "2022-04-18T05:00:00Z"
                 },
                 "start": {
-                    "type": "string"
+                    "description": "Start is the timestamp of the start of the issuance week.",
+                    "type": "string",
+                    "example": "2022-04-11T05:00:00Z"
                 }
             }
         },
@@ -82,15 +102,19 @@
             "type": "object",
             "properties": {
                 "devices": {
+                    "description": "Devices is a list of the user's devices, together with some information about their\nconnectivity.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/internal_controllers.UserResponseDevice"
                     }
                 },
                 "points": {
-                    "type": "integer"
+                    "description": "Points is the user's total number of points, across all devices and issuance weeks.",
+                    "type": "integer",
+                    "example": 5000
                 },
                 "thisWeek": {
+                    "description": "ThisWeek describes the current issuance week.",
                     "$ref": "#/definitions/internal_controllers.UserResponseThisWeek"
                 }
             }
@@ -99,22 +123,34 @@
             "type": "object",
             "properties": {
                 "connectedThisWeek": {
-                    "type": "boolean"
+                    "description": "ConnectedThisWeek is true if we've seen activity from the device during the current issuance\nweek.",
+                    "type": "boolean",
+                    "example": true
                 },
                 "connectionStreak": {
-                    "type": "integer"
+                    "description": "ConnectionStreak is what we consider the streak of the device to be. This may not literally\nbe the number of consecutive connected weeks, because the user may disconnect for a week\nwithout penalty, or have the connection streak reduced after three weeks of inactivity.",
+                    "type": "integer",
+                    "example": 4
                 },
                 "disconnectionStreak": {
-                    "type": "integer"
+                    "description": "DisconnectionStreak is the number of consecutive issuance weeks that the device has been\ndisconnected. This number resets to 0 as soon as a device earns rewards for a certain week.",
+                    "type": "integer",
+                    "example": 0
                 },
                 "id": {
-                    "type": "string"
+                    "description": "ID is the user device ID used across all services.",
+                    "type": "string",
+                    "example": "27cv7gVTh9h4RJuTsmJHpBcr4I9"
                 },
                 "level": {
-                    "type": "integer"
+                    "description": "Level is the level 1-4 of the device. This is fully determined by ConnectionStreak.",
+                    "type": "integer",
+                    "example": 2
                 },
                 "points": {
-                    "type": "integer"
+                    "description": "Points is the total number of points that the device has earned across all weeks.",
+                    "type": "integer",
+                    "example": 5000
                 }
             }
         },
@@ -122,10 +158,14 @@
             "type": "object",
             "properties": {
                 "end": {
-                    "type": "string"
+                    "description": "End is the timestamp of the start of the next issuance week.",
+                    "type": "string",
+                    "example": "2022-04-18T05:00:00Z"
                 },
                 "start": {
-                    "type": "string"
+                    "description": "Start is the timestamp of the start of the issuance week.",
+                    "type": "string",
+                    "example": "2022-04-11T05:00:00Z"
                 }
             }
         }
