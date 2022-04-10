@@ -83,29 +83,50 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		userPts += pts
 
 		lvl := 1
+		connectionStreak := 0
+		disconnectionStreak := 0
 		if len(rewards) > 0 {
 			lvl = services.GetLevel(rewards[0].ConnectionStreak).Level
+			connectionStreak = rewards[0].ConnectionStreak
+			disconnectionStreak = rewards[0].DisconnectionStreak
 		}
 
 		outLi[i] = &UserResponseDevice{
-			ID:                device.Id,
-			Points:            pts,
-			ConnectedThisWeek: activeThisWeek,
-			Level:             lvl,
+			ID:                  device.Id,
+			Points:              pts,
+			ConnectedThisWeek:   activeThisWeek,
+			ConnectionStreak:    connectionStreak,
+			DisconnectionStreak: disconnectionStreak,
+			Level:               lvl,
 		}
 	}
 
-	return c.JSON(UserResponse{Points: userPts, Devices: outLi})
+	return c.JSON(UserResponse{
+		Points: userPts,
+		ThisWeek: UserResponseThisWeek{
+			Start: weekStart,
+			End:   services.NumToWeekEnd(weekNum),
+		},
+		Devices: outLi,
+	})
 }
 
 type UserResponse struct {
-	Points  int                   `json:"points"`
-	Devices []*UserResponseDevice `json:"devices"`
+	Points   int                   `json:"points"`
+	Devices  []*UserResponseDevice `json:"devices"`
+	ThisWeek UserResponseThisWeek  `json:"thisWeek"`
 }
 
 type UserResponseDevice struct {
-	ID                string `json:"id"`
-	Points            int    `json:"points"`
-	ConnectedThisWeek bool   `json:"connectedThisWeek"`
-	Level             int    `json:"level"`
+	ID                  string `json:"id"`
+	Points              int    `json:"points"`
+	ConnectedThisWeek   bool   `json:"connectedThisWeek"`
+	ConnectionStreak    int    `json:"connectionStreak"`
+	DisconnectionStreak int    `json:"disconnectionStreak,omitempty"`
+	Level               int    `json:"level"`
+}
+
+type UserResponseThisWeek struct {
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
 }
