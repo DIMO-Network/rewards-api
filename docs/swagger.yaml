@@ -11,12 +11,15 @@ definitions:
     properties:
       end:
         description: End is the starting time of the issuance week after this one.
+        example: "2022-04-18T05:00:00Z"
         type: string
       points:
         description: Points is the number of points the user earned this week.
+        example: 4000
         type: integer
       start:
         description: Start is the starting time of the issuance week.
+        example: "2022-04-11T05:00:00Z"
         type: string
     type: object
   github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse:
@@ -145,12 +148,15 @@ definitions:
     properties:
       end:
         description: End is the starting time of the issuance week after this one.
+        example: "2022-04-18T05:00:00Z"
         type: string
       points:
         description: Points is the number of points the user earned this week.
+        example: 4000
         type: integer
       start:
         description: Start is the starting time of the issuance week.
+        example: "2022-04-11T05:00:00Z"
         type: string
     type: object
   internal_controllers.UserResponse:

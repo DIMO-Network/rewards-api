@@ -61,15 +61,18 @@
             "properties": {
                 "end": {
                     "description": "End is the starting time of the issuance week after this one.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "2022-04-18T05:00:00Z"
                 },
                 "points": {
                     "description": "Points is the number of points the user earned this week.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 4000
                 },
                 "start": {
                     "description": "Start is the starting time of the issuance week.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "2022-04-11T05:00:00Z"
                 }
             }
         },
@@ -216,15 +219,18 @@
             "properties": {
                 "end": {
                     "description": "End is the starting time of the issuance week after this one.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "2022-04-18T05:00:00Z"
                 },
                 "points": {
                     "description": "Points is the number of points the user earned this week.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 4000
                 },
                 "start": {
                     "description": "Start is the starting time of the issuance week.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "2022-04-11T05:00:00Z"
                 }
             }
         },

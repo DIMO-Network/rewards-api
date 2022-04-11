@@ -299,9 +299,9 @@ type HistoryResponse struct {
 
 type HistoryResponseWeek struct {
 	// Start is the starting time of the issuance week.
-	Start time.Time `json:"start"`
+	Start time.Time `json:"start" example:"2022-04-11T05:00:00Z"`
 	// End is the starting time of the issuance week after this one.
-	End time.Time `json:"end"`
+	End time.Time `json:"end" example:"2022-04-18T05:00:00Z"`
 	// Points is the number of points the user earned this week.
-	Points int `json:"points"`
+	Points int `json:"points" example:"4000"`
 }
