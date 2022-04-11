@@ -9,7 +9,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	pb "github.com/DIMO-Network/shared/api/devices"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -119,8 +118,8 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	week := models.IssuanceWeek{
 		ID:        issuanceWeek,
 		JobStatus: models.IssuanceWeeksJobStatusStarted,
-		StartsAt:  null.TimeFrom(weekStart),
-		EndsAt:    null.TimeFrom(weekEnd),
+		StartsAt:  weekStart,
+		EndsAt:    weekEnd,
 	}
 
 	if err := week.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {

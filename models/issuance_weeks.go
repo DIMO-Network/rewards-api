@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -28,8 +27,8 @@ type IssuanceWeek struct {
 	JobStatus string    `boil:"job_status" json:"job_status" toml:"job_status" yaml:"job_status"`
 	CreatedAt time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	StartsAt  null.Time `boil:"starts_at" json:"starts_at,omitempty" toml:"starts_at" yaml:"starts_at,omitempty"`
-	EndsAt    null.Time `boil:"ends_at" json:"ends_at,omitempty" toml:"ends_at" yaml:"ends_at,omitempty"`
+	StartsAt  time.Time `boil:"starts_at" json:"starts_at" toml:"starts_at" yaml:"starts_at"`
+	EndsAt    time.Time `boil:"ends_at" json:"ends_at" toml:"ends_at" yaml:"ends_at"`
 
 	R *issuanceWeekR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L issuanceWeekL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -136,44 +135,20 @@ func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-type whereHelpernull_Time struct{ field string }
-
-func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_Time) NEQ(x null.Time) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_Time) LT(x null.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_Time) LTE(x null.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_Time) GT(x null.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 var IssuanceWeekWhere = struct {
 	ID        whereHelperint
 	JobStatus whereHelperstring
 	CreatedAt whereHelpertime_Time
 	UpdatedAt whereHelpertime_Time
-	StartsAt  whereHelpernull_Time
-	EndsAt    whereHelpernull_Time
+	StartsAt  whereHelpertime_Time
+	EndsAt    whereHelpertime_Time
 }{
 	ID:        whereHelperint{field: "\"rewards_api\".\"issuance_weeks\".\"id\""},
 	JobStatus: whereHelperstring{field: "\"rewards_api\".\"issuance_weeks\".\"job_status\""},
 	CreatedAt: whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"created_at\""},
 	UpdatedAt: whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"updated_at\""},
-	StartsAt:  whereHelpernull_Time{field: "\"rewards_api\".\"issuance_weeks\".\"starts_at\""},
-	EndsAt:    whereHelpernull_Time{field: "\"rewards_api\".\"issuance_weeks\".\"ends_at\""},
+	StartsAt:  whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"starts_at\""},
+	EndsAt:    whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"ends_at\""},
 }
 
 // IssuanceWeekRels is where relationship names are stored.
@@ -198,8 +173,8 @@ type issuanceWeekL struct{}
 
 var (
 	issuanceWeekAllColumns            = []string{"id", "job_status", "created_at", "updated_at", "starts_at", "ends_at"}
-	issuanceWeekColumnsWithoutDefault = []string{"id", "job_status"}
-	issuanceWeekColumnsWithDefault    = []string{"created_at", "updated_at", "starts_at", "ends_at"}
+	issuanceWeekColumnsWithoutDefault = []string{"id", "job_status", "starts_at", "ends_at"}
+	issuanceWeekColumnsWithDefault    = []string{"created_at", "updated_at"}
 	issuanceWeekPrimaryKeyColumns     = []string{"id"}
 	issuanceWeekGeneratedColumns      = []string{}
 )
