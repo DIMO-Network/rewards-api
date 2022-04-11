@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type RewardsController struct {
@@ -51,6 +52,16 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
+	intDescs, err := r.IntegClient.ListIntegrations(c.Context(), &emptypb.Empty{})
+	if err != nil {
+		return opaqueInternalError
+	}
+
+	intMap := make(map[string]string)
+	for _, intDesc := range intDescs.Integrations {
+		intMap[intDesc.Vendor] = intDesc.Id
+	}
+
 	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
 	userPts := 0
 
@@ -62,11 +73,46 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			dlog.Err(err).Msg("Failed to retrieve last activity.")
 			return opaqueInternalError
 		}
+
+		outInts := make([]UserResponseIntegration, 0)
+
 		var activeThisWeek = false
 		if seen {
 			maybeLastActive = &lastActive
 			if !lastActive.Before(weekStart) {
 				activeThisWeek = true
+
+				ints, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
+				if err != nil {
+					return opaqueInternalError
+				}
+
+				if services.ContainsString(ints, intMap["AutoPi"]) {
+					outInts = append(outInts, UserResponseIntegration{
+						ID:     intMap["AutoPi"],
+						Vendor: "AutoPi",
+						Points: 6000,
+					})
+					if services.ContainsString(ints, intMap["SmartCar"]) {
+						outInts = append(outInts, UserResponseIntegration{
+							ID:     intMap["SmartCar"],
+							Vendor: "SmartCar",
+							Points: 1000,
+						})
+					}
+				} else if services.ContainsString(ints, intMap["Tesla"]) {
+					outInts = append(outInts, UserResponseIntegration{
+						ID:     intMap["Tesla"],
+						Vendor: "Tesla",
+						Points: 4000,
+					})
+				} else if services.ContainsString(ints, intMap["SmartCar"]) {
+					outInts = append(outInts, UserResponseIntegration{
+						ID:     intMap["SmartCar"],
+						Vendor: "SmartCar",
+						Points: 1000,
+					})
+				}
 			}
 		}
 		rewards, err := models.Rewards(
@@ -96,13 +142,14 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 
 		outLi[i] = &UserResponseDevice{
-			ID:                  device.Id,
-			Points:              pts,
-			ConnectedThisWeek:   activeThisWeek,
-			LastActive:          maybeLastActive,
-			ConnectionStreak:    connectionStreak,
-			DisconnectionStreak: disconnectionStreak,
-			Level:               *getLevelResp(lvl),
+			ID:                   device.Id,
+			Points:               pts,
+			ConnectedThisWeek:    activeThisWeek,
+			IntegrationsThisWeek: outInts,
+			LastActive:           maybeLastActive,
+			ConnectionStreak:     connectionStreak,
+			DisconnectionStreak:  disconnectionStreak,
+			Level:                *getLevelResp(lvl),
 		}
 	}
 
@@ -148,7 +195,8 @@ type UserResponseDevice struct {
 	Points int `json:"points" example:"5000"`
 	// ConnectedThisWeek is true if we've seen activity from the device during the current issuance
 	// week.
-	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
+	ConnectedThisWeek    bool                      `json:"connectedThisWeek" example:"true"`
+	IntegrationsThisWeek []UserResponseIntegration `json:"integrationsThisWeek"`
 	// LastActive is the last time we saw activity from the vehicle.
 	LastActive *time.Time `json:"lastActive,omitempty" example:"2022-04-12T09:23:01Z"`
 	// ConnectionStreak is what we consider the streak of the device to be. This may not literally
@@ -174,4 +222,10 @@ type UserResponseLevel struct {
 	MinWeeks     int  `json:"minWeeks" example:"4"`
 	MaxWeeks     *int `json:"maxWeeks,omitempty" example:"20"`
 	StreakPoints int  `json:"streakPoints" example:"1000"`
+}
+
+type UserResponseIntegration struct {
+	ID     string `json:"id"`
+	Vendor string `json:"vendor"`
+	Points int    `json:"points"`
 }
