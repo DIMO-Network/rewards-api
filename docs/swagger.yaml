@@ -44,6 +44,8 @@ definitions:
         example: 27cv7gVTh9h4RJuTsmJHpBcr4I9
         type: string
       integrationsThisWeek:
+        description: IntegrationsThisWeek details the integrations we've seen active
+          this week.
         items:
           $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration'
         type: array
@@ -64,24 +66,41 @@ definitions:
   github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration:
     properties:
       id:
+        description: ID is the integration ID.
+        example: 27egBSLazAT7njT2VBjcISPIpiU
         type: string
       points:
+        description: |-
+          Points is the number of points a user earns for being connected with this integration
+          for a week.
+        example: 1000
         type: integer
       vendor:
+        description: |-
+          Vendor is the name of the integration vendor. At present, this uniquely determines the
+          integration.
+        example: SmartCar
         type: string
     type: object
   github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel:
     properties:
       maxWeeks:
+        description: MaxWeeks is the last streak week at this level. In the next week,
+          we enter the next level.
         example: 20
         type: integer
       minWeeks:
+        description: MinWeeks is the minimum streak of weeks needed to enter this
+          level.
         example: 4
         type: integer
       number:
+        description: Number is the level number 1-4
         example: 2
         type: integer
       streakPoints:
+        description: StreakPoints is the number of points you earn per week at this
+          level.
         example: 1000
         type: integer
     type: object
@@ -140,6 +159,8 @@ definitions:
         example: 27cv7gVTh9h4RJuTsmJHpBcr4I9
         type: string
       integrationsThisWeek:
+        description: IntegrationsThisWeek details the integrations we've seen active
+          this week.
         items:
           $ref: '#/definitions/internal_controllers.UserResponseIntegration'
         type: array
@@ -160,24 +181,41 @@ definitions:
   internal_controllers.UserResponseIntegration:
     properties:
       id:
+        description: ID is the integration ID.
+        example: 27egBSLazAT7njT2VBjcISPIpiU
         type: string
       points:
+        description: |-
+          Points is the number of points a user earns for being connected with this integration
+          for a week.
+        example: 1000
         type: integer
       vendor:
+        description: |-
+          Vendor is the name of the integration vendor. At present, this uniquely determines the
+          integration.
+        example: SmartCar
         type: string
     type: object
   internal_controllers.UserResponseLevel:
     properties:
       maxWeeks:
+        description: MaxWeeks is the last streak week at this level. In the next week,
+          we enter the next level.
         example: 20
         type: integer
       minWeeks:
+        description: MinWeeks is the minimum streak of weeks needed to enter this
+          level.
         example: 4
         type: integer
       number:
+        description: Number is the level number 1-4
         example: 2
         type: integer
       streakPoints:
+        description: StreakPoints is the number of points you earn per week at this
+          level.
         example: 1000
         type: integer
     type: object
@@ -204,7 +242,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse'
+            $ref: '#/definitions/internal_controllers.UserResponse'
       security:
       - BearerAuth: []
 securityDefinitions:

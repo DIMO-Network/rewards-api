@@ -195,7 +195,8 @@ type UserResponseDevice struct {
 	Points int `json:"points" example:"5000"`
 	// ConnectedThisWeek is true if we've seen activity from the device during the current issuance
 	// week.
-	ConnectedThisWeek    bool                      `json:"connectedThisWeek" example:"true"`
+	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
+	// IntegrationsThisWeek details the integrations we've seen active this week.
 	IntegrationsThisWeek []UserResponseIntegration `json:"integrationsThisWeek"`
 	// LastActive is the last time we saw activity from the vehicle.
 	LastActive *time.Time `json:"lastActive,omitempty" example:"2022-04-12T09:23:01Z"`
@@ -218,14 +219,23 @@ type UserResponseThisWeek struct {
 }
 
 type UserResponseLevel struct {
-	Number       int  `json:"number" example:"2"`
-	MinWeeks     int  `json:"minWeeks" example:"4"`
-	MaxWeeks     *int `json:"maxWeeks,omitempty" example:"20"`
-	StreakPoints int  `json:"streakPoints" example:"1000"`
+	// Number is the level number 1-4
+	Number int `json:"number" example:"2"`
+	// MinWeeks is the minimum streak of weeks needed to enter this level.
+	MinWeeks int `json:"minWeeks" example:"4"`
+	// MaxWeeks is the last streak week at this level. In the next week, we enter the next level.
+	MaxWeeks *int `json:"maxWeeks,omitempty" example:"20"`
+	// StreakPoints is the number of points you earn per week at this level.
+	StreakPoints int `json:"streakPoints" example:"1000"`
 }
 
 type UserResponseIntegration struct {
-	ID     string `json:"id"`
-	Vendor string `json:"vendor"`
-	Points int    `json:"points"`
+	// ID is the integration ID.
+	ID string `json:"id" example:"27egBSLazAT7njT2VBjcISPIpiU"`
+	// Vendor is the name of the integration vendor. At present, this uniquely determines the
+	// integration.
+	Vendor string `json:"vendor" example:"SmartCar"`
+	// Points is the number of points a user earns for being connected with this integration
+	// for a week.
+	Points int `json:"points" example:"1000"`
 }

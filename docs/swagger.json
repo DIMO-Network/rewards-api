@@ -19,7 +19,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse"
+                            "$ref": "#/definitions/internal_controllers.UserResponse"
                         }
                     }
                 }
@@ -72,6 +72,7 @@
                     "example": "27cv7gVTh9h4RJuTsmJHpBcr4I9"
                 },
                 "integrationsThisWeek": {
+                    "description": "IntegrationsThisWeek details the integrations we've seen active this week.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration"
@@ -97,13 +98,19 @@
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "string"
+                    "description": "ID is the integration ID.",
+                    "type": "string",
+                    "example": "27egBSLazAT7njT2VBjcISPIpiU"
                 },
                 "points": {
-                    "type": "integer"
+                    "description": "Points is the number of points a user earns for being connected with this integration\nfor a week.",
+                    "type": "integer",
+                    "example": 1000
                 },
                 "vendor": {
-                    "type": "string"
+                    "description": "Vendor is the name of the integration vendor. At present, this uniquely determines the\nintegration.",
+                    "type": "string",
+                    "example": "SmartCar"
                 }
             }
         },
@@ -111,18 +118,22 @@
             "type": "object",
             "properties": {
                 "maxWeeks": {
+                    "description": "MaxWeeks is the last streak week at this level. In the next week, we enter the next level.",
                     "type": "integer",
                     "example": 20
                 },
                 "minWeeks": {
+                    "description": "MinWeeks is the minimum streak of weeks needed to enter this level.",
                     "type": "integer",
                     "example": 4
                 },
                 "number": {
+                    "description": "Number is the level number 1-4",
                     "type": "integer",
                     "example": 2
                 },
                 "streakPoints": {
+                    "description": "StreakPoints is the number of points you earn per week at this level.",
                     "type": "integer",
                     "example": 1000
                 }
@@ -188,6 +199,7 @@
                     "example": "27cv7gVTh9h4RJuTsmJHpBcr4I9"
                 },
                 "integrationsThisWeek": {
+                    "description": "IntegrationsThisWeek details the integrations we've seen active this week.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/internal_controllers.UserResponseIntegration"
@@ -213,13 +225,19 @@
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "string"
+                    "description": "ID is the integration ID.",
+                    "type": "string",
+                    "example": "27egBSLazAT7njT2VBjcISPIpiU"
                 },
                 "points": {
-                    "type": "integer"
+                    "description": "Points is the number of points a user earns for being connected with this integration\nfor a week.",
+                    "type": "integer",
+                    "example": 1000
                 },
                 "vendor": {
-                    "type": "string"
+                    "description": "Vendor is the name of the integration vendor. At present, this uniquely determines the\nintegration.",
+                    "type": "string",
+                    "example": "SmartCar"
                 }
             }
         },
@@ -227,18 +245,22 @@
             "type": "object",
             "properties": {
                 "maxWeeks": {
+                    "description": "MaxWeeks is the last streak week at this level. In the next week, we enter the next level.",
                     "type": "integer",
                     "example": 20
                 },
                 "minWeeks": {
+                    "description": "MinWeeks is the minimum streak of weeks needed to enter this level.",
                     "type": "integer",
                     "example": 4
                 },
                 "number": {
+                    "description": "Number is the level number 1-4",
                     "type": "integer",
                     "example": 2
                 },
                 "streakPoints": {
+                    "description": "StreakPoints is the number of points you earn per week at this level.",
                     "type": "integer",
                     "example": 1000
                 }
