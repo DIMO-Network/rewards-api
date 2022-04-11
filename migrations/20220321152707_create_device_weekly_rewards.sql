@@ -6,8 +6,8 @@ CREATE TYPE issuance_weeks_job_status AS ENUM ('Started', 'Failed', 'Finished');
 
 CREATE TABLE issuance_weeks (
     id int, -- This number is the number of complete weeks that have passed since the
-            -- beginning of issuance. Right now the beginning is 0900 UTC on March 14,
-            -- 2022. We start counting at 0.
+            -- beginning of issuance. Right now the beginning is 2022-01-31 05:00 UTC.
+            -- We start counting at 0.
     job_status issuance_weeks_job_status NOT NULL,
 
     created_at timestamptz NOT NULL DEFAULT current_timestamp,

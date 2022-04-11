@@ -22,7 +22,7 @@ var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 var weekDuration = 7 * 24 * time.Hour
 
 // GeetWeekNum calculates the number of the week in which the given time lies for DIMO point
-// issuance, which at the time of writing starts at 05:00 March 14, 2022 UTC. Indexing is
+// issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
 // zero-based.
 func GetWeekNum(t time.Time) int {
 	sinceStart := t.Sub(startTime)
