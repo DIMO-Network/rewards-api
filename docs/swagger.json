@@ -7,7 +7,7 @@
     },
     "basePath": "/v1",
     "paths": {
-        "/rewards": {
+        "/user": {
             "get": {
                 "security": [
                     {
@@ -71,15 +71,36 @@
                     "type": "string",
                     "example": "27cv7gVTh9h4RJuTsmJHpBcr4I9"
                 },
+                "lastActive": {
+                    "description": "LastActive is the last time we saw activity from the vehicle.",
+                    "type": "string",
+                    "example": "2022-04-12T09:23:01Z"
+                },
                 "level": {
                     "description": "Level is the level 1-4 of the device. This is fully determined by ConnectionStreak.",
-                    "type": "integer",
-                    "example": 2
+                    "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel"
                 },
                 "points": {
                     "description": "Points is the total number of points that the device has earned across all weeks.",
                     "type": "integer",
                     "example": 5000
+                }
+            }
+        },
+        "github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel": {
+            "type": "object",
+            "properties": {
+                "maxWeeks": {
+                    "type": "integer"
+                },
+                "minWeeks": {
+                    "type": "integer"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "streakPoints": {
+                    "type": "integer"
                 }
             }
         },
@@ -142,15 +163,36 @@
                     "type": "string",
                     "example": "27cv7gVTh9h4RJuTsmJHpBcr4I9"
                 },
+                "lastActive": {
+                    "description": "LastActive is the last time we saw activity from the vehicle.",
+                    "type": "string",
+                    "example": "2022-04-12T09:23:01Z"
+                },
                 "level": {
                     "description": "Level is the level 1-4 of the device. This is fully determined by ConnectionStreak.",
-                    "type": "integer",
-                    "example": 2
+                    "$ref": "#/definitions/internal_controllers.UserResponseLevel"
                 },
                 "points": {
                     "description": "Points is the total number of points that the device has earned across all weeks.",
                     "type": "integer",
                     "example": 5000
+                }
+            }
+        },
+        "internal_controllers.UserResponseLevel": {
+            "type": "object",
+            "properties": {
+                "maxWeeks": {
+                    "type": "integer"
+                },
+                "minWeeks": {
+                    "type": "integer"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "streakPoints": {
+                    "type": "integer"
                 }
             }
         },

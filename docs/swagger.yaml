@@ -43,15 +43,29 @@ definitions:
         description: ID is the user device ID used across all services.
         example: 27cv7gVTh9h4RJuTsmJHpBcr4I9
         type: string
+      lastActive:
+        description: LastActive is the last time we saw activity from the vehicle.
+        example: "2022-04-12T09:23:01Z"
+        type: string
       level:
+        $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel'
         description: Level is the level 1-4 of the device. This is fully determined
           by ConnectionStreak.
-        example: 2
-        type: integer
       points:
         description: Points is the total number of points that the device has earned
           across all weeks.
         example: 5000
+        type: integer
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel:
+    properties:
+      maxWeeks:
+        type: integer
+      minWeeks:
+        type: integer
+      number:
+        type: integer
+      streakPoints:
         type: integer
     type: object
   github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek:
@@ -108,15 +122,29 @@ definitions:
         description: ID is the user device ID used across all services.
         example: 27cv7gVTh9h4RJuTsmJHpBcr4I9
         type: string
+      lastActive:
+        description: LastActive is the last time we saw activity from the vehicle.
+        example: "2022-04-12T09:23:01Z"
+        type: string
       level:
+        $ref: '#/definitions/internal_controllers.UserResponseLevel'
         description: Level is the level 1-4 of the device. This is fully determined
           by ConnectionStreak.
-        example: 2
-        type: integer
       points:
         description: Points is the total number of points that the device has earned
           across all weeks.
         example: 5000
+        type: integer
+    type: object
+  internal_controllers.UserResponseLevel:
+    properties:
+      maxWeeks:
+        type: integer
+      minWeeks:
+        type: integer
+      number:
+        type: integer
+      streakPoints:
         type: integer
     type: object
   internal_controllers.UserResponseThisWeek:
@@ -135,7 +163,7 @@ info:
   title: DIMO Rewards API
   version: "1.0"
 paths:
-  /rewards:
+  /user:
     get:
       description: A summary of the user's rewards.
       responses:
