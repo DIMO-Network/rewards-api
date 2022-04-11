@@ -43,6 +43,10 @@ definitions:
         description: ID is the user device ID used across all services.
         example: 27cv7gVTh9h4RJuTsmJHpBcr4I9
         type: string
+      integrationsThisWeek:
+        items:
+          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration'
+        type: array
       lastActive:
         description: LastActive is the last time we saw activity from the vehicle.
         example: "2022-04-12T09:23:01Z"
@@ -57,15 +61,28 @@ definitions:
         example: 5000
         type: integer
     type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration:
+    properties:
+      id:
+        type: string
+      points:
+        type: integer
+      vendor:
+        type: string
+    type: object
   github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel:
     properties:
       maxWeeks:
+        example: 20
         type: integer
       minWeeks:
+        example: 4
         type: integer
       number:
+        example: 2
         type: integer
       streakPoints:
+        example: 1000
         type: integer
     type: object
   github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek:
@@ -122,6 +139,10 @@ definitions:
         description: ID is the user device ID used across all services.
         example: 27cv7gVTh9h4RJuTsmJHpBcr4I9
         type: string
+      integrationsThisWeek:
+        items:
+          $ref: '#/definitions/internal_controllers.UserResponseIntegration'
+        type: array
       lastActive:
         description: LastActive is the last time we saw activity from the vehicle.
         example: "2022-04-12T09:23:01Z"
@@ -136,15 +157,28 @@ definitions:
         example: 5000
         type: integer
     type: object
+  internal_controllers.UserResponseIntegration:
+    properties:
+      id:
+        type: string
+      points:
+        type: integer
+      vendor:
+        type: string
+    type: object
   internal_controllers.UserResponseLevel:
     properties:
       maxWeeks:
+        example: 20
         type: integer
       minWeeks:
+        example: 4
         type: integer
       number:
+        example: 2
         type: integer
       streakPoints:
+        example: 1000
         type: integer
     type: object
   internal_controllers.UserResponseThisWeek:
@@ -170,7 +204,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.UserResponse'
+            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse'
       security:
       - BearerAuth: []
 securityDefinitions:

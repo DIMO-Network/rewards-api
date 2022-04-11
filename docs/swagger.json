@@ -19,7 +19,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_controllers.UserResponse"
+                            "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse"
                         }
                     }
                 }
@@ -71,6 +71,12 @@
                     "type": "string",
                     "example": "27cv7gVTh9h4RJuTsmJHpBcr4I9"
                 },
+                "integrationsThisWeek": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration"
+                    }
+                },
                 "lastActive": {
                     "description": "LastActive is the last time we saw activity from the vehicle.",
                     "type": "string",
@@ -87,20 +93,38 @@
                 }
             }
         },
+        "github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "points": {
+                    "type": "integer"
+                },
+                "vendor": {
+                    "type": "string"
+                }
+            }
+        },
         "github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel": {
             "type": "object",
             "properties": {
                 "maxWeeks": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 20
                 },
                 "minWeeks": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 4
                 },
                 "number": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2
                 },
                 "streakPoints": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1000
                 }
             }
         },
@@ -163,6 +187,12 @@
                     "type": "string",
                     "example": "27cv7gVTh9h4RJuTsmJHpBcr4I9"
                 },
+                "integrationsThisWeek": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_controllers.UserResponseIntegration"
+                    }
+                },
                 "lastActive": {
                     "description": "LastActive is the last time we saw activity from the vehicle.",
                     "type": "string",
@@ -179,20 +209,38 @@
                 }
             }
         },
+        "internal_controllers.UserResponseIntegration": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "points": {
+                    "type": "integer"
+                },
+                "vendor": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_controllers.UserResponseLevel": {
             "type": "object",
             "properties": {
                 "maxWeeks": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 20
                 },
                 "minWeeks": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 4
                 },
                 "number": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2
                 },
                 "streakPoints": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1000
                 }
             }
         },
