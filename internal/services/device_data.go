@@ -16,6 +16,7 @@ import (
 type DeviceDataClient interface {
 	GetLastActivity(userDeviceID string) (lastActivity time.Time, seen bool, err error)
 	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
+	GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, err error)
 }
 
 type elasticDeviceDataClient struct {
@@ -103,6 +104,54 @@ type ActivityResp struct {
 			} `json:"_source"`
 		} `json:"hits"`
 	} `json:"hits"`
+}
+
+func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, err error) {
+	ctx := context.Background()
+
+	query := esquery.Search().
+		Query(
+			esquery.Bool().
+				Filter(
+					esquery.Term("subject", userDeviceID),
+					esquery.Range("data.timestamp").Gte(start).Lt(end),
+				).
+				Should(activityFieldExists...).
+				MinimumShouldMatch(1),
+		).
+		Aggs(esquery.TermsAgg("integrations", "source")).
+		Size(0)
+
+	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	respb := new(DeviceIntegrationsResp)
+	if err := json.NewDecoder(res.Body).Decode(respb); err != nil {
+		return nil, err
+	}
+
+	integrations := make([]string, 0)
+	for _, bucket := range respb.Aggregations.Integrations.Buckets {
+		key := bucket.Key
+		if strings.HasPrefix(key, integPrefix) {
+			integrations = append(integrations, strings.TrimPrefix(key, integPrefix))
+		}
+	}
+
+	return integrations, nil
+}
+
+type DeviceIntegrationsResp struct {
+	Aggregations struct {
+		Integrations struct {
+			Buckets []struct {
+				Key string `json:"key"`
+			} `json:"buckets"`
+		} `json:"integrations"`
+	} `json:"aggregations"`
 }
 
 func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error) {
