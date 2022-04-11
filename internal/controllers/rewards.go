@@ -170,8 +170,8 @@ type UserResponseThisWeek struct {
 }
 
 type UserResponseLevel struct {
-	Number       int  `json:"number"`
-	MinWeeks     int  `json:"minWeeks"`
-	MaxWeeks     *int `json:"maxWeeks,omitempty"`
-	StreakPoints int  `json:"streakPoints"`
+	Number       int  `json:"number" example:"2"`
+	MinWeeks     int  `json:"minWeeks" example:"4"`
+	MaxWeeks     *int `json:"maxWeeks,omitempty" example:"20"`
+	StreakPoints int  `json:"streakPoints" example:"1000"`
 }
