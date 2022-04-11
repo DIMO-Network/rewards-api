@@ -77,7 +77,7 @@ func main() {
 			KeyRefreshInterval:   &keyRefreshInterval,
 			KeyRefreshUnknownKID: &keyRefreshUnknownKID,
 		})
-		app.Get("/v1/swagger/*", swagger.Handler)
+		app.Get("/v1/swagger/*", swagger.HandlerDefault)
 
 		v1 := app.Group("/v1", jwtAuth)
 		v1.Get("/user", rewardsController.GetUserRewards)
