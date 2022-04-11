@@ -6,7 +6,7 @@ type LevelInfo struct {
 	Points   int
 }
 
-var levelInfos = []*LevelInfo{
+var LevelInfos = []*LevelInfo{
 	{Level: 1, MinWeeks: 0, Points: 0},
 	{Level: 2, MinWeeks: 4, Points: 1000},
 	{Level: 3, MinWeeks: 21, Points: 2000},
@@ -14,8 +14,8 @@ var levelInfos = []*LevelInfo{
 }
 
 func GetLevel(connStreak int) *LevelInfo {
-	levelInfo := levelInfos[0]
-	for _, nextLevelInfo := range levelInfos {
+	levelInfo := LevelInfos[0]
+	for _, nextLevelInfo := range LevelInfos {
 		if connStreak < nextLevelInfo.MinWeeks {
 			break
 		}
@@ -53,7 +53,7 @@ func ComputeStreak(i StreakInput) StreakOutput {
 		if levelIndex > 0 {
 			levelIndex--
 		}
-		connStreak = levelInfos[levelIndex].MinWeeks
+		connStreak = LevelInfos[levelIndex].MinWeeks
 	}
 	return StreakOutput{
 		ConnectionStreak:    connStreak,
