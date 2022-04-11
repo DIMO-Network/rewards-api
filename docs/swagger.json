@@ -24,9 +24,55 @@
                     }
                 }
             }
+        },
+        "/user/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A summary of the user's rewards for past weeks.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_controllers.HistoryResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponse": {
+            "type": "object",
+            "properties": {
+                "weeks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponseWeek"
+                    }
+                }
+            }
+        },
+        "github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponseWeek": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "description": "End is the starting time of the issuance week after this one.",
+                    "type": "string"
+                },
+                "points": {
+                    "description": "Points is the number of points the user earned this week.",
+                    "type": "integer"
+                },
+                "start": {
+                    "description": "Start is the starting time of the issuance week.",
+                    "type": "string"
+                }
+            }
+        },
         "github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse": {
             "type": "object",
             "properties": {
@@ -151,6 +197,34 @@
                     "description": "Start is the timestamp of the start of the issuance week.",
                     "type": "string",
                     "example": "2022-04-11T05:00:00Z"
+                }
+            }
+        },
+        "internal_controllers.HistoryResponse": {
+            "type": "object",
+            "properties": {
+                "weeks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_controllers.HistoryResponseWeek"
+                    }
+                }
+            }
+        },
+        "internal_controllers.HistoryResponseWeek": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "description": "End is the starting time of the issuance week after this one.",
+                    "type": "string"
+                },
+                "points": {
+                    "description": "Points is the number of points the user earned this week.",
+                    "type": "integer"
+                },
+                "start": {
+                    "description": "Start is the starting time of the issuance week.",
+                    "type": "string"
                 }
             }
         },

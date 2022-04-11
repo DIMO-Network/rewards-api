@@ -1,5 +1,24 @@
 basePath: /v1
 definitions:
+  github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponse:
+    properties:
+      weeks:
+        items:
+          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponseWeek'
+        type: array
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponseWeek:
+    properties:
+      end:
+        description: End is the starting time of the issuance week after this one.
+        type: string
+      points:
+        description: Points is the number of points the user earned this week.
+        type: integer
+      start:
+        description: Start is the starting time of the issuance week.
+        type: string
+    type: object
   github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse:
     properties:
       devices:
@@ -113,6 +132,25 @@ definitions:
       start:
         description: Start is the timestamp of the start of the issuance week.
         example: "2022-04-11T05:00:00Z"
+        type: string
+    type: object
+  internal_controllers.HistoryResponse:
+    properties:
+      weeks:
+        items:
+          $ref: '#/definitions/internal_controllers.HistoryResponseWeek'
+        type: array
+    type: object
+  internal_controllers.HistoryResponseWeek:
+    properties:
+      end:
+        description: End is the starting time of the issuance week after this one.
+        type: string
+      points:
+        description: Points is the number of points the user earned this week.
+        type: integer
+      start:
+        description: Start is the starting time of the issuance week.
         type: string
     type: object
   internal_controllers.UserResponse:
@@ -243,6 +281,16 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_controllers.UserResponse'
+      security:
+      - BearerAuth: []
+  /user/history:
+    get:
+      description: A summary of the user's rewards for past weeks.
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_controllers.HistoryResponse'
       security:
       - BearerAuth: []
 securityDefinitions:

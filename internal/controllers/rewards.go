@@ -239,3 +239,69 @@ type UserResponseIntegration struct {
 	// for a week.
 	Points int `json:"points" example:"1000"`
 }
+
+// GetUserRewardsHistory godoc
+// @Description  A summary of the user's rewards for past weeks.
+// @Success      200 {object} controllers.HistoryResponse
+// @Security     BearerAuth
+// @Router       /user/history [get]
+func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
+	userID := getUserID(c)
+	logger := r.Logger.With().Str("userId", userID).Logger()
+
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb.ListUserDevicesForUserRequest{
+		UserId: userID,
+	})
+	if err != nil {
+		logger.Err(err).Msg("Failed to retrieve user's devices.")
+		return opaqueInternalError
+	}
+
+	deviceIDs := make([]string, len(devices.UserDevices))
+	for i := range devices.UserDevices {
+		deviceIDs[i] = devices.UserDevices[i].Id
+	}
+
+	rs, err := models.Rewards(
+		models.RewardWhere.UserID.EQ(userID),
+		models.RewardWhere.UserDeviceID.IN(deviceIDs),
+		qm.OrderBy(models.RewardColumns.IssuanceWeekID+" asc"),
+	).All(c.Context(), r.DB().Reader)
+	if err != nil {
+		logger.Err(err).Msg("Database failure retrieving rewards.")
+		return opaqueInternalError
+	}
+
+	if len(rs) == 0 {
+		return c.JSON(HistoryResponse{})
+	}
+
+	minWeek := rs[0].IssuanceWeekID
+	maxWeek := rs[len(rs)-1].IssuanceWeekID
+
+	weeks := make([]HistoryResponseWeek, maxWeek-minWeek+1)
+	for i := range weeks {
+		weekNum := maxWeek - i
+		weeks[i].Start = services.NumToWeekStart(weekNum)
+		weeks[i].End = services.NumToWeekStart(weekNum)
+	}
+
+	for _, r := range rs {
+		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.IntegrationPoints
+	}
+
+	return c.JSON(HistoryResponse{Weeks: weeks})
+}
+
+type HistoryResponse struct {
+	Weeks []HistoryResponseWeek `json:"weeks"`
+}
+
+type HistoryResponseWeek struct {
+	// Start is the starting time of the issuance week.
+	Start time.Time `json:"start"`
+	// End is the starting time of the issuance week after this one.
+	End time.Time `json:"end"`
+	// Points is the number of points the user earned this week.
+	Points int `json:"points"`
+}

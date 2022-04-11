@@ -81,6 +81,7 @@ func main() {
 
 		v1 := app.Group("/v1", jwtAuth)
 		v1.Get("/user", rewardsController.GetUserRewards)
+		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 
 		logger.Info().Msgf("Starting HTTP server on port %s.", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {
