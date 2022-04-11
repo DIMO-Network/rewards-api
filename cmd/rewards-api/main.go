@@ -79,8 +79,8 @@ func main() {
 		})
 		app.Get("/v1/swagger/*", swagger.Handler)
 
-		v1 := app.Group("/v1/rewards", jwtAuth)
-		v1.Get("/", rewardsController.GetUserRewards)
+		v1 := app.Group("/v1", jwtAuth)
+		v1.Get("/user", rewardsController.GetUserRewards)
 
 		logger.Info().Msgf("Starting HTTP server on port %s.", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {

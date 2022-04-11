@@ -21,11 +21,6 @@ type RewardsController struct {
 	DevicesClient pb.UserDeviceServiceClient
 }
 
-type RewardsResponse struct {
-	UserID      string `json:"userId"`
-	TotalPoints int    `json:"totalPoints"`
-}
-
 func getUserID(c *fiber.Ctx) string {
 	token := c.Locals("user").(*jwt.Token)
 	claims := token.Claims.(jwt.MapClaims)
@@ -39,7 +34,7 @@ var opaqueInternalError = fiber.NewError(fiber.StatusInternalServerError, "Inter
 // @Description  A summary of the user's rewards.
 // @Success      200 {object} controllers.UserResponse
 // @Security     BearerAuth
-// @Router       /rewards [get]
+// @Router       /user [get]
 func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	userID := getUserID(c)
 	logger := r.Logger.With().Str("userId", userID).Logger()
@@ -61,14 +56,18 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
+		var maybeLastActive *time.Time
 		lastActive, seen, err := r.DataClient.GetLastActivity(device.Id)
 		if err != nil {
 			dlog.Err(err).Msg("Failed to retrieve last activity.")
 			return opaqueInternalError
 		}
 		var activeThisWeek = false
-		if seen && !lastActive.Before(weekStart) {
-			activeThisWeek = true
+		if seen {
+			maybeLastActive = &lastActive
+			if !lastActive.Before(weekStart) {
+				activeThisWeek = true
+			}
 		}
 		rewards, err := models.Rewards(
 			models.RewardWhere.UserDeviceID.EQ(device.Id),
@@ -100,9 +99,10 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			ID:                  device.Id,
 			Points:              pts,
 			ConnectedThisWeek:   activeThisWeek,
+			LastActive:          maybeLastActive,
 			ConnectionStreak:    connectionStreak,
 			DisconnectionStreak: disconnectionStreak,
-			Level:               lvl,
+			Level:               *getLevelResp(lvl),
 		}
 	}
 
@@ -114,6 +114,21 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		},
 		Devices: outLi,
 	})
+}
+
+func getLevelResp(level int) *UserResponseLevel {
+	info := services.LevelInfos[level-1]
+	var maxWeeks *int
+	if level < 4 {
+		maxWk := services.LevelInfos[level].MinWeeks - 1
+		maxWeeks = &maxWk
+	}
+	return &UserResponseLevel{
+		Number:       level,
+		MinWeeks:     info.MinWeeks,
+		MaxWeeks:     maxWeeks,
+		StreakPoints: info.Points,
+	}
 }
 
 type UserResponse struct {
@@ -134,6 +149,8 @@ type UserResponseDevice struct {
 	// ConnectedThisWeek is true if we've seen activity from the device during the current issuance
 	// week.
 	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
+	// LastActive is the last time we saw activity from the vehicle.
+	LastActive *time.Time `json:"lastActive,omitempty" example:"2022-04-12T09:23:01Z"`
 	// ConnectionStreak is what we consider the streak of the device to be. This may not literally
 	// be the number of consecutive connected weeks, because the user may disconnect for a week
 	// without penalty, or have the connection streak reduced after three weeks of inactivity.
@@ -142,7 +159,7 @@ type UserResponseDevice struct {
 	// disconnected. This number resets to 0 as soon as a device earns rewards for a certain week.
 	DisconnectionStreak int `json:"disconnectionStreak,omitempty" example:"0"`
 	// Level is the level 1-4 of the device. This is fully determined by ConnectionStreak.
-	Level int `json:"level" example:"2"`
+	Level UserResponseLevel `json:"level"`
 }
 
 type UserResponseThisWeek struct {
@@ -150,4 +167,11 @@ type UserResponseThisWeek struct {
 	Start time.Time `json:"start" example:"2022-04-11T05:00:00Z"`
 	// End is the timestamp of the start of the next issuance week.
 	End time.Time `json:"end" example:"2022-04-18T05:00:00Z"`
+}
+
+type UserResponseLevel struct {
+	Number       int  `json:"number"`
+	MinWeeks     int  `json:"minWeeks"`
+	MaxWeeks     *int `json:"maxWeeks,omitempty"`
+	StreakPoints int  `json:"streakPoints"`
 }
