@@ -97,7 +97,8 @@ func main() {
 	case "calculate":
 		var week int
 		if len(os.Args) == 2 {
-			week = services.GetWeekNum(time.Now()) - 1
+			// We have to subtract 1 because we're getting the number of the newly beginning week.
+			week = services.GetWeekNumForCron(time.Now()) - 1
 		} else {
 			var err error
 			week, err = strconv.Atoi(os.Args[2])

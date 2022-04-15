@@ -30,6 +30,14 @@ func GetWeekNum(t time.Time) int {
 	return weekNum
 }
 
+// GeetWeekNumForCron calculates the week number for the current run of the cron job. We expect
+// the job to run every Monday at 05:00 UTC, but due to skew we just round the time.
+func GetWeekNumForCron(t time.Time) int {
+	sinceStart := t.Sub(startTime)
+	weekNum := int(sinceStart.Round(weekDuration) / weekDuration)
+	return weekNum
+}
+
 func NumToWeekStart(n int) time.Time {
 	return startTime.Add(time.Duration(n) * weekDuration)
 }
