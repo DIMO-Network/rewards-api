@@ -22,7 +22,7 @@ securityContext:
       - all
 cronJob:
   enabled: true
-  schedule: 0 17 * * 3
+  schedule: 0 5 * * 1
 env:
   ENVIRONMENT: dev
   PORT: '8080'
