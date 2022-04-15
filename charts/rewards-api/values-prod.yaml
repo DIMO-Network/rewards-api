@@ -17,17 +17,8 @@ env:
   SERVICE_NAME: rewards-api
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys
   DEPLOYMENT_BASE_URL: https://rewards-api.dimo.zone
-  TOR_PROXY_URL: socks5://tor-prod:9050
-  REDIS_USER: default
-  REDIS_CLUSTER_MODE: true
-  REDIS_TLS: true
-  INGEST_SMARTCAR_URL: http://ingest-smartcar-prod:8080
-  INGEST_SMARTCAR_TOPIC: topic.interface.ingest.smartcar
-  KAFKA_BROKERS: kafka-prod-dimo-kafka-kafka-brokers:9092
-  DEVICE_STATUS_TOPIC: topic.device.status
-  PRIVACY_FENCE_TOPIC: table.device.privacyfence
-  EVENTS_TOPIC: topic.event
   DEVICE_DATA_INDEX_NAME: device-status-prod*
+  DEVICES_API_GRPC_ADDR: devices-api-prod:8086
 ingress:
   enabled: true
   className: nginx
