@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"os"
 	"strconv"
 	"time"
 
 	_ "github.com/DIMO-Network/rewards-api/docs"
-	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/shared"
 	pb "github.com/DIMO-Network/shared/api/devices"
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/gofiber/fiber/v2"
@@ -29,7 +30,7 @@ import (
 // @name                        Authorization
 func main() {
 	ctx := context.Background()
-	settings, err := config.LoadConfig("settings.yaml")
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
 	if err != nil {
 		os.Exit(1)
 	}
@@ -40,7 +41,7 @@ func main() {
 		Logger()
 
 	if len(os.Args) == 1 {
-		pdb := database.NewDbConnectionFromSettings(ctx, settings)
+		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
 		app := fiber.New(fiber.Config{
 			DisableStartupMessage: true,
 			ErrorHandler:          ErrorHandler,
@@ -59,7 +60,7 @@ func main() {
 		integClient := pb.NewIntegrationServiceClient(conn)
 		deviceClient := pb.NewUserDeviceServiceClient(conn)
 
-		dataClient := services.NewDeviceDataClient(settings)
+		dataClient := services.NewDeviceDataClient(&settings)
 
 		rewardsController := controllers.RewardsController{
 			DB:            pdb.DBS,
@@ -92,7 +93,7 @@ func main() {
 
 	switch subCommand := os.Args[1]; subCommand {
 	case "migrate":
-		migrateDatabase(logger, settings)
+		migrateDatabase(logger, &settings)
 	case "calculate":
 		var week int
 		if len(os.Args) == 2 {
@@ -104,7 +105,7 @@ func main() {
 				logger.Fatal().Err(err).Msg("Could not parse week number.")
 			}
 		}
-		pdb := database.NewDbConnectionFromSettings(ctx, settings)
+		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
 		totalTime := 0
 		for !pdb.IsReady() {
 			if totalTime > 30 {
@@ -114,8 +115,8 @@ func main() {
 			totalTime++
 		}
 		task := services.RewardsTask{
-			Settings:    settings,
-			DataService: services.NewDeviceDataClient(settings),
+			Settings:    &settings,
+			DataService: services.NewDeviceDataClient(&settings),
 			DB:          pdb.DBS,
 			Logger:      &logger,
 		}

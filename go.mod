@@ -1,9 +1,9 @@
 module github.com/DIMO-Network/rewards-api
 
-go 1.17
+go 1.18
 
 require (
-	github.com/DIMO-Network/shared v0.1.10
+	github.com/DIMO-Network/shared v0.1.11
 	github.com/aquasecurity/esquery v0.2.0
 	github.com/arsmn/fiber-swagger/v2 v2.31.1
 	github.com/elastic/go-elasticsearch/v7 v7.17.1
@@ -17,7 +17,6 @@ require (
 	github.com/volatiletech/strmangle v0.0.2
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.28.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 
 require (
@@ -25,6 +24,7 @@ require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
+	github.com/avast/retry-go/v4 v4.0.3 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20181231230500-73749d4874d5 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
@@ -42,6 +42,7 @@ require (
 	github.com/volatiletech/randomize v0.0.1 // indirect
 	golang.org/x/tools v0.1.9 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
 
 require (
