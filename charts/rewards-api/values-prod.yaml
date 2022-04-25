@@ -5,7 +5,7 @@ image:
   tag: 0.1.0
 cronJob:
   enabled: true
-  schedule: 0 0 * * 0
+  schedule: 0 5 * * 1
 env:
   ENVIRONMENT: prod
   PORT: '8080'
