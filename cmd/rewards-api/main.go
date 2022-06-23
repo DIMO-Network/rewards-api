@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/DIMO-Network/rewards-api/internal/config"
 	"os"
 	"strconv"
 	"time"
 
 	_ "github.com/DIMO-Network/rewards-api/docs"
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
@@ -93,7 +93,14 @@ func main() {
 
 	switch subCommand := os.Args[1]; subCommand {
 	case "migrate":
-		migrateDatabase(logger, &settings)
+		command := "up"
+		if len(os.Args) > 2 {
+			command = os.Args[2]
+			if command == "down-to" || command == "up-to" {
+				command = command + " " + os.Args[3]
+			}
+		}
+		migrateDatabase(logger, &settings, command, "rewards_api")
 	case "calculate":
 		var week int
 		if len(os.Args) == 2 {
