@@ -93,7 +93,14 @@ func main() {
 
 	switch subCommand := os.Args[1]; subCommand {
 	case "migrate":
-		migrateDatabase(logger, &settings)
+		command := "up"
+		if len(os.Args) > 2 {
+			command = os.Args[2]
+			if command == "down-to" || command == "up-to" {
+				command = command + " " + os.Args[3]
+			}
+		}
+		migrateDatabase(logger, &settings, command, "rewards_api")
 	case "calculate":
 		var week int
 		if len(os.Args) == 2 {
