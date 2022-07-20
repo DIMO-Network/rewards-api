@@ -1,3 +1,7 @@
+## Background
+
+Each Monday at 05:00 UTC, a new DIMO issuance week begins; week 0 started on 2022-01-31. At the end of each issuance week, this service runs a cron job that calculates how many points each vehicle earned that week. The results from all weeks are visible to vehicle owners through a simple REST API.
+
 ## Database modifications
 
 Create a new Goose migration file:
