@@ -6,9 +6,26 @@ The formulas are available on the [docs site](https://docs.dimo.zone/dimo-overvi
 
 **Activity.** A vehicle's integration is considered active in a given week if during that time it has transmitted some non-trivial signal. Vehicles without active integrations do not earn points.
 
-**Integration.** A Smartcar integration earns 1000, Tesla 4000, and AutoPi 6000. The only valid combination of two of these is Smartcar together with AutoPi, which earns the sum 7000.
+**Integration.** Better integrations earn more points, as shown in the table below. The only valid combination of two of these is Smartcar and AutoPi together, which earns the sim 7000.
 
-**Streak.** The program maintains a "weeks connected" counter for each vehicle. Ideally, this starts at 0 and simply increments by 1 every week, with the vehicle staying continuously connected.
+| Integration | Points |
+|-|-|
+| Smartcar | 1000 |
+| Tesla | 4000 |
+| AutoPi | 6000 |
+
+**Streak.** The program maintains a "weeks connected" counter for each vehicle. Ideally, this starts at 0 and simply increments by 1 every week, with the vehicle staying continuously connected. Being disconnected for one or two weeks in a row merely pauses this counter.
+
+**Level.** The connection streak at the end of a week determines a level for the vehicle. An active vehicle then earns points based on the level:
+
+| Level | Min streak | Points |
+|-|-|-|
+| 1 | 0 | 0 |
+| 2 | 4 | 1000 |
+| 3 | 20 | 2000 |
+| 4 | 36 | 3000 |
+
+Being inactive for three weeks straight drops your connection streak to the minimum one for the previous level.
 
 ## Database modifications
 
