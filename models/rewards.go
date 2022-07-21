@@ -34,6 +34,7 @@ type Reward struct {
 	IntegrationPoints   int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
 	CreatedAt           time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt           time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	Override            bool              `boil:"override" json:"override" toml:"override" yaml:"override"`
 
 	R *rewardR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L rewardL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -50,6 +51,7 @@ var RewardColumns = struct {
 	IntegrationPoints   string
 	CreatedAt           string
 	UpdatedAt           string
+	Override            string
 }{
 	IssuanceWeekID:      "issuance_week_id",
 	UserDeviceID:        "user_device_id",
@@ -61,6 +63,7 @@ var RewardColumns = struct {
 	IntegrationPoints:   "integration_points",
 	CreatedAt:           "created_at",
 	UpdatedAt:           "updated_at",
+	Override:            "override",
 }
 
 var RewardTableColumns = struct {
@@ -74,6 +77,7 @@ var RewardTableColumns = struct {
 	IntegrationPoints   string
 	CreatedAt           string
 	UpdatedAt           string
+	Override            string
 }{
 	IssuanceWeekID:      "rewards.issuance_week_id",
 	UserDeviceID:        "rewards.user_device_id",
@@ -85,6 +89,7 @@ var RewardTableColumns = struct {
 	IntegrationPoints:   "rewards.integration_points",
 	CreatedAt:           "rewards.created_at",
 	UpdatedAt:           "rewards.updated_at",
+	Override:            "rewards.override",
 }
 
 // Generated where
@@ -110,6 +115,15 @@ func (w whereHelpertypes_StringArray) GTE(x types.StringArray) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
+type whereHelperbool struct{ field string }
+
+func (w whereHelperbool) EQ(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperbool) NEQ(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperbool) LT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+
 var RewardWhere = struct {
 	IssuanceWeekID      whereHelperint
 	UserDeviceID        whereHelperstring
@@ -121,6 +135,7 @@ var RewardWhere = struct {
 	IntegrationPoints   whereHelperint
 	CreatedAt           whereHelpertime_Time
 	UpdatedAt           whereHelpertime_Time
+	Override            whereHelperbool
 }{
 	IssuanceWeekID:      whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
 	UserDeviceID:        whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
@@ -132,6 +147,7 @@ var RewardWhere = struct {
 	IntegrationPoints:   whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
 	CreatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
 	UpdatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
+	Override:            whereHelperbool{field: "\"rewards_api\".\"rewards\".\"override\""},
 }
 
 // RewardRels is where relationship names are stored.
@@ -155,9 +171,9 @@ func (*rewardR) NewStruct() *rewardR {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override"}
 	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )
