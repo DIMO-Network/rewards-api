@@ -180,6 +180,10 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	devicesOverriddenThisWeek := shared.NewStringSet()
 
 	for _, override := range overrides {
+		if len(override.IntegrationIds) == 0 {
+			t.Logger.Warn().Str("userDeviceId", override.UserDeviceID).Msg("Override had no integrations.")
+			continue
+		}
 		devicesOverriddenThisWeek.Add(override.UserDeviceID)
 
 		ud, err := deviceClient.GetUserDevice(ctx, &pb.GetUserDeviceRequest{Id: override.UserDeviceID})
