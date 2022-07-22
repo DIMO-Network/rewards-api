@@ -27,7 +27,9 @@ The formulas are available on the [docs site](https://docs.dimo.zone/dimo-overvi
 
 Being inactive for three weeks straight drops your connection streak to the minimum one for the previous level.
 
-## Database modifications
+## Contributing
+
+### Database modifications
 
 Create a new Goose migration file:
 ```
@@ -42,7 +44,7 @@ And then to generate the models:
 sqlboiler psql --no-tests --wipe
 ```
 
-## Generate API documentation
+### Generate API documentation
 
 ```
 swag init -g cmd/rewards-api/main.go --parseDependency --parseInternal --generatedTime true --parseDepth 2
