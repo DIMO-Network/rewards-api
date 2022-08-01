@@ -129,7 +129,7 @@ func main() {
 			Logger:      &logger,
 		}
 		if err := task.Calculate(week); err != nil {
-			logger.Fatal().Err(err).Msg("Failed to calculate rewards for week %d.")
+			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate rewards.")
 		}
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
