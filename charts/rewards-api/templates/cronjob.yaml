@@ -14,27 +14,23 @@ spec:
       template:
         metadata:
           annotations:
-            linkerd.io/inject: disabled
           {{- with .Values.podAnnotations }}
             {{- toYaml . | nindent 8 }}
           {{- end }}
           labels:
             {{- include "rewards-api.selectorLabels" . | nindent 12 }}
         spec:
-          initContainers:
+          containers:
           - name: weekly-rewards-calculation
             securityContext:
               {{- toYaml .Values.securityContext | nindent 14 }}
             image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-            command: ['sh', '-c', "/rewards-api calculate"]
+            command: ['/bin/sh']
+            args: ['-c', '/rewards-api calculate; CODE=$?; echo 'weekly rewards calculation completed'; wget -q --post-data "hello=shutdown" http://localhost:4191/shutdown &> /dev/null; exit $CODE;']
             envFrom:
             - configMapRef:
                 name: {{ include "rewards-api.fullname" . }}-config
             - secretRef:
                 name: {{ include "rewards-api.fullname" . }}-secret
-          containers:
-          - name: completed
-            image: busybox
-            command: ['sh', '-c', 'echo "weekly rewards calculation completed"']
           restartPolicy: OnFailure
 {{ end }}          
