@@ -77,9 +77,8 @@ func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
 	if ContainsString(integrationIDs, i.autoPiID) {
 		if ContainsString(integrationIDs, i.smartcarID) {
 			return 7000
-		} else {
-			return 6000
 		}
+		return 6000
 	} else if ContainsString(integrationIDs, i.teslaID) {
 		return 4000
 	} else if ContainsString(integrationIDs, i.smartcarID) {
