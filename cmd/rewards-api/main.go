@@ -3,17 +3,20 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"strconv"
 	"time"
 
 	_ "github.com/DIMO-Network/rewards-api/docs"
+	"github.com/DIMO-Network/rewards-api/internal/api"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/shared"
-	pb "github.com/DIMO-Network/shared/api/devices"
+	pb_devices "github.com/DIMO-Network/shared/api/devices"
+	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
@@ -57,8 +60,8 @@ func main() {
 		}
 		defer conn.Close()
 
-		integClient := pb.NewIntegrationServiceClient(conn)
-		deviceClient := pb.NewUserDeviceServiceClient(conn)
+		integClient := pb_devices.NewIntegrationServiceClient(conn)
+		deviceClient := pb_devices.NewUserDeviceServiceClient(conn)
 
 		dataClient := services.NewDeviceDataClient(&settings)
 
@@ -83,6 +86,8 @@ func main() {
 		v1 := app.Group("/v1", jwtAuth)
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
+
+		go startGRPCServer(&settings, pdb.DBS, &logger)
 
 		logger.Info().Msgf("Starting HTTP server on port %s.", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {
@@ -133,6 +138,21 @@ func main() {
 		}
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
+	}
+}
+
+func startGRPCServer(settings *config.Settings, dbs func() *database.DBReaderWriter, logger *zerolog.Logger) {
+	lis, err := net.Listen("tcp", ":"+settings.GRPCPort)
+	if err != nil {
+		logger.Fatal().Err(err).Msgf("Couldn't listen on gRPC port %s", settings.GRPCPort)
+	}
+
+	logger.Info().Msgf("Starting gRPC server on port %s", settings.GRPCPort)
+	server := grpc.NewServer()
+	pb_rewards.RegisterRewardsServiceServer(server, api.NewRewardsService(dbs, logger))
+
+	if err := server.Serve(lis); err != nil {
+		logger.Fatal().Err(err).Msg("gRPC server terminated unexpectedly")
 	}
 }
 

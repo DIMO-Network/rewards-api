@@ -32,6 +32,7 @@ env:
   DB_MAX_OPEN_CONNECTIONS: '10'
   DB_MAX_IDLE_CONNECTIONS: '3'
   SERVICE_NAME: rewards-api
+  GRPC_PORT: '8086'
   JWT_KEY_SET_URL: https://auth.dev.dimo.zone/keys
   DEPLOYMENT_BASE_URL: https://rewards-api.dev.dimo.zone
   DEVICE_DATA_INDEX_NAME: device-status-dev*
@@ -48,12 +49,19 @@ service:
       port: 8080
       targetPort: http
       protocol: TCP
+    grpc:
+      port: 8086
+      targetPort: grpc
+      protocol: TCP
 ports:
   - name: mon-http
     containerPort: 8888
     protocol: TCP
   - name: http
     containerPort: 8080
+    protocol: TCP
+  - name: grpc
+    containerPort: 8086
     protocol: TCP
 ingress:
   enabled: true
