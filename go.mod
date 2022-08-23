@@ -3,7 +3,7 @@ module github.com/DIMO-Network/rewards-api
 go 1.18
 
 require (
-	github.com/DIMO-Network/shared v0.1.11
+	github.com/DIMO-Network/shared v0.3.0
 	github.com/aquasecurity/esquery v0.2.0
 	github.com/arsmn/fiber-swagger/v2 v2.31.1
 	github.com/elastic/go-elasticsearch/v7 v7.17.1
@@ -25,6 +25,11 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/avast/retry-go/v4 v4.0.3 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.16.5 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.12 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.17.3 // indirect
+	github.com/aws/smithy-go v1.11.3 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20181231230500-73749d4874d5 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
