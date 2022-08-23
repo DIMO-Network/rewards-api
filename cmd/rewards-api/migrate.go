@@ -7,7 +7,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/pressly/goose/v3"
 	"github.com/rs/zerolog"
-	
+
 	_ "github.com/lib/pq"
 )
 
