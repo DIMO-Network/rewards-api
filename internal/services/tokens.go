@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/models"
+	_ "github.com/lib/pq"
 	"github.com/volatiletech/sqlboiler/queries"
 )
 
@@ -28,7 +29,6 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 	currentWeeklyAllocation := initialAllocationAmount * math.Pow((1+discountRate), float64(issuanceYear))
 	dimo := new(big.Float)
 	dimoBigInt := fmt.Sprintf("%d0000000", int64(currentWeeklyAllocation*10e11))
-	fmt.Println(dimoBigInt)
 	dimo.SetString(dimoBigInt)
 
 	currentWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
@@ -44,8 +44,8 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 	err = queries.Raw(`select sum(streak_points) + sum(integration_points) as "distributed_points" from rewards`).Bind(ctx, t.DB().Writer, &pts)
 
 	type RewardsByDevice struct {
-		UserDeviceID string
-		Tokens       *big.Float
+		VehicleNode string
+		Tokens      *big.Float
 	}
 	var rewards []RewardsByDevice
 	for _, points := range currentWeekRewards {
@@ -57,7 +57,7 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 		userShare := new(big.Float).Quo(userTotalPoints, dist)
 
 		dimoEarned := big.NewFloat(0).Mul(userShare, dimo)
-		rewards = append(rewards, RewardsByDevice{UserDeviceID: points.UserDeviceID, Tokens: dimoEarned})
+		rewards = append(rewards, RewardsByDevice{VehicleNode: points.UserDeviceID, Tokens: dimoEarned})
 	}
 
 	return nil
