@@ -23,11 +23,12 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 
 	t.Logger.Info().Msgf("Running token allocation for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
-	issuanceYear := float64(issuanceWeek / 52)
+	issuanceYear := int(issuanceWeek / 52)
 
-	currentWeeklyAllocation := initialAllocationAmount * math.Pow((1+discountRate), issuanceYear)
+	currentWeeklyAllocation := initialAllocationAmount * math.Pow((1+discountRate), float64(issuanceYear))
 	dimo := new(big.Float)
-	dimoBigInt := fmt.Sprintf("%d0000000000000000", int64(currentWeeklyAllocation*100))
+	dimoBigInt := fmt.Sprintf("%d0000000", int64(currentWeeklyAllocation*10e11))
+	fmt.Println(dimoBigInt)
 	dimo.SetString(dimoBigInt)
 
 	currentWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
@@ -46,11 +47,8 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 		UserDeviceID string
 		Tokens       *big.Float
 	}
-
 	var rewards []RewardsByDevice
-
 	for _, points := range currentWeekRewards {
-
 		sp := big.NewFloat(float64(points.StreakPoints))
 		ip := big.NewFloat(float64(points.IntegrationPoints))
 		dist := big.NewFloat(pts.DistributedPoints)
