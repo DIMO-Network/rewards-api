@@ -3,7 +3,6 @@ package services
 import (
 	"fmt"
 	"log"
-	"math"
 	"math/big"
 	"os"
 	"time"
@@ -18,6 +17,11 @@ import (
 const initialAllocationAmount float64 = 1300000.00
 const discountRate float64 = -0.15
 
+var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+var base = new(big.Int).Mul(big.NewInt(1_300_000), ether)
+var rateNum = big.NewInt(17)
+var rateDen = big.NewInt(20)
+
 type userPointData struct {
 	VehicleNode int            `csv:"vehicle_node"`
 	Owner       common.Address `csv:"owner"`
@@ -27,7 +31,7 @@ type userPointData struct {
 type userTokenData struct {
 	VehicleNode int
 	Owner       common.Address
-	Value       *big.Float
+	Value       *big.Int
 }
 
 func (t *RewardsTask) DistributeRewards(issuanceWeek int) error {
@@ -81,45 +85,59 @@ func (t *RewardsTask) fetchUserData(issuanceWeek int) []*userPointData {
 	return userPoints
 }
 
-func determineWeeklyAllocation(issuanceWeek int) *big.Float {
-	issuanceYear := int(issuanceWeek / 52)
+func yearlyDecrease(s *big.Int, yr int) *big.Int {
 
-	currentWeeklyAllocation := initialAllocationAmount * math.Pow((1+discountRate), float64(issuanceYear))
-	dimo := new(big.Float)
-	dimoBigInt := fmt.Sprintf("%d0000000", int64(currentWeeklyAllocation*10e11))
-	dimo.SetString(dimoBigInt)
+	for yr > 0 {
+		s.Mul(s, rateNum)
+		s.Div(s, rateDen)
+		yr--
+	}
 
-	return dimo
+	return s
 }
 
 // AllocateTokens determine token allocation based on points earned by user during issuance week
 func (t *RewardsTask) allocateTokens(usrData []*userPointData, issuanceWeek int) []userTokenData {
 
-	dimo := determineWeeklyAllocation(issuanceWeek)
+	issuanceYear := issuanceWeek / 52
+	val := new(big.Int).Set(base)
+	dimo := yearlyDecrease(val, issuanceYear)
+	fmt.Println("Issuance Week: ", issuanceWeek, " Issuance Year: ", issuanceYear)
+	fmt.Println("DIMO Allocated This Week: ", dimo)
 
 	type allPointsDistributed struct {
 		DistributedPoints big.Float
 	}
 
-	var allPoints big.Float
+	var allPoints big.Int
 	for _, p := range usrData {
-		result := big.NewFloat(float64(p.Points))
+		result := big.NewInt(int64(p.Points))
 		allPoints.Add(&allPoints, result)
 	}
 
 	userTokens := []userTokenData{}
 
 	for _, points := range usrData {
-		pts := big.NewFloat(float64(points.Points))
-		userShare := new(big.Float).Quo(pts, &allPoints)
-		dimoEarned := big.NewFloat(0).Mul(userShare, dimo)
-		userTokens = append(userTokens, userTokenData{VehicleNode: points.VehicleNode, Owner: points.Owner, Value: dimoEarned})
+		pts := big.NewInt(int64(points.Points))
+		pts.Mul(pts, dimo)
+		pts.Div(pts, &allPoints)
+		userTokens = append(userTokens, userTokenData{VehicleNode: points.VehicleNode, Owner: points.Owner, Value: pts})
+	}
+
+	for _, tkns := range userTokens {
+		fmt.Println("\tOwner: ", tkns.Owner, " Amount: ", format(tkns.Value))
 	}
 
 	return userTokens
 }
 
 func (t *RewardsTask) distributeTokens(tknData []userTokenData) error {
-	// TODO
+	// TO DO
+
 	return nil
+}
+
+func format(n *big.Int) string {
+	d, m := new(big.Int).DivMod(n, ether, new(big.Int))
+	return fmt.Sprintf("%7s.%018s", d, m)
 }
