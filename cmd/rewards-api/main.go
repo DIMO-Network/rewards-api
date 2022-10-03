@@ -86,6 +86,7 @@ func main() {
 		v1 := app.Group("/v1", jwtAuth)
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
+		v1.Get("/points", rewardsController.GetPointsThisWeek)
 
 		go startGRPCServer(&settings, pdb.DBS, &logger)
 

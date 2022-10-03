@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -304,4 +305,26 @@ type HistoryResponseWeek struct {
 	End time.Time `json:"end" example:"2022-04-18T05:00:00Z"`
 	// Points is the number of points the user earned this week.
 	Points int `json:"points" example:"4000"`
+}
+
+// GetPointsThisWeek godoc
+// @Description  Total number of points a user has earned this week.
+// @Success      200 {object} controllers.UserResponse
+// @Security     BearerAuth
+// @Router       /points [get]
+func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
+	now := time.Now()
+	weekNum := services.GetWeekNum(now)
+
+	pointsDistributed, err := models.WeeklyPointTotals(models.WeeklyPointTotalWhere.ID.EQ(weekNum)).One(c.Context(), r.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	if err != nil {
+		log.Err(err).Msg("Failed to retrieve total of all points earned this week.")
+		return opaqueInternalError
+	}
+
+	return c.JSON(map[string]interface{}{"weekStart": pointsDistributed.WeekStart, "weekEnd": pointsDistributed.WeekEnd, "pointsDistributed": pointsDistributed.Points})
 }

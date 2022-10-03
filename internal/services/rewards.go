@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -9,8 +10,11 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb "github.com/DIMO-Network/shared/api/devices"
+	"github.com/ericlagergren/decimal"
 	"github.com/rs/zerolog"
+	"github.com/volatiletech/sqlboiler/queries"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -21,6 +25,10 @@ import (
 var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
+
+type allPointsDistributed struct {
+	DistributedPoints *big.Int `boil:"distributed_points"`
+}
 
 // GeetWeekNum calculates the number of the week in which the given time lies for DIMO point
 // issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
@@ -298,6 +306,34 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished
 	if _, err := week.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
+		return err
+	}
+
+	t.sumAllPoints(issuanceWeek, weekStart, weekEnd)
+
+	return nil
+}
+
+func (t *RewardsTask) sumAllPoints(issuanceWk int, wkStart, wkEnd time.Time) error {
+	ctx := context.Background()
+	var pts allPointsDistributed
+
+	err := queries.Raw(`select sum(streak_points) + sum(integration_points) as "distributed_points" from rewards`).Bind(ctx, t.DB().Writer, &pts)
+	if err != nil {
+		return err
+	}
+
+	weeklyPointDistribution := models.WeeklyPointTotal{
+		ID:        issuanceWk,
+		WeekStart: wkStart,
+		WeekEnd:   wkEnd,
+		Points:    types.NewNullDecimal(new(decimal.Big).SetBigMantScale(pts.DistributedPoints, 0)),
+	}
+
+	if err := weeklyPointDistribution.Upsert(ctx, t.DB().Writer.DB, true,
+		[]string{models.WeeklyPointTotalColumns.ID},
+		boil.Whitelist(models.WeeklyPointTotalColumns.Points),
+		boil.Infer()); err != nil {
 		return err
 	}
 
