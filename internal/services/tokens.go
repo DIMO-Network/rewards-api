@@ -1,16 +1,16 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/big"
-	"os"
-	"time"
 
-	"github.com/DIMO-Network/rewards-api/internal/config"
-	"github.com/DIMO-Network/shared"
+	"github.com/DIMO-Network/rewards-api/internal/contracts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gocarina/gocsv"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	_ "github.com/lib/pq"
 )
 
@@ -29,80 +29,96 @@ type userPointData struct {
 }
 
 type userTokenData struct {
-	VehicleNode int
-	Owner       common.Address
-	Value       *big.Int
+	VehicleNode []*big.Int
+	Owner       []common.Address
+	Value       []*big.Int
 }
 
-func (t *RewardsTask) DistributeRewards(issuanceWeek int) error {
+// func (t *RewardsTask) DistributeRewards(issuanceWeek int) error {
+// 	userPointData := t.fetchUserData(issuanceWeek)
+// 	tokenAllocations := t.allocateTokens(userPointData, issuanceWeek)
+// 	err := t.distributeTokens(tokenAllocations)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	return nil
 
-	userPointData := t.fetchUserData(issuanceWeek)
-	tokenAllocations := t.allocateTokens(userPointData, issuanceWeek)
-	err := t.distributeTokens(tokenAllocations)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
+// }
 
-}
+// func (t *RewardsTask) fetchUserData(issuanceWeek int) error {
+// 	ctx := context.Background()
+// 	weeklyDistribution, err := models.IssuanceWeeks(
+// 		models.IssuanceWeekWhere.ID.EQ(issuanceWeek),
+// 	).One(ctx, t.DB().Reader.DB)
+// 	if err != nil {
+// 		return err
+// 	}
 
-func (t *RewardsTask) fetchUserData(issuanceWeek int) []*userPointData {
-	// ctx := context.Background()
+// 	pointsDistributed := weeklyDistribution.PointsDistributed
+// 	tokensAllocated := big.Int(weeklyDistribution.WeeklyTokenAllocation)
 
-	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
-	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
+// 	devices, err := models.Rewards(
+// 		models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
+// 	).All(ctx, t.DB().Reader.DB)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	t.Logger.Info().Msgf("Running token allocation for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
+// 	for n, device := range devices {
 
-	// currentWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
-	// if err != nil {
-	// 	return err
-	// }
+// 	}
 
-	// type allPointsDistributed struct {
-	// 	DistributedPoints float64 `boil:"distributed_points"`
-	// }
+// // open file
+// settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+// f, err := os.Open(settings.Filepath)
+// if err != nil {
+// 	log.Fatal(err)
+// }
 
-	// var pts allPointsDistributed
-	// err = queries.Raw(`select sum(streak_points) + sum(integration_points) as "distributed_points" from rewards`).Bind(ctx, t.DB().Writer, &pts)
+// // remember to close the file at the end of the program
+// defer f.Close()
 
-	// open file
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
-	f, err := os.Open(settings.Filepath)
-	if err != nil {
-		log.Fatal(err)
-	}
+// userPoints := []*userPointData{}
 
-	// remember to close the file at the end of the program
-	defer f.Close()
+// if err := gocsv.UnmarshalFile(f, &userPoints); err != nil {
+// 	panic(err)
+// }
 
-	userPoints := []*userPointData{}
+// return userPoints
+// }
 
-	if err := gocsv.UnmarshalFile(f, &userPoints); err != nil {
-		panic(err)
-	}
+// weeklyTokenAllocation determine number of tokens allocated to all eligible users in a given week
+func WeeklyTokenAllocation(issuanceWeek int) *big.Int {
 
-	return userPoints
-}
-
-func yearlyDecrease(s *big.Int, yr int) *big.Int {
+	yr := issuanceWeek / 52
+	// val := new(big.Int).Set(base)
+	val := new(big.Int).Set(new(big.Int).Mul(big.NewInt(1_105_000), ether))
 
 	for yr > 0 {
-		s.Mul(s, rateNum)
-		s.Div(s, rateDen)
+		val.Mul(val, rateNum)
+		val.Div(val, rateDen)
 		yr--
 	}
 
-	return s
+	return val
+}
+
+// CalculateTokenAllocation determine number of tokens an individual device earned in a given week
+func CalculateTokenAllocation(devicePointsEarned, totalPointsDistributed int, weeklyTokenAllocation *big.Int) *big.Int {
+
+	devicePoints := big.NewInt(int64(devicePointsEarned))
+	allPoints := big.NewInt(int64(totalPointsDistributed))
+	devicePoints.Mul(devicePoints, weeklyTokenAllocation)
+	devicePoints.Div(devicePoints, allPoints)
+
+	return devicePoints
 }
 
 // AllocateTokens determine token allocation based on points earned by user during issuance week
-func (t *RewardsTask) allocateTokens(usrData []*userPointData, issuanceWeek int) []userTokenData {
+func (t *RewardsTask) allocateTokens(usrData []*userPointData, issuanceWeek int) userTokenData {
 
-	issuanceYear := issuanceWeek / 52
-	val := new(big.Int).Set(base)
-	dimo := yearlyDecrease(val, issuanceYear)
-	fmt.Println("Issuance Week: ", issuanceWeek, " Issuance Year: ", issuanceYear)
+	dimo := WeeklyTokenAllocation(issuanceWeek)
+	fmt.Println("Issuance Week: ", issuanceWeek, " Issuance Year: ", issuanceWeek/52)
 	fmt.Println("DIMO Allocated This Week: ", dimo)
 
 	type allPointsDistributed struct {
@@ -115,24 +131,81 @@ func (t *RewardsTask) allocateTokens(usrData []*userPointData, issuanceWeek int)
 		allPoints.Add(&allPoints, result)
 	}
 
-	userTokens := []userTokenData{}
+	userTokens := userTokenData{}
 
 	for _, points := range usrData {
 		pts := big.NewInt(int64(points.Points))
 		pts.Mul(pts, dimo)
 		pts.Div(pts, &allPoints)
-		userTokens = append(userTokens, userTokenData{VehicleNode: points.VehicleNode, Owner: points.Owner, Value: pts})
+
+		userTokens.VehicleNode = append(userTokens.VehicleNode, big.NewInt(int64(points.VehicleNode)))
+		userTokens.Owner = append(userTokens.Owner, points.Owner)
+		userTokens.Value = append(userTokens.Value, pts)
 	}
 
-	for _, tkns := range userTokens {
-		fmt.Println("\tOwner: ", tkns.Owner, " Amount: ", format(tkns.Value))
+	for n, _ := range userTokens.Owner {
+		fmt.Println("\tOwner: ", userTokens.Owner[n], " Amount: ", format(userTokens.Value[n]))
 	}
 
 	return userTokens
 }
 
-func (t *RewardsTask) distributeTokens(tknData []userTokenData) error {
-	// TO DO
+func (t *RewardsTask) distributeTokens(tknData userTokenData) error {
+
+	// connect to ethereum clinet (local for now)
+	client, err := ethclient.Dial("http://localhost:8545")
+	if err != nil {
+		log.Fatal(err)
+	}
+	local, _ := client.NetworkID(context.Background())
+	fmt.Println("Connected to Local Eth Client: ", local)
+
+	privateKey, err := crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	auth := bind.NewKeyedTransactor(privateKey)
+	auth.GasPrice = gasPrice
+
+	issuance, err := contracts.NewAbi(common.HexToAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3"), client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// put value in twice instead of vehicle node bc batch transfer is expecting a big int and didn't feel like changing it rn
+	transaction, err := issuance.AbiTransactor.BatchTransfer(auth, tknData.Owner, tknData.Value, tknData.VehicleNode)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	txHash := transaction.Hash()
+	fmt.Println("Transaction Hash: ", txHash)
+	rcpt, err := client.TransactionReceipt(context.Background(), txHash)
+	fmt.Println("Receipt: ", rcpt)
+
+	if rcpt.Status != 1 {
+		log.Fatal("raise an issue!!!")
+	}
+
+	// logLen := len(rcpt.Logs)
+	for _, lg := range rcpt.Logs {
+
+		if lg.Topics[0] == common.HexToHash("0x57e1000ba5ba7b6ab6670639de9fc3db34d05ef2bbce4a09d60dda560387b0ea") {
+			transferred, err := issuance.ParseTokensTransferred(*lg)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(transferred.User, transferred.VehicleNodeId, transferred.Amount)
+
+		}
+
+	}
 
 	return nil
 }

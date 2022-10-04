@@ -164,7 +164,7 @@ func main() {
 			DB:          pdb.DBS,
 			Logger:      &logger,
 		}
-		if err := task.DistributeRewards(week); err != nil {
+		if err := task.Allocate(week); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to allocate tokens.")
 		}
 	default:

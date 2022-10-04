@@ -12,7 +12,7 @@ import (
 	pb "github.com/DIMO-Network/shared/api/devices"
 	"github.com/ericlagergren/decimal"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/sqlboiler/queries"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
@@ -26,8 +26,12 @@ var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
 
-type allPointsDistributed struct {
+type AllPointsDistributed struct {
 	DistributedPoints *big.Int `boil:"distributed_points"`
+}
+
+type DeviceTotalPoints struct {
+	DevicePoints int64 `boil:"device_points"`
 }
 
 // GeetWeekNum calculates the number of the week in which the given time lies for DIMO point
@@ -116,6 +120,7 @@ func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb.ListIntegration
 
 func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	ctx := context.Background()
+	var totalPointsDistributed int64
 
 	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
 	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
@@ -129,11 +134,13 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		return err
 	}
 
+	dimo := WeeklyTokenAllocation(issuanceWeek)
 	week := models.IssuanceWeek{
-		ID:        issuanceWeek,
-		JobStatus: models.IssuanceWeeksJobStatusStarted,
-		StartsAt:  weekStart,
-		EndsAt:    weekEnd,
+		ID:                    issuanceWeek,
+		JobStatus:             models.IssuanceWeeksJobStatusStarted,
+		StartsAt:              weekStart,
+		EndsAt:                weekEnd,
+		WeeklyTokenAllocation: types.NewNullDecimal(new(decimal.Big).SetBigMantScale(dimo, 0)),
 	}
 
 	if err := week.Upsert(ctx, t.DB().Writer.DB, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
@@ -224,10 +231,12 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			}
 			delete(lastWeekByDevice, override.UserDeviceID)
 		}
-
-		setStreakFields(override, ComputeStreak(streakInput))
+		streak := ComputeStreak(streakInput)
+		setStreakFields(override, streak)
+		totalPointsDistributed += int64(streak.Points)
 
 		override.IntegrationPoints = integCalc.Calculate(override.IntegrationIds)
+		totalPointsDistributed += int64(override.IntegrationPoints)
 
 		if _, err := override.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
@@ -274,12 +283,14 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			}
 			delete(lastWeekByDevice, device.ID)
 		}
-
-		setStreakFields(thisWeek, ComputeStreak(streakInput))
+		streak := ComputeStreak(streakInput)
+		setStreakFields(thisWeek, streak)
+		totalPointsDistributed += int64(streak.Points)
 
 		// Integration or "connected method" rewards.
 		thisWeek.IntegrationIds = device.Integrations
 		thisWeek.IntegrationPoints = integCalc.Calculate(device.Integrations)
+		totalPointsDistributed += int64(thisWeek.IntegrationPoints)
 
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
@@ -298,42 +309,69 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			ExistingConnectionStreak:    lastWeek.ConnectionStreak,
 			ExistingDisconnectionStreak: lastWeek.DisconnectionStreak,
 		}
-		setStreakFields(thisWeek, ComputeStreak(streakInput))
+		streak := ComputeStreak(streakInput)
+		setStreakFields(thisWeek, streak)
+		totalPointsDistributed += int64(streak.Points)
+
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
 		}
 	}
 
-	week.JobStatus = models.IssuanceWeeksJobStatusFinished
+	week.JobStatus = models.IssuanceWeeksJobStatusPointsAllocated
+	week.PointsDistributed = null.Int64From(totalPointsDistributed)
 	if _, err := week.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}
 
-	t.sumAllPoints(issuanceWeek, weekStart, weekEnd)
-
 	return nil
 }
 
-func (t *RewardsTask) sumAllPoints(issuanceWk int, wkStart, wkEnd time.Time) error {
+func (t *RewardsTask) Allocate(issuanceWeek int) error {
 	ctx := context.Background()
-	var pts allPointsDistributed
 
-	err := queries.Raw(`select sum(streak_points) + sum(integration_points) as "distributed_points" from rewards`).Bind(ctx, t.DB().Writer, &pts)
+	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
+	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
+
+	t.Logger.Info().Msgf("Running token allocation for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
+
+	deviceRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
 	if err != nil {
 		return err
 	}
-
-	weeklyPointDistribution := models.WeeklyPointTotal{
-		ID:        issuanceWk,
-		WeekStart: wkStart,
-		WeekEnd:   wkEnd,
-		Points:    types.NewNullDecimal(new(decimal.Big).SetBigMantScale(pts.DistributedPoints, 0)),
+	distribution, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.DB().Reader)
+	if err != nil {
+		return err
+	}
+	tokensDistributed, bool := distribution.WeeklyTokenAllocation.Int64()
+	if !bool {
+		return err
 	}
 
-	if err := weeklyPointDistribution.Upsert(ctx, t.DB().Writer.DB, true,
-		[]string{models.WeeklyPointTotalColumns.ID},
-		boil.Whitelist(models.WeeklyPointTotalColumns.Points),
-		boil.Infer()); err != nil {
+	distribution.JobStatus = models.IssuanceWeeksJobStatusBeginTokenDistribution
+	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
+		return err
+	}
+
+	for _, device := range deviceRewards {
+		devicePoints := device.IntegrationPoints + device.StreakPoints
+		deviceTokens := CalculateTokenAllocation(devicePoints, int(distribution.PointsDistributed.Int64), big.NewInt(tokensDistributed))
+
+		update := models.TokenAllocation{
+			IssuanceWeekID: issuanceWeek,
+			UserDeviceID:   device.UserDeviceID,
+			Tokens:         types.NewNullDecimal(new(decimal.Big).SetBigMantScale(deviceTokens, 0)),
+			WeekStart:      weekStart,
+			WeekEnd:        weekEnd,
+		}
+
+		if _, err := update.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
+			return err
+		}
+	}
+
+	distribution.JobStatus = models.IssuanceWeeksJobStatusFinished
+	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}
 

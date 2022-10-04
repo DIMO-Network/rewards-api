@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 SET search_path TO rewards_api, public;
 
-CREATE TYPE issuance_weeks_job_status AS ENUM ('Started', 'Failed', 'Finished');
+CREATE TYPE issuance_weeks_job_status AS ENUM ('Started', 'Failed', 'PointsAllocated', 'BeginTokenDistribution', 'Finished');
 
 CREATE TABLE issuance_weeks (
     id int, -- This number is the number of complete weeks that have passed since the
@@ -11,7 +11,9 @@ CREATE TABLE issuance_weeks (
     job_status issuance_weeks_job_status NOT NULL,
 
     created_at timestamptz NOT NULL DEFAULT current_timestamp,
-    updated_at timestamptz NOT NULL DEFAULT current_timestamp
+    updated_at timestamptz NOT NULL DEFAULT current_timestamp,
+    points_distributed bigint,
+    weekly_token_allocation numeric(24, 0)
 );
 
 ALTER TABLE issuance_weeks ADD CONSTRAINT issuance_weeks_id_pkey PRIMARY KEY (id);

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/database"
@@ -10,7 +11,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -287,8 +287,19 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		weeks[i].End = services.NumToWeekEnd(weekNum)
 	}
 
-	for _, r := range rs {
-		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.IntegrationPoints
+	for _, s := range rs {
+		distribution, err := models.TokenAllocations(models.TokenAllocationWhere.IssuanceWeekID.EQ(s.IssuanceWeekID), models.TokenAllocationWhere.UserDeviceID.EQ(s.UserDeviceID)).One(c.Context(), r.DB().Reader)
+		if err != nil {
+			logger.Err(err).Msg("unable to get device token allocation from table")
+			return err
+		}
+		deviceTokens, bool := distribution.Tokens.Int64()
+		if !bool {
+			logger.Fatal().Msg("unable to convert weekly token allocation")
+		}
+
+		weeks[maxWeek-s.IssuanceWeekID].Points += s.StreakPoints + s.IntegrationPoints
+		weeks[maxWeek-s.IssuanceWeekID].Tokens = big.NewInt(deviceTokens)
 	}
 
 	return c.JSON(HistoryResponse{Weeks: weeks})
@@ -305,6 +316,8 @@ type HistoryResponseWeek struct {
 	End time.Time `json:"end" example:"2022-04-18T05:00:00Z"`
 	// Points is the number of points the user earned this week.
 	Points int `json:"points" example:"4000"`
+	// Tokens is the number of tokens the user earned this week.
+	Tokens *big.Int `json:"tokens" example:"4000"`
 }
 
 // GetPointsThisWeek godoc
@@ -316,15 +329,10 @@ func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
 	now := time.Now()
 	weekNum := services.GetWeekNum(now)
 
-	pointsDistributed, err := models.WeeklyPointTotals(models.WeeklyPointTotalWhere.ID.EQ(weekNum)).One(c.Context(), r.DB().Reader)
+	pointsDistributed, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(weekNum)).One(c.Context(), r.DB().Reader)
 	if err != nil {
 		return err
 	}
 
-	if err != nil {
-		log.Err(err).Msg("Failed to retrieve total of all points earned this week.")
-		return opaqueInternalError
-	}
-
-	return c.JSON(map[string]interface{}{"weekStart": pointsDistributed.WeekStart, "weekEnd": pointsDistributed.WeekEnd, "pointsDistributed": pointsDistributed.Points})
+	return c.JSON(map[string]interface{}{"weekStart": pointsDistributed.StartsAt, "weekEnd": pointsDistributed.EndsAt, "pointsDistributed": pointsDistributed.PointsDistributed})
 }
