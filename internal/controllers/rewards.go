@@ -133,6 +133,23 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		userPts += pts
 
+		tokens, err := models.TokenAllocations(
+			models.TokenAllocationWhere.UserDeviceID.EQ(device.Id),
+			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" desc"),
+		).All(c.Context(), r.DB().Reader)
+		if err != nil {
+			dlog.Err(err).Msg("Failed to retrieve previously earned tokens.")
+			return opaqueInternalError
+		}
+		tkns := big.NewInt(0)
+		for _, t := range tokens {
+			deviceTokens, bool := t.Tokens.Int64()
+			if !bool {
+				logger.Fatal().Msg("unable to convert weekly token allocation")
+			}
+			tkns.Add(tkns, big.NewInt(deviceTokens))
+		}
+
 		lvl := 1
 		connectionStreak := 0
 		disconnectionStreak := 0
@@ -145,6 +162,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		outLi[i] = &UserResponseDevice{
 			ID:                   device.Id,
 			Points:               pts,
+			Tokens:               tkns,
 			ConnectedThisWeek:    activeThisWeek,
 			IntegrationsThisWeek: outInts,
 			LastActive:           maybeLastActive,
@@ -194,6 +212,8 @@ type UserResponseDevice struct {
 	ID string `json:"id" example:"27cv7gVTh9h4RJuTsmJHpBcr4I9"`
 	// Points is the total number of points that the device has earned across all weeks.
 	Points int `json:"points" example:"5000"`
+	// Tokens is the total number of tokens that the device has earned across all weeks.
+	Tokens *big.Int `json:"tokens" example:"5000"`
 	// ConnectedThisWeek is true if we've seen activity from the device during the current issuance
 	// week.
 	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
