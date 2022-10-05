@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	definitions_pb "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	devices_pb "github.com/DIMO-Network/shared/api/devices"
+	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc"
@@ -88,7 +88,7 @@ func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
 	return 0
 }
 
-func (t *RewardsTask) createIntegrationPointsCalculator(resp *definitions_pb.GetIntegrationResponse) *integrationPointsCalculator {
+func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb_defs.GetIntegrationResponse) *integrationPointsCalculator {
 	calc := new(integrationPointsCalculator)
 
 	for _, integration := range resp.Integrations {
@@ -151,7 +151,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 	defer definitionsConn.Close()
 
-	definitionsClient := definitions_pb.NewDeviceDefinitionServiceClient(definitionsConn)
+	definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 	integs, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
@@ -163,7 +163,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		vendorToIntegration[i.Vendor] = i.Id
 	}
 
-	deviceClient := devices_pb.NewUserDeviceServiceClient(devicesConn)
+	deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB().Reader)
 	if err != nil {
@@ -192,7 +192,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 		devicesOverriddenThisWeek.Add(override.UserDeviceID)
 
-		ud, err := deviceClient.GetUserDevice(ctx, &devices_pb.GetUserDeviceRequest{Id: override.UserDeviceID})
+		ud, err := deviceClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: override.UserDeviceID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok {
 				if s.Code() == codes.NotFound {
@@ -238,7 +238,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			continue
 		}
 
-		ud, err := deviceClient.GetUserDevice(ctx, &devices_pb.GetUserDeviceRequest{Id: device.ID})
+		ud, err := deviceClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: device.ID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok {
 				if s.Code() == codes.NotFound {

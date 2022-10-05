@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	definitions_pb "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -67,7 +67,7 @@ func main() {
 		}
 		defer devicesConn.Close()
 
-		definitionsClient := definitions_pb.NewDeviceDefinitionServiceClient(definitionsConn)
+		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
 
 		dataClient := services.NewDeviceDataClient(&settings)
