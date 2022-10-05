@@ -38,6 +38,7 @@ env:
   DEVICE_DATA_INDEX_NAME: device-status-dev*
   AWS_REGION: us-east-2
   DEVICES_API_GRPC_ADDR: devices-api-dev:8086
+  DEFINITIONS_API_GRPC_ADDR: device-definitions-api-dev:8086
 service:
   type: ClusterIP
   ports:
