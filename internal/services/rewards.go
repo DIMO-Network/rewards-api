@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -358,6 +359,7 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 		update := models.TokenAllocation{
 			IssuanceWeekID: issuanceWeek,
 			UserDeviceID:   device.UserDeviceID,
+			UserID:         device.UserID,
 			Tokens:         types.NewNullDecimal(new(decimal.Big).SetBigMantScale(deviceTokens, 0)),
 			WeekStart:      weekStart,
 			WeekEnd:        weekEnd,
@@ -371,6 +373,42 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (t *RewardsTask) Distribute(issuanceWeek int, settings *config.Settings, logger *zerolog.Logger) error {
+	ctx := context.Background()
+
+	// ethClient, err := NewTokenDistributionService(settings, logger)
+	// if err != nil {
+	// 	return err
+	// }
+
+	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
+	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
+	t.Logger.Info().Msgf("Running token distribution for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
+
+	checkAllocationStatus, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	if checkAllocationStatus.JobStatus != "Finished" {
+		return errors.New("token allocation not completed, cannot issue tokens")
+	}
+
+	weeklyTokenAllocation, err := models.TokenAllocations(models.TokenAllocationWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	eligibleDevices := len(weeklyTokenAllocation)
+	fmt.Println("Devices eligible for rewards: ", eligibleDevices)
+	// check that users are linked to devices in users api and grab their eth address
+	// batch eligible devices and submit transaction
+	// transaction, err := ethClient.Contract.AbiTransactor.BatchTransfer(ethClient.TransactionSigner, tknData.Owner, tknData.Value, tknData.VehicleNode)
+
+	// confirm that token distribution is complete
 	return nil
 }
 

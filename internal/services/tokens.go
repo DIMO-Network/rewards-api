@@ -2,16 +2,19 @@ package services
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"log"
 	"math/big"
 
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	_ "github.com/lib/pq"
+	"github.com/rs/zerolog"
 )
 
 const initialAllocationAmount float64 = 1300000.00
@@ -32,6 +35,54 @@ type userTokenData struct {
 	VehicleNode []*big.Int
 	Owner       []common.Address
 	Value       []*big.Int
+}
+
+type TokenDistributionService struct {
+	Client            *ethclient.Client
+	Network           *big.Int
+	TransactionSigner *bind.TransactOpts
+	Contract          *contracts.Abi
+	privateKey        *ecdsa.PrivateKey
+	log               *zerolog.Logger
+}
+
+func NewTokenDistributionService(settings *config.Settings, logger *zerolog.Logger) (*TokenDistributionService, error) {
+
+	tokenDistributor := TokenDistributionService{}
+
+	client, err := ethclient.Dial(settings.EthClientURL)
+	if err != nil {
+		return &TokenDistributionService{}, err
+	}
+	network, _ := client.NetworkID(context.Background())
+	privateKey, err := crypto.HexToECDSA(settings.HexKey)
+	if err != nil {
+		return &TokenDistributionService{}, err
+	}
+	auth := bind.NewKeyedTransactor(privateKey)
+	auth.GasPrice = big.NewInt(settings.GasPrice)
+
+	if auth.GasPrice == big.NewInt(0) {
+		gasPrice, err := client.SuggestGasPrice(context.Background())
+		if err != nil {
+			return &TokenDistributionService{}, err
+		}
+		auth.GasPrice = gasPrice
+	}
+
+	contract, err := contracts.NewAbi(common.HexToAddress(settings.ContractAddress), client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tokenDistributor.Client = client
+	tokenDistributor.Network = network
+	tokenDistributor.TransactionSigner = auth
+	tokenDistributor.Contract = contract
+	tokenDistributor.privateKey = privateKey
+	tokenDistributor.log = logger
+
+	return &tokenDistributor, nil
 }
 
 // func (t *RewardsTask) DistributeRewards(issuanceWeek int) error {

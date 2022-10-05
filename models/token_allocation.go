@@ -26,6 +26,7 @@ import (
 type TokenAllocation struct {
 	IssuanceWeekID int               `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
 	UserDeviceID   string            `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
+	UserID         string            `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
 	Tokens         types.NullDecimal `boil:"tokens" json:"tokens,omitempty" toml:"tokens" yaml:"tokens,omitempty"`
 	WeekStart      time.Time         `boil:"week_start" json:"week_start" toml:"week_start" yaml:"week_start"`
 	WeekEnd        time.Time         `boil:"week_end" json:"week_end" toml:"week_end" yaml:"week_end"`
@@ -37,12 +38,14 @@ type TokenAllocation struct {
 var TokenAllocationColumns = struct {
 	IssuanceWeekID string
 	UserDeviceID   string
+	UserID         string
 	Tokens         string
 	WeekStart      string
 	WeekEnd        string
 }{
 	IssuanceWeekID: "issuance_week_id",
 	UserDeviceID:   "user_device_id",
+	UserID:         "user_id",
 	Tokens:         "tokens",
 	WeekStart:      "week_start",
 	WeekEnd:        "week_end",
@@ -51,12 +54,14 @@ var TokenAllocationColumns = struct {
 var TokenAllocationTableColumns = struct {
 	IssuanceWeekID string
 	UserDeviceID   string
+	UserID         string
 	Tokens         string
 	WeekStart      string
 	WeekEnd        string
 }{
 	IssuanceWeekID: "token_allocation.issuance_week_id",
 	UserDeviceID:   "token_allocation.user_device_id",
+	UserID:         "token_allocation.user_id",
 	Tokens:         "token_allocation.tokens",
 	WeekStart:      "token_allocation.week_start",
 	WeekEnd:        "token_allocation.week_end",
@@ -67,12 +72,14 @@ var TokenAllocationTableColumns = struct {
 var TokenAllocationWhere = struct {
 	IssuanceWeekID whereHelperint
 	UserDeviceID   whereHelperstring
+	UserID         whereHelperstring
 	Tokens         whereHelpertypes_NullDecimal
 	WeekStart      whereHelpertime_Time
 	WeekEnd        whereHelpertime_Time
 }{
 	IssuanceWeekID: whereHelperint{field: "\"rewards_api\".\"token_allocation\".\"issuance_week_id\""},
 	UserDeviceID:   whereHelperstring{field: "\"rewards_api\".\"token_allocation\".\"user_device_id\""},
+	UserID:         whereHelperstring{field: "\"rewards_api\".\"token_allocation\".\"user_id\""},
 	Tokens:         whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"token_allocation\".\"tokens\""},
 	WeekStart:      whereHelpertime_Time{field: "\"rewards_api\".\"token_allocation\".\"week_start\""},
 	WeekEnd:        whereHelpertime_Time{field: "\"rewards_api\".\"token_allocation\".\"week_end\""},
@@ -95,8 +102,8 @@ func (*tokenAllocationR) NewStruct() *tokenAllocationR {
 type tokenAllocationL struct{}
 
 var (
-	tokenAllocationAllColumns            = []string{"issuance_week_id", "user_device_id", "tokens", "week_start", "week_end"}
-	tokenAllocationColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "week_start", "week_end"}
+	tokenAllocationAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "tokens", "week_start", "week_end"}
+	tokenAllocationColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "week_start", "week_end"}
 	tokenAllocationColumnsWithDefault    = []string{"tokens"}
 	tokenAllocationPrimaryKeyColumns     = []string{"user_device_id"}
 	tokenAllocationGeneratedColumns      = []string{}

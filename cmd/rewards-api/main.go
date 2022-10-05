@@ -88,6 +88,7 @@ func main() {
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 		v1.Get("/points", rewardsController.GetPointsThisWeek)
 		v1.Get("/tokens", rewardsController.GetTokensThisWeek)
+		v1.Get("/allocation", rewardsController.GetUserAllocation)
 
 		go startGRPCServer(&settings, pdb.DBS, &logger)
 
@@ -167,6 +168,9 @@ func main() {
 		}
 		if err := task.Allocate(week); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to allocate tokens.")
+		}
+		if err := task.Distribute(week, &settings, &logger); err != nil {
+			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to distribute tokens")
 		}
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)

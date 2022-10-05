@@ -24,6 +24,10 @@ type Settings struct {
 	DeviceDataIndexName            string `yaml:"DEVICE_DATA_INDEX_NAME"`
 	DevicesAPIGRPCAddr             string `yaml:"DEVICES_API_GRPC_ADDR"`
 	Filepath                       string `yaml:"FILE_PATH"`
+	GasPrice                       int64  `yaml:"ETH_GAS_PRICE"`
+	EthClientURL                   string `yaml:"ETH_CLIENT_URL"`
+	HexKey                         string `yaml:"PRIVATE_HEX_KEY"`
+	ContractAddress                string `yaml:"CONTRACT_ADDRESS"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

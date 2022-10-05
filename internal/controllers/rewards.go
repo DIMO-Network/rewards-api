@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"math/big"
 	"time"
 
@@ -347,6 +348,10 @@ type PointsDistributed struct {
 	Tokens    int64     `json:"tokens,omitempty"`
 }
 
+type QueryValues struct {
+	DeviceID string `query:"device_id"`
+}
+
 // GetPointsThisWeek godoc
 // @Description  Total number of points distributed to users this week
 // @Success      200 {object} controllers.UserResponse
@@ -370,6 +375,7 @@ func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
 // @Security     BearerAuth
 // @Router       /tokens [get]
 func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
+
 	now := time.Now()
 	weekNum := services.GetWeekNum(now)
 
@@ -383,4 +389,45 @@ func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(PointsDistributed{WeekStart: pointsDistributed.StartsAt, WeekEnd: pointsDistributed.EndsAt, Points: tokensDistributed})
+
+}
+
+// GetUserAllocation godoc
+// @Description  Total number of tokens allocated to a device
+// @Success      200 {object} controllers.UserResponse
+// @Security     BearerAuth
+// @Router       /allocation [get]
+func (r *RewardsController) GetUserAllocation(c *fiber.Ctx) error {
+	var params QueryValues
+	err := c.QueryParser(&params)
+	if err != nil {
+		return err
+	}
+
+	resp, err := models.TokenAllocations(models.TokenAllocationWhere.UserDeviceID.EQ(params.DeviceID)).All(c.Context(), r.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	response := make(map[string]*big.Int, 0)
+
+	for _, r := range resp {
+		num := big.NewInt(0)
+		num, ok := num.SetString(r.Tokens.String(), 10)
+		if !ok {
+			return errors.New("cannot convert data in table to big int")
+		}
+		_, ok = response[r.UserDeviceID]
+		if !ok {
+			response[r.UserDeviceID] = big.NewInt(0)
+		}
+		response[r.UserDeviceID] = response[r.UserDeviceID].Add(response[r.UserDeviceID], num)
+
+	}
+	return c.JSON(response)
+}
+
+type deviceTokens struct {
+	DeviceID string   `json:"deviceID"`
+	Tokens   *big.Int `json:"tokens"`
 }
