@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS token_allocation (
     week_end timestamptz NOT NULL
 );
 
-ALTER TABLE token_allocation ADD CONSTRAINT tokens_id_pkey PRIMARY KEY (issuance_week_id);
+ALTER TABLE token_allocation ADD CONSTRAINT user_device_pkey PRIMARY KEY (user_device_id);
 
 -- +goose StatementEnd
 

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -146,25 +147,21 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	if err := week.Upsert(ctx, t.DB().Writer.DB, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
 		return err
 	}
-
 	// These devices have each sent some signal during the issuance week.
 	devices, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
 		return err
 	}
-
 	conn, err := grpc.Dial(t.Settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-
 	integClient := pb.NewIntegrationServiceClient(conn)
 	integs, err := integClient.ListIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
-
 	integCalc := t.createIntegrationPointsCalculator(integs)
 	vendorToIntegration := make(map[string]string)
 	for _, i := range integs.Integrations {
@@ -329,12 +326,9 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 func (t *RewardsTask) Allocate(issuanceWeek int) error {
 	ctx := context.Background()
-
 	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
 	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
-
 	t.Logger.Info().Msgf("Running token allocation for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
-
 	deviceRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
 	if err != nil {
 		return err
@@ -343,19 +337,23 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 	if err != nil {
 		return err
 	}
-	tokensDistributed, bool := distribution.WeeklyTokenAllocation.Int64()
-	if !bool {
+	tknBytes, err := distribution.WeeklyTokenAllocation.MarshalText()
+	if err != nil {
 		return err
 	}
-
+	distributedTokens := new(big.Int)
+	distributedTokens, ok := distributedTokens.SetString(string(tknBytes), 10)
+	if !ok {
+		fmt.Println("SetString: error")
+		return nil
+	}
 	distribution.JobStatus = models.IssuanceWeeksJobStatusBeginTokenDistribution
 	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}
-
 	for _, device := range deviceRewards {
 		devicePoints := device.IntegrationPoints + device.StreakPoints
-		deviceTokens := CalculateTokenAllocation(devicePoints, int(distribution.PointsDistributed.Int64), big.NewInt(tokensDistributed))
+		deviceTokens := CalculateTokenAllocation(devicePoints, distribution.PointsDistributed.Int64, distributedTokens)
 
 		update := models.TokenAllocation{
 			IssuanceWeekID: issuanceWeek,
@@ -365,16 +363,14 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 			WeekEnd:        weekEnd,
 		}
 
-		if _, err := update.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
+		if err := update.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
 		}
 	}
-
 	distribution.JobStatus = models.IssuanceWeeksJobStatusFinished
 	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}
-
 	return nil
 }
 

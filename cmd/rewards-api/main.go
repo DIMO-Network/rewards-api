@@ -87,6 +87,7 @@ func main() {
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 		v1.Get("/points", rewardsController.GetPointsThisWeek)
+		v1.Get("/tokens", rewardsController.GetTokensThisWeek)
 
 		go startGRPCServer(&settings, pdb.DBS, &logger)
 

@@ -13,7 +13,7 @@ CREATE TABLE issuance_weeks (
     created_at timestamptz NOT NULL DEFAULT current_timestamp,
     updated_at timestamptz NOT NULL DEFAULT current_timestamp,
     points_distributed bigint,
-    weekly_token_allocation numeric(24, 0)
+    weekly_token_allocation numeric(28, 0)
 );
 
 ALTER TABLE issuance_weeks ADD CONSTRAINT issuance_weeks_id_pkey PRIMARY KEY (id);

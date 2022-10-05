@@ -98,7 +98,7 @@ var (
 	tokenAllocationAllColumns            = []string{"issuance_week_id", "user_device_id", "tokens", "week_start", "week_end"}
 	tokenAllocationColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "week_start", "week_end"}
 	tokenAllocationColumnsWithDefault    = []string{"tokens"}
-	tokenAllocationPrimaryKeyColumns     = []string{"issuance_week_id"}
+	tokenAllocationPrimaryKeyColumns     = []string{"user_device_id"}
 	tokenAllocationGeneratedColumns      = []string{}
 )
 
@@ -393,7 +393,7 @@ func TokenAllocations(mods ...qm.QueryMod) tokenAllocationQuery {
 
 // FindTokenAllocation retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindTokenAllocation(ctx context.Context, exec boil.ContextExecutor, issuanceWeekID int, selectCols ...string) (*TokenAllocation, error) {
+func FindTokenAllocation(ctx context.Context, exec boil.ContextExecutor, userDeviceID string, selectCols ...string) (*TokenAllocation, error) {
 	tokenAllocationObj := &TokenAllocation{}
 
 	sel := "*"
@@ -401,10 +401,10 @@ func FindTokenAllocation(ctx context.Context, exec boil.ContextExecutor, issuanc
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"rewards_api\".\"token_allocation\" where \"issuance_week_id\"=$1", sel,
+		"select %s from \"rewards_api\".\"token_allocation\" where \"user_device_id\"=$1", sel,
 	)
 
-	q := queries.Raw(query, issuanceWeekID)
+	q := queries.Raw(query, userDeviceID)
 
 	err := q.Bind(ctx, exec, tokenAllocationObj)
 	if err != nil {
@@ -756,7 +756,7 @@ func (o *TokenAllocation) Delete(ctx context.Context, exec boil.ContextExecutor)
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), tokenAllocationPrimaryKeyMapping)
-	sql := "DELETE FROM \"rewards_api\".\"token_allocation\" WHERE \"issuance_week_id\"=$1"
+	sql := "DELETE FROM \"rewards_api\".\"token_allocation\" WHERE \"user_device_id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -853,7 +853,7 @@ func (o TokenAllocationSlice) DeleteAll(ctx context.Context, exec boil.ContextEx
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *TokenAllocation) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindTokenAllocation(ctx, exec, o.IssuanceWeekID)
+	ret, err := FindTokenAllocation(ctx, exec, o.UserDeviceID)
 	if err != nil {
 		return err
 	}
@@ -892,16 +892,16 @@ func (o *TokenAllocationSlice) ReloadAll(ctx context.Context, exec boil.ContextE
 }
 
 // TokenAllocationExists checks if the TokenAllocation row exists.
-func TokenAllocationExists(ctx context.Context, exec boil.ContextExecutor, issuanceWeekID int) (bool, error) {
+func TokenAllocationExists(ctx context.Context, exec boil.ContextExecutor, userDeviceID string) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"rewards_api\".\"token_allocation\" where \"issuance_week_id\"=$1 limit 1)"
+	sql := "select exists(select 1 from \"rewards_api\".\"token_allocation\" where \"user_device_id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, issuanceWeekID)
+		fmt.Fprintln(writer, userDeviceID)
 	}
-	row := exec.QueryRowContext(ctx, sql, issuanceWeekID)
+	row := exec.QueryRowContext(ctx, sql, userDeviceID)
 
 	err := row.Scan(&exists)
 	if err != nil {

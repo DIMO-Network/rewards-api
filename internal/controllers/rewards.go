@@ -340,8 +340,15 @@ type HistoryResponseWeek struct {
 	Tokens *big.Int `json:"tokens" example:"4000"`
 }
 
+type PointsDistributed struct {
+	WeekStart time.Time `json:"week_start"`
+	WeekEnd   time.Time `json:"week_end"`
+	Points    int64     `json:"points,omitempty"`
+	Tokens    int64     `json:"tokens,omitempty"`
+}
+
 // GetPointsThisWeek godoc
-// @Description  Total number of points a user has earned this week.
+// @Description  Total number of points distributed to users this week
 // @Success      200 {object} controllers.UserResponse
 // @Security     BearerAuth
 // @Router       /points [get]
@@ -354,5 +361,26 @@ func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(map[string]interface{}{"weekStart": pointsDistributed.StartsAt, "weekEnd": pointsDistributed.EndsAt, "pointsDistributed": pointsDistributed.PointsDistributed})
+	return c.JSON(PointsDistributed{WeekStart: pointsDistributed.StartsAt, WeekEnd: pointsDistributed.EndsAt, Points: pointsDistributed.PointsDistributed.Int64})
+}
+
+// GetTokensThisWeek godoc
+// @Description  Total number of tokens distributed to users this week
+// @Success      200 {object} controllers.UserResponse
+// @Security     BearerAuth
+// @Router       /tokens [get]
+func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
+	now := time.Now()
+	weekNum := services.GetWeekNum(now)
+
+	pointsDistributed, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(weekNum)).One(c.Context(), r.DB().Reader)
+	if err != nil {
+		return err
+	}
+	tokensDistributed, bool := pointsDistributed.WeeklyTokenAllocation.Int64()
+	if !bool {
+		return err
+	}
+
+	return c.JSON(PointsDistributed{WeekStart: pointsDistributed.StartsAt, WeekEnd: pointsDistributed.EndsAt, Points: tokensDistributed})
 }

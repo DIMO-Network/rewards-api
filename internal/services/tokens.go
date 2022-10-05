@@ -104,10 +104,9 @@ func WeeklyTokenAllocation(issuanceWeek int) *big.Int {
 }
 
 // CalculateTokenAllocation determine number of tokens an individual device earned in a given week
-func CalculateTokenAllocation(devicePointsEarned, totalPointsDistributed int, weeklyTokenAllocation *big.Int) *big.Int {
-
+func CalculateTokenAllocation(devicePointsEarned int, totalPointsDistributed int64, weeklyTokenAllocation *big.Int) *big.Int {
 	devicePoints := big.NewInt(int64(devicePointsEarned))
-	allPoints := big.NewInt(int64(totalPointsDistributed))
+	allPoints := big.NewInt(totalPointsDistributed)
 	devicePoints.Mul(devicePoints, weeklyTokenAllocation)
 	devicePoints.Div(devicePoints, allPoints)
 
