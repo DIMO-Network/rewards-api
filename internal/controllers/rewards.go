@@ -3,6 +3,7 @@ package controllers
 import (
 	"time"
 
+	definitions_pb "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -15,11 +16,11 @@ import (
 )
 
 type RewardsController struct {
-	DB            func() *database.DBReaderWriter
-	Logger        *zerolog.Logger
-	DataClient    services.DeviceDataClient
-	IntegClient   pb.IntegrationServiceClient
-	DevicesClient pb.UserDeviceServiceClient
+	DB                func() *database.DBReaderWriter
+	Logger            *zerolog.Logger
+	DataClient        services.DeviceDataClient
+	DefinitionsClient definitions_pb.DeviceDefinitionServiceClient
+	DevicesClient     pb.UserDeviceServiceClient
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -52,7 +53,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
-	intDescs, err := r.IntegClient.ListIntegrations(c.Context(), &emptypb.Empty{})
+	intDescs, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
 	if err != nil {
 		return opaqueInternalError
 	}
