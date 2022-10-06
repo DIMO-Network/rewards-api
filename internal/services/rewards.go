@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"math/big"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -10,8 +12,11 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
+	"github.com/ericlagergren/decimal"
 	"github.com/rs/zerolog"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -23,7 +28,12 @@ var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
 
-// GeetWeekNum calculates the number of the week in which the given time lies for DIMO point
+var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+var base = new(big.Int).Mul(big.NewInt(1_300_000), ether)
+var rateNum = big.NewInt(17)
+var rateDen = big.NewInt(20)
+
+// GetWeekNum calculates the number of the week in which the given time lies for DIMO point
 // issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
 // zero-based.
 func GetWeekNum(t time.Time) int {
@@ -32,7 +42,7 @@ func GetWeekNum(t time.Time) int {
 	return weekNum
 }
 
-// GeetWeekNumForCron calculates the week number for the current run of the cron job. We expect
+// GetWeekNumForCron calculates the week number for the current run of the cron job. We expect
 // the job to run every Monday at 05:00 UTC, but due to skew we just round the time.
 func GetWeekNumForCron(t time.Time) int {
 	sinceStart := t.Sub(startTime)
@@ -109,6 +119,7 @@ func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb_defs.GetIntegra
 
 func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	ctx := context.Background()
+	var totalPointsDistributed int64
 
 	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
 	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
@@ -122,11 +133,13 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		return err
 	}
 
+	dimo := WeeklyTokenAllocation(issuanceWeek)
 	week := models.IssuanceWeek{
-		ID:        issuanceWeek,
-		JobStatus: models.IssuanceWeeksJobStatusStarted,
-		StartsAt:  weekStart,
-		EndsAt:    weekEnd,
+		ID:                    issuanceWeek,
+		JobStatus:             models.IssuanceWeeksJobStatusStarted,
+		StartsAt:              weekStart,
+		EndsAt:                weekEnd,
+		WeeklyTokenAllocation: types.NewNullDecimal(new(decimal.Big).SetBigMantScale(dimo, 0)),
 	}
 
 	if err := week.Upsert(ctx, t.DB().Writer.DB, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
@@ -224,9 +237,12 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			delete(lastWeekByDevice, override.UserDeviceID)
 		}
 
-		setStreakFields(override, ComputeStreak(streakInput))
+		streak := ComputeStreak(streakInput)
+		setStreakFields(override, streak)
+		totalPointsDistributed += int64(streak.Points)
 
 		override.IntegrationPoints = integCalc.Calculate(override.IntegrationIds)
+		totalPointsDistributed += int64(override.IntegrationPoints)
 
 		if _, err := override.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
@@ -274,11 +290,14 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			delete(lastWeekByDevice, device.ID)
 		}
 
-		setStreakFields(thisWeek, ComputeStreak(streakInput))
+		streak := ComputeStreak(streakInput)
+		setStreakFields(thisWeek, streak)
+		totalPointsDistributed += int64(streak.Points)
 
 		// Integration or "connected method" rewards.
 		thisWeek.IntegrationIds = device.Integrations
 		thisWeek.IntegrationPoints = integCalc.Calculate(device.Integrations)
+		totalPointsDistributed += int64(thisWeek.IntegrationPoints)
 
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
@@ -297,13 +316,16 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			ExistingConnectionStreak:    lastWeek.ConnectionStreak,
 			ExistingDisconnectionStreak: lastWeek.DisconnectionStreak,
 		}
-		setStreakFields(thisWeek, ComputeStreak(streakInput))
+		streak := ComputeStreak(streakInput)
+		setStreakFields(thisWeek, streak)
+		totalPointsDistributed += int64(streak.Points)
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
 		}
 	}
 
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished
+	week.PointsDistributed = null.Int64From(totalPointsDistributed)
 	if _, err := week.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}
@@ -311,8 +333,83 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	return nil
 }
 
+func (t *RewardsTask) Allocate(issuanceWeek int) error {
+	ctx := context.Background()
+	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
+	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
+	t.Logger.Info().Msgf("Running token allocation for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
+	deviceRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
+	if err != nil {
+		return err
+	}
+	distribution, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.DB().Reader)
+	if err != nil {
+		return err
+	}
+	tknBytes, err := distribution.WeeklyTokenAllocation.MarshalText()
+	if err != nil {
+		return err
+	}
+	distributedTokens := new(big.Int)
+	distributedTokens, ok := distributedTokens.SetString(string(tknBytes), 10)
+	if !ok {
+		fmt.Println("SetString: error")
+		return nil
+	}
+	distribution.JobStatus = models.IssuanceWeeksJobStatusBeginTokenDistribution
+	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
+		return err
+	}
+	for _, device := range deviceRewards {
+
+		deviceRow, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
+			models.RewardWhere.UserDeviceID.EQ(device.UserDeviceID)).One(ctx, t.DB().Reader)
+		if err != nil {
+			return err
+		}
+		deviceTokens := CalculateTokenAllocation(device.IntegrationPoints+device.StreakPoints, distribution.PointsDistributed.Int64, distributedTokens)
+		deviceRow.Tokens = types.NewNullDecimal(new(decimal.Big).SetBigMantScale(deviceTokens, 0))
+
+		_, err = deviceRow.Update(ctx, t.DB().Writer, boil.Infer())
+		if err != nil {
+			return err
+		}
+	}
+	distribution.JobStatus = models.IssuanceWeeksJobStatusFinished
+	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
+		return err
+	}
+	return nil
+}
+
 func setStreakFields(reward *models.Reward, streakOutput StreakOutput) {
 	reward.ConnectionStreak = streakOutput.ConnectionStreak
 	reward.DisconnectionStreak = streakOutput.DisconnectionStreak
 	reward.StreakPoints = streakOutput.Points
+}
+
+// WeeklyTokenAllocation determine number of tokens allocated to all eligible users in a given week
+func WeeklyTokenAllocation(issuanceWeek int) *big.Int {
+
+	yr := issuanceWeek / 52
+	// val := new(big.Int).Set(base)
+	val := new(big.Int).Set(new(big.Int).Mul(big.NewInt(1_105_000), ether))
+
+	for yr > 0 {
+		val.Mul(val, rateNum)
+		val.Div(val, rateDen)
+		yr--
+	}
+
+	return val
+}
+
+// CalculateTokenAllocation determine number of tokens an individual device earned in a given week
+func CalculateTokenAllocation(devicePointsEarned int, totalPointsDistributed int64, weeklyTokenAllocation *big.Int) *big.Int {
+	devicePoints := big.NewInt(int64(devicePointsEarned))
+	allPoints := big.NewInt(totalPointsDistributed)
+	devicePoints.Mul(devicePoints, weeklyTokenAllocation)
+	devicePoints.Div(devicePoints, allPoints)
+
+	return devicePoints
 }

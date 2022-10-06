@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"errors"
+	"math/big"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -133,6 +135,15 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		userPts += pts
 
+		tkns := big.NewInt(0)
+		for _, t := range rewards {
+			num, ok := tkns.SetString(t.Tokens.String(), 10)
+			if !ok {
+				return errors.New("cannot convert data in table to big int")
+			}
+			tkns.Add(tkns, num)
+		}
+
 		lvl := 1
 		connectionStreak := 0
 		disconnectionStreak := 0
@@ -145,6 +156,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		outLi[i] = &UserResponseDevice{
 			ID:                   device.Id,
 			Points:               pts,
+			Tokens:               tkns,
 			ConnectedThisWeek:    activeThisWeek,
 			IntegrationsThisWeek: outInts,
 			LastActive:           maybeLastActive,
@@ -194,6 +206,8 @@ type UserResponseDevice struct {
 	ID string `json:"id" example:"27cv7gVTh9h4RJuTsmJHpBcr4I9"`
 	// Points is the total number of points that the device has earned across all weeks.
 	Points int `json:"points" example:"5000"`
+	// Tokens is the total number of tokens that the device has earned across all weeks.
+	Tokens *big.Int `json:"tokens" example:"5000"`
 	// ConnectedThisWeek is true if we've seen activity from the device during the current issuance
 	// week.
 	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
@@ -288,7 +302,13 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	}
 
 	for _, r := range rs {
+		num := big.NewInt(0)
+		num, ok := num.SetString(r.Tokens.String(), 10)
+		if !ok {
+			return errors.New("cannot convert data in table to big int")
+		}
 		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.IntegrationPoints
+		weeks[maxWeek-r.IssuanceWeekID].Tokens = num
 	}
 
 	return c.JSON(HistoryResponse{Weeks: weeks})
@@ -305,4 +325,96 @@ type HistoryResponseWeek struct {
 	End time.Time `json:"end" example:"2022-04-18T05:00:00Z"`
 	// Points is the number of points the user earned this week.
 	Points int `json:"points" example:"4000"`
+	// Tokens is the number of tokens the user earned this week.
+	Tokens *big.Int `json:"tokens" example:"4000"`
+}
+
+type PointsDistributed struct {
+	WeekStart time.Time `json:"week_start"`
+	WeekEnd   time.Time `json:"week_end"`
+	Points    int64     `json:"points,omitempty"`
+	Tokens    int64     `json:"tokens,omitempty"`
+}
+
+type QueryValues struct {
+	DeviceID string `query:"device_id"`
+}
+
+// GetPointsThisWeek godoc
+// @Description  Total number of points distributed to users this week
+// @Success      200 {object} controllers.UserResponse
+// @Security     BearerAuth
+// @Router       /points [get]
+func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
+	now := time.Now()
+	weekNum := services.GetWeekNum(now)
+
+	pointsDistributed, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(weekNum)).One(c.Context(), r.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(PointsDistributed{WeekStart: pointsDistributed.StartsAt, WeekEnd: pointsDistributed.EndsAt, Points: pointsDistributed.PointsDistributed.Int64})
+}
+
+// GetTokensThisWeek godoc
+// @Description  Total number of tokens distributed to users this week
+// @Success      200 {object} controllers.UserResponse
+// @Security     BearerAuth
+// @Router       /tokens [get]
+func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
+
+	now := time.Now()
+	weekNum := services.GetWeekNum(now)
+
+	pointsDistributed, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(weekNum)).One(c.Context(), r.DB().Reader)
+	if err != nil {
+		return err
+	}
+	tokensDistributed, bool := pointsDistributed.WeeklyTokenAllocation.Int64()
+	if !bool {
+		return err
+	}
+
+	return c.JSON(PointsDistributed{WeekStart: pointsDistributed.StartsAt, WeekEnd: pointsDistributed.EndsAt, Points: tokensDistributed})
+
+}
+
+// GetUserAllocation godoc
+// @Description  Total number of tokens allocated to a device
+// @Success      200 {object} controllers.UserResponse
+// @Security     BearerAuth
+// @Router       /allocation [get]
+func (r *RewardsController) GetUserAllocation(c *fiber.Ctx) error {
+	var params QueryValues
+	err := c.QueryParser(&params)
+	if err != nil {
+		return err
+	}
+	resp, err := models.Rewards(models.RewardWhere.UserDeviceID.EQ(params.DeviceID)).All(c.Context(), r.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	response := make(map[string]*big.Int, 0)
+
+	for _, r := range resp {
+		num := big.NewInt(0)
+		num, ok := num.SetString(r.Tokens.String(), 10)
+		if !ok {
+			return errors.New("cannot convert data in table to big int")
+		}
+		_, ok = response[r.UserDeviceID]
+		if !ok {
+			response[r.UserDeviceID] = big.NewInt(0)
+		}
+		response[r.UserDeviceID] = response[r.UserDeviceID].Add(response[r.UserDeviceID], num)
+
+	}
+	return c.JSON(response)
+}
+
+type deviceTokens struct {
+	DeviceID string   `json:"deviceID"`
+	Tokens   *big.Int `json:"tokens"`
 }
