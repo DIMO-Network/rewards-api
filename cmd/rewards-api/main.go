@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -54,23 +55,29 @@ func main() {
 			return c.SendStatus(fiber.StatusOK)
 		})
 
-		conn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
 		}
-		defer conn.Close()
+		defer devicesConn.Close()
 
-		integClient := pb_devices.NewIntegrationServiceClient(conn)
-		deviceClient := pb_devices.NewUserDeviceServiceClient(conn)
+		definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
+		}
+		defer devicesConn.Close()
+
+		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
+		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
 
 		dataClient := services.NewDeviceDataClient(&settings)
 
 		rewardsController := controllers.RewardsController{
-			DB:            pdb.DBS,
-			Logger:        &logger,
-			IntegClient:   integClient,
-			DevicesClient: deviceClient,
-			DataClient:    dataClient,
+			DB:                pdb.DBS,
+			Logger:            &logger,
+			DefinitionsClient: definitionsClient,
+			DevicesClient:     deviceClient,
+			DataClient:        dataClient,
 		}
 
 		// secured paths

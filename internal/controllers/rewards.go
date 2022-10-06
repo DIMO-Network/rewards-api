@@ -3,10 +3,11 @@ package controllers
 import (
 	"time"
 
+	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
-	pb "github.com/DIMO-Network/shared/api/devices"
+	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
@@ -15,11 +16,11 @@ import (
 )
 
 type RewardsController struct {
-	DB            func() *database.DBReaderWriter
-	Logger        *zerolog.Logger
-	DataClient    services.DeviceDataClient
-	IntegClient   pb.IntegrationServiceClient
-	DevicesClient pb.UserDeviceServiceClient
+	DB                func() *database.DBReaderWriter
+	Logger            *zerolog.Logger
+	DataClient        services.DeviceDataClient
+	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
+	DevicesClient     pb_devices.UserDeviceServiceClient
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -44,7 +45,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	weekNum := services.GetWeekNum(now)
 	weekStart := services.NumToWeekStart(weekNum)
 
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb.ListUserDevicesForUserRequest{
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
 		UserId: userID,
 	})
 	if err != nil {
@@ -52,7 +53,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
-	intDescs, err := r.IntegClient.ListIntegrations(c.Context(), &emptypb.Empty{})
+	intDescs, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
 	if err != nil {
 		return opaqueInternalError
 	}
@@ -249,7 +250,7 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	userID := getUserID(c)
 	logger := r.Logger.With().Str("userId", userID).Logger()
 
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb.ListUserDevicesForUserRequest{
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
 		UserId: userID,
 	})
 	if err != nil {
