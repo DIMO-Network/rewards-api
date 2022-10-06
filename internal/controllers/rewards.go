@@ -134,21 +134,13 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		userPts += pts
 
-		tokens, err := models.TokenAllocations(
-			models.TokenAllocationWhere.UserDeviceID.EQ(device.Id),
-			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" desc"),
-		).All(c.Context(), r.DB().Reader)
-		if err != nil {
-			dlog.Err(err).Msg("Failed to retrieve previously earned tokens.")
-			return opaqueInternalError
-		}
 		tkns := big.NewInt(0)
-		for _, t := range tokens {
-			deviceTokens, bool := t.Tokens.Int64()
-			if !bool {
-				logger.Fatal().Msg("unable to convert weekly token allocation")
+		for _, t := range rewards {
+			num, ok := tkns.SetString(t.Tokens.String(), 10)
+			if !ok {
+				return errors.New("cannot convert data in table to big int")
 			}
-			tkns.Add(tkns, big.NewInt(deviceTokens))
+			tkns.Add(tkns, num)
 		}
 
 		lvl := 1
@@ -309,18 +301,13 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	}
 
 	for _, s := range rs {
-		distribution, err := models.TokenAllocations(models.TokenAllocationWhere.IssuanceWeekID.EQ(s.IssuanceWeekID), models.TokenAllocationWhere.UserDeviceID.EQ(s.UserDeviceID)).One(c.Context(), r.DB().Reader)
-		if err != nil {
-			logger.Err(err).Msg("unable to get device token allocation from table")
-			return err
+		num := big.NewInt(0)
+		num, ok := num.SetString(s.Tokens.String(), 10)
+		if !ok {
+			return errors.New("cannot convert data in table to big int")
 		}
-		deviceTokens, bool := distribution.Tokens.Int64()
-		if !bool {
-			logger.Fatal().Msg("unable to convert weekly token allocation")
-		}
-
 		weeks[maxWeek-s.IssuanceWeekID].Points += s.StreakPoints + s.IntegrationPoints
-		weeks[maxWeek-s.IssuanceWeekID].Tokens = big.NewInt(deviceTokens)
+		weeks[maxWeek-s.IssuanceWeekID].Tokens = num
 	}
 
 	return c.JSON(HistoryResponse{Weeks: weeks})
@@ -404,7 +391,7 @@ func (r *RewardsController) GetUserAllocation(c *fiber.Ctx) error {
 		return err
 	}
 
-	resp, err := models.TokenAllocations(models.TokenAllocationWhere.UserDeviceID.EQ(params.DeviceID)).All(c.Context(), r.DB().Reader)
+	resp, err := models.Rewards(models.RewardWhere.UserDeviceID.EQ(params.DeviceID)).All(c.Context(), r.DB().Reader)
 	if err != nil {
 		return err
 	}

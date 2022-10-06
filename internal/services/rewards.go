@@ -353,19 +353,17 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 		return err
 	}
 	for _, device := range deviceRewards {
-		devicePoints := device.IntegrationPoints + device.StreakPoints
-		deviceTokens := CalculateTokenAllocation(devicePoints, distribution.PointsDistributed.Int64, distributedTokens)
 
-		update := models.TokenAllocation{
-			IssuanceWeekID: issuanceWeek,
-			UserDeviceID:   device.UserDeviceID,
-			UserID:         device.UserID,
-			Tokens:         types.NewNullDecimal(new(decimal.Big).SetBigMantScale(deviceTokens, 0)),
-			WeekStart:      weekStart,
-			WeekEnd:        weekEnd,
+		deviceRow, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
+			models.RewardWhere.UserDeviceID.EQ(device.UserDeviceID)).One(ctx, t.DB().Reader)
+		if err != nil {
+			return err
 		}
+		deviceTokens := CalculateTokenAllocation(device.IntegrationPoints+device.StreakPoints, distribution.PointsDistributed.Int64, distributedTokens)
+		deviceRow.Tokens = types.NewNullDecimal(new(decimal.Big).SetBigMantScale(deviceTokens, 0))
 
-		if err := update.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
+		_, err = deviceRow.Update(ctx, t.DB().Writer, boil.Infer())
+		if err != nil {
 			return err
 		}
 	}
@@ -397,7 +395,7 @@ func (t *RewardsTask) Distribute(issuanceWeek int, settings *config.Settings, lo
 		return errors.New("token allocation not completed, cannot issue tokens")
 	}
 
-	weeklyTokenAllocation, err := models.TokenAllocations(models.TokenAllocationWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
+	weeklyTokenAllocation, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
 	if err != nil {
 		return err
 	}

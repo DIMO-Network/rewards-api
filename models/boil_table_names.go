@@ -4,11 +4,9 @@
 package models
 
 var TableNames = struct {
-	IssuanceWeeks   string
-	Rewards         string
-	TokenAllocation string
+	IssuanceWeeks string
+	Rewards       string
 }{
-	IssuanceWeeks:   "issuance_weeks",
-	Rewards:         "rewards",
-	TokenAllocation: "token_allocation",
+	IssuanceWeeks: "issuance_weeks",
+	Rewards:       "rewards",
 }

@@ -32,6 +32,7 @@ type Reward struct {
 	StreakPoints        int               `boil:"streak_points" json:"streak_points" toml:"streak_points" yaml:"streak_points"`
 	IntegrationIds      types.StringArray `boil:"integration_ids" json:"integration_ids" toml:"integration_ids" yaml:"integration_ids"`
 	IntegrationPoints   int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
+	Tokens              types.NullDecimal `boil:"tokens" json:"tokens,omitempty" toml:"tokens" yaml:"tokens,omitempty"`
 	CreatedAt           time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt           time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	Override            bool              `boil:"override" json:"override" toml:"override" yaml:"override"`
@@ -49,6 +50,7 @@ var RewardColumns = struct {
 	StreakPoints        string
 	IntegrationIds      string
 	IntegrationPoints   string
+	Tokens              string
 	CreatedAt           string
 	UpdatedAt           string
 	Override            string
@@ -61,6 +63,7 @@ var RewardColumns = struct {
 	StreakPoints:        "streak_points",
 	IntegrationIds:      "integration_ids",
 	IntegrationPoints:   "integration_points",
+	Tokens:              "tokens",
 	CreatedAt:           "created_at",
 	UpdatedAt:           "updated_at",
 	Override:            "override",
@@ -75,6 +78,7 @@ var RewardTableColumns = struct {
 	StreakPoints        string
 	IntegrationIds      string
 	IntegrationPoints   string
+	Tokens              string
 	CreatedAt           string
 	UpdatedAt           string
 	Override            string
@@ -87,6 +91,7 @@ var RewardTableColumns = struct {
 	StreakPoints:        "rewards.streak_points",
 	IntegrationIds:      "rewards.integration_ids",
 	IntegrationPoints:   "rewards.integration_points",
+	Tokens:              "rewards.tokens",
 	CreatedAt:           "rewards.created_at",
 	UpdatedAt:           "rewards.updated_at",
 	Override:            "rewards.override",
@@ -133,6 +138,7 @@ var RewardWhere = struct {
 	StreakPoints        whereHelperint
 	IntegrationIds      whereHelpertypes_StringArray
 	IntegrationPoints   whereHelperint
+	Tokens              whereHelpertypes_NullDecimal
 	CreatedAt           whereHelpertime_Time
 	UpdatedAt           whereHelpertime_Time
 	Override            whereHelperbool
@@ -145,6 +151,7 @@ var RewardWhere = struct {
 	StreakPoints:        whereHelperint{field: "\"rewards_api\".\"rewards\".\"streak_points\""},
 	IntegrationIds:      whereHelpertypes_StringArray{field: "\"rewards_api\".\"rewards\".\"integration_ids\""},
 	IntegrationPoints:   whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
+	Tokens:              whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"tokens\""},
 	CreatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
 	UpdatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
 	Override:            whereHelperbool{field: "\"rewards_api\".\"rewards\".\"override\""},
@@ -178,9 +185,9 @@ func (r *rewardR) GetIssuanceWeek() *IssuanceWeek {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "tokens", "created_at", "updated_at", "override"}
 	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "tokens", "created_at", "updated_at", "override"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )

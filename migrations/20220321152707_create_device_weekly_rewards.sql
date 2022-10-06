@@ -31,6 +31,8 @@ CREATE TABLE rewards (
     integration_ids text[] NOT NULL DEFAULT '{}',
     integration_points int NOT NULL,
 
+    tokens numeric(28,0) DEFAULT 0,
+
     created_at timestamptz NOT NULL DEFAULT current_timestamp,
     updated_at timestamptz NOT NULL DEFAULT current_timestamp
 );
