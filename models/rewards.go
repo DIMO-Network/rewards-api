@@ -32,7 +32,7 @@ type Reward struct {
 	StreakPoints        int               `boil:"streak_points" json:"streak_points" toml:"streak_points" yaml:"streak_points"`
 	IntegrationIds      types.StringArray `boil:"integration_ids" json:"integration_ids" toml:"integration_ids" yaml:"integration_ids"`
 	IntegrationPoints   int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
-	Tokens              types.NullDecimal `boil:"tokens" json:"tokens,omitempty" toml:"tokens" yaml:"tokens,omitempty"`
+	Tokens              string            `boil:"tokens" json:"tokens" toml:"tokens" yaml:"tokens"`
 	CreatedAt           time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt           time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	Override            bool              `boil:"override" json:"override" toml:"override" yaml:"override"`
@@ -138,7 +138,7 @@ var RewardWhere = struct {
 	StreakPoints        whereHelperint
 	IntegrationIds      whereHelpertypes_StringArray
 	IntegrationPoints   whereHelperint
-	Tokens              whereHelpertypes_NullDecimal
+	Tokens              whereHelperstring
 	CreatedAt           whereHelpertime_Time
 	UpdatedAt           whereHelpertime_Time
 	Override            whereHelperbool
@@ -151,7 +151,7 @@ var RewardWhere = struct {
 	StreakPoints:        whereHelperint{field: "\"rewards_api\".\"rewards\".\"streak_points\""},
 	IntegrationIds:      whereHelpertypes_StringArray{field: "\"rewards_api\".\"rewards\".\"integration_ids\""},
 	IntegrationPoints:   whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
-	Tokens:              whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"tokens\""},
+	Tokens:              whereHelperstring{field: "\"rewards_api\".\"rewards\".\"tokens\""},
 	CreatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
 	UpdatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
 	Override:            whereHelperbool{field: "\"rewards_api\".\"rewards\".\"override\""},

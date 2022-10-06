@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -144,6 +145,39 @@ func main() {
 			Logger:      &logger,
 		}
 		if err := task.Calculate(week); err != nil {
+			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate rewards.")
+		}
+	case "allocate":
+		var week int
+		if len(os.Args) == 2 {
+			// We have to subtract 1 because we're getting the number of the newly beginning week.
+			week = services.GetWeekNumForCron(time.Now()) - 1
+		} else {
+			var err error
+			week, err = strconv.Atoi(os.Args[2])
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Could not parse week number.")
+			}
+		}
+		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
+		totalTime := 0
+		for !pdb.IsReady() {
+			if totalTime > 30 {
+				logger.Fatal().Msg("could not connect to postgres after 30 seconds")
+			}
+			time.Sleep(time.Second)
+			totalTime++
+		}
+		task := services.RewardsTask{
+			Settings:    &settings,
+			DataService: services.NewDeviceDataClient(&settings),
+			DB:          pdb.DBS,
+			Logger:      &logger,
+		}
+		if strings.ToLower(settings.Environment) == "prod" {
+			logger.Fatal().Err(err).Msg("Token allocation not ready for production.")
+		}
+		if err := task.Allocate(week); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate rewards.")
 		}
 	default:

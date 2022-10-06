@@ -12,11 +12,9 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
-	"github.com/ericlagergren/decimal"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -139,7 +137,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		JobStatus:             models.IssuanceWeeksJobStatusStarted,
 		StartsAt:              weekStart,
 		EndsAt:                weekEnd,
-		WeeklyTokenAllocation: types.NewNullDecimal(new(decimal.Big).SetBigMantScale(dimo, 0)),
+		WeeklyTokenAllocation: dimo.String(),
 	}
 
 	if err := week.Upsert(ctx, t.DB().Writer.DB, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
@@ -335,23 +333,24 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 func (t *RewardsTask) Allocate(issuanceWeek int) error {
 	ctx := context.Background()
+
 	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
 	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
 	t.Logger.Info().Msgf("Running token allocation for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
+
 	deviceRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
 	if err != nil {
 		return err
 	}
+
 	distribution, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.DB().Reader)
 	if err != nil {
 		return err
 	}
-	tknBytes, err := distribution.WeeklyTokenAllocation.MarshalText()
-	if err != nil {
-		return err
-	}
+
+	tknString := distribution.WeeklyTokenAllocation
 	distributedTokens := new(big.Int)
-	distributedTokens, ok := distributedTokens.SetString(string(tknBytes), 10)
+	distributedTokens, ok := distributedTokens.SetString(tknString, 10)
 	if !ok {
 		fmt.Println("SetString: error")
 		return nil
@@ -368,7 +367,7 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 			return err
 		}
 		deviceTokens := CalculateTokenAllocation(device.IntegrationPoints+device.StreakPoints, distribution.PointsDistributed.Int64, distributedTokens)
-		deviceRow.Tokens = types.NewNullDecimal(new(decimal.Big).SetBigMantScale(deviceTokens, 0))
+		deviceRow.Tokens = deviceTokens.String()
 
 		_, err = deviceRow.Update(ctx, t.DB().Writer, boil.Infer())
 		if err != nil {

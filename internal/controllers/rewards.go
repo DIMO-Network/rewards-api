@@ -137,7 +137,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		tkns := big.NewInt(0)
 		for _, t := range rewards {
-			num, ok := tkns.SetString(t.Tokens.String(), 10)
+			num, ok := tkns.SetString(t.Tokens, 10)
 			if !ok {
 				return errors.New("cannot convert data in table to big int")
 			}
@@ -303,7 +303,7 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 
 	for _, r := range rs {
 		num := big.NewInt(0)
-		num, ok := num.SetString(r.Tokens.String(), 10)
+		num, ok := num.SetString(r.Tokens, 10)
 		if !ok {
 			return errors.New("cannot convert data in table to big int")
 		}
@@ -333,11 +333,11 @@ type PointsDistributed struct {
 	WeekStart time.Time `json:"week_start"`
 	WeekEnd   time.Time `json:"week_end"`
 	Points    int64     `json:"points,omitempty"`
-	Tokens    int64     `json:"tokens,omitempty"`
+	Tokens    *big.Int  `json:"tokens,omitempty"`
 }
 
 type QueryValues struct {
-	DeviceID string `query:"device_id"`
+	DeviceID string `query:"deviceid"`
 }
 
 // GetPointsThisWeek godoc
@@ -349,7 +349,7 @@ func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
 	now := time.Now()
 	weekNum := services.GetWeekNum(now)
 
-	pointsDistributed, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(weekNum)).One(c.Context(), r.DB().Reader)
+	pointsDistributed, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(weekNum-1)).One(c.Context(), r.DB().Reader)
 	if err != nil {
 		return err
 	}
@@ -366,17 +366,19 @@ func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
 
 	now := time.Now()
 	weekNum := services.GetWeekNum(now)
-
-	pointsDistributed, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(weekNum)).One(c.Context(), r.DB().Reader)
+	pointsDistributed, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(weekNum-1)).One(c.Context(), r.DB().Reader)
 	if err != nil {
 		return err
 	}
-	tokensDistributed, bool := pointsDistributed.WeeklyTokenAllocation.Int64()
-	if !bool {
-		return err
+
+	tknString := pointsDistributed.WeeklyTokenAllocation
+	distributedTokens := new(big.Int)
+	distributedTokens, ok := distributedTokens.SetString(tknString, 10)
+	if !ok {
+		return errors.New("SetString: error")
 	}
 
-	return c.JSON(PointsDistributed{WeekStart: pointsDistributed.StartsAt, WeekEnd: pointsDistributed.EndsAt, Points: tokensDistributed})
+	return c.JSON(PointsDistributed{WeekStart: pointsDistributed.StartsAt, WeekEnd: pointsDistributed.EndsAt, Tokens: distributedTokens})
 
 }
 
@@ -400,7 +402,7 @@ func (r *RewardsController) GetUserAllocation(c *fiber.Ctx) error {
 
 	for _, r := range resp {
 		num := big.NewInt(0)
-		num, ok := num.SetString(r.Tokens.String(), 10)
+		num, ok := num.SetString(r.Tokens, 10)
 		if !ok {
 			return errors.New("cannot convert data in table to big int")
 		}

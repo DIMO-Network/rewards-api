@@ -13,7 +13,7 @@ CREATE TABLE issuance_weeks (
     created_at timestamptz NOT NULL DEFAULT current_timestamp,
     updated_at timestamptz NOT NULL DEFAULT current_timestamp,
     points_distributed bigint,
-    weekly_token_allocation numeric(28, 0)
+    weekly_token_allocation text NOT NULL
 );
 
 ALTER TABLE issuance_weeks ADD CONSTRAINT issuance_weeks_id_pkey PRIMARY KEY (id);
@@ -31,7 +31,7 @@ CREATE TABLE rewards (
     integration_ids text[] NOT NULL DEFAULT '{}',
     integration_points int NOT NULL,
 
-    tokens numeric(28,0) DEFAULT 0,
+    tokens text NOT NULL DEFAULT '0',
 
     created_at timestamptz NOT NULL DEFAULT current_timestamp,
     updated_at timestamptz NOT NULL DEFAULT current_timestamp
