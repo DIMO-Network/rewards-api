@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
+	"github.com/volatiletech/sqlboiler/queries"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -216,7 +216,6 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 				return err
 			}
 		}
-
 		override.UserID = ud.UserId
 
 		streakInput := StreakInput{
@@ -338,42 +337,23 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
 	t.Logger.Info().Msgf("Running token allocation for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
-	deviceRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
-	if err != nil {
-		return err
-	}
-
 	distribution, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.DB().Reader)
 	if err != nil {
 		return err
 	}
 
-	tknString := distribution.WeeklyTokenAllocation
-	distributedTokens := new(big.Int)
-	distributedTokens, ok := distributedTokens.SetString(tknString, 10)
-	if !ok {
-		fmt.Println("SetString: error")
-		return nil
-	}
 	distribution.JobStatus = models.IssuanceWeeksJobStatusBeginTokenDistribution
 	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}
-	for _, device := range deviceRewards {
-
-		deviceRow, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
-			models.RewardWhere.UserDeviceID.EQ(device.UserDeviceID)).One(ctx, t.DB().Reader)
-		if err != nil {
-			return err
-		}
-		deviceTokens := CalculateTokenAllocation(device.IntegrationPoints+device.StreakPoints, distribution.PointsDistributed.Int64, distributedTokens)
-		deviceRow.Tokens = deviceTokens.String()
-
-		_, err = deviceRow.Update(ctx, t.DB().Writer, boil.Infer())
-		if err != nil {
-			return err
-		}
+	var rowsChanged rows
+	err = queries.Raw(`SELECT UserTokenAllocation()`).Bind(ctx, t.DB().Reader, &rowsChanged)
+	if err != nil {
+		return err
 	}
+
+	// add check to make sure rows changed equals the number of eligible devices?
+
 	distribution.JobStatus = models.IssuanceWeeksJobStatusFinished
 	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
@@ -411,4 +391,8 @@ func CalculateTokenAllocation(devicePointsEarned int, totalPointsDistributed int
 	devicePoints.Div(devicePoints, allPoints)
 
 	return devicePoints
+}
+
+type rows struct {
+	Rows int `boil:"usertokenallocation"`
 }
