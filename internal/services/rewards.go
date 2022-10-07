@@ -346,13 +346,21 @@ func (t *RewardsTask) Allocate(issuanceWeek int) error {
 	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}
-	var rowsChanged rows
-	err = queries.Raw(`SELECT UserTokenAllocation()`).Bind(ctx, t.DB().Reader, &rowsChanged)
+
+	_, err = queries.Raw(`
+	UPDATE rewards_api.rewards rewards SET tokens = tbl.user_total * tbl.tkns / tbl.all_pts FROM 
+    (
+        SELECT rewards.issuance_week_id, rewards.user_device_id, rewards.user_id, (rewards.integration_points + rewards.streak_points)::numeric(26, 0) user_total, 
+            issuance_weeks.points_distributed::numeric(26, 0) all_pts,
+            issuance_weeks.weekly_token_allocation::numeric(26, 0) tkns 
+        FROM rewards_api.rewards rewards
+        LEFT JOIN rewards_api.issuance_weeks issuance_weeks ON issuance_weeks.id = rewards.issuance_week_id) tbl
+    WHERE rewards.user_device_id = tbl.user_device_id AND rewards.user_id = tbl.user_id AND rewards.issuance_week_id = tbl.issuance_week_id;`).ExecContext(ctx, t.DB().Writer)
 	if err != nil {
 		return err
 	}
 
-	// add check to make sure rows changed equals the number of eligible devices?
+	// add check to make sure rows changed equals the number of eligible devices? resp.RowsAffected()
 
 	distribution.JobStatus = models.IssuanceWeeksJobStatusFinished
 	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {

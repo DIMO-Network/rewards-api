@@ -40,29 +40,6 @@ CREATE TABLE rewards (
 ALTER TABLE rewards ADD CONSTRAINT rewards_issuance_week_id_fkey FOREIGN KEY (issuance_week_id) REFERENCES issuance_weeks(id);
 ALTER TABLE rewards ADD CONSTRAINT rewards_issuance_week_id_user_device_id_pkey PRIMARY KEY (issuance_week_id, user_device_id);
 
-
-CREATE OR REPLACE FUNCTION UserTokenAllocation() RETURNS integer
-language plpgsql
- AS
-$$
-DECLARE
-    deviceRowsChanged integer;
-BEGIN
-
-UPDATE rewards_api.rewards rewards SET tokens = tbl.user_total * tbl.tkns / tbl.all_pts FROM 
-    (
-        SELECT rewards.issuance_week_id, rewards.user_device_id, rewards.user_id, (rewards.integration_points + rewards.streak_points)::numeric(26, 0) user_total, 
-            issuance_weeks.points_distributed::numeric(26, 0) all_pts,
-            issuance_weeks.weekly_token_allocation::numeric(26, 0) tkns 
-        FROM rewards_api.rewards rewards
-        LEFT JOIN rewards_api.issuance_weeks issuance_weeks ON issuance_weeks.id = rewards.issuance_week_id) tbl
-
-    WHERE rewards.user_device_id = tbl.user_device_id AND rewards.user_id = tbl.user_id AND rewards.issuance_week_id = tbl.issuance_week_id;
-    GET DIAGNOSTICS deviceRowsChanged = ROW_COUNT;
-    RETURN deviceRowsChanged;
-END;
-$$
-
 -- +goose StatementEnd
 
 -- +goose Down
