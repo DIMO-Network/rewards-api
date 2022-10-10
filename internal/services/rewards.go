@@ -145,7 +145,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 	defer devicesConn.Close()
 
-	definitionsConn, err := grpc.Dial(t.Settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	definitionsConn, err := grpc.Dial(t.Settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
