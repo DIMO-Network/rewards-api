@@ -13,7 +13,6 @@ import (
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
-	"github.com/volatiletech/sqlboiler/queries"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -330,45 +329,6 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	return nil
 }
 
-func (t *RewardsTask) Allocate(issuanceWeek int) error {
-	ctx := context.Background()
-
-	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
-	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
-	t.Logger.Info().Msgf("Running token allocation for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
-
-	distribution, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.DB().Reader)
-	if err != nil {
-		return err
-	}
-
-	distribution.JobStatus = models.IssuanceWeeksJobStatusBeginTokenDistribution
-	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
-		return err
-	}
-
-	_, err = queries.Raw(`
-	UPDATE rewards_api.rewards rewards SET tokens = tbl.user_total * tbl.tkns / tbl.all_pts FROM 
-    (
-        SELECT rewards.issuance_week_id, rewards.user_device_id, rewards.user_id, (rewards.integration_points + rewards.streak_points)::numeric(26, 0) user_total, 
-            issuance_weeks.points_distributed::numeric(26, 0) all_pts,
-            issuance_weeks.weekly_token_allocation::numeric(26, 0) tkns 
-        FROM rewards_api.rewards rewards
-        LEFT JOIN rewards_api.issuance_weeks issuance_weeks ON issuance_weeks.id = rewards.issuance_week_id) tbl
-    WHERE rewards.user_device_id = tbl.user_device_id AND rewards.user_id = tbl.user_id AND rewards.issuance_week_id = tbl.issuance_week_id;`).ExecContext(ctx, t.DB().Writer)
-	if err != nil {
-		return err
-	}
-
-	// add check to make sure rows changed equals the number of eligible devices? resp.RowsAffected()
-
-	distribution.JobStatus = models.IssuanceWeeksJobStatusFinished
-	if _, err := distribution.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
-		return err
-	}
-	return nil
-}
-
 func setStreakFields(reward *models.Reward, streakOutput StreakOutput) {
 	reward.ConnectionStreak = streakOutput.ConnectionStreak
 	reward.DisconnectionStreak = streakOutput.DisconnectionStreak
@@ -389,18 +349,4 @@ func WeeklyTokenAllocation(issuanceWeek int) *big.Int {
 	}
 
 	return val
-}
-
-// CalculateTokenAllocation determine number of tokens an individual device earned in a given week
-func CalculateTokenAllocation(devicePointsEarned int, totalPointsDistributed int64, weeklyTokenAllocation *big.Int) *big.Int {
-	devicePoints := big.NewInt(int64(devicePointsEarned))
-	allPoints := big.NewInt(totalPointsDistributed)
-	devicePoints.Mul(devicePoints, weeklyTokenAllocation)
-	devicePoints.Div(devicePoints, allPoints)
-
-	return devicePoints
-}
-
-type rows struct {
-	Rows int `boil:"usertokenallocation"`
 }
