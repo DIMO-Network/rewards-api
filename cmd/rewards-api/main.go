@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"math/big"
 	"net"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -16,6 +16,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
@@ -26,6 +27,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 
 // @title                       DIMO Rewards API
 // @version                     1.0
@@ -147,7 +150,7 @@ func main() {
 		if err := task.Calculate(week); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate rewards.")
 		}
-	case "allocate":
+	case "test-tokens":
 		var week int
 		if len(os.Args) == 2 {
 			// We have to subtract 1 because we're getting the number of the newly beginning week.
@@ -168,18 +171,17 @@ func main() {
 			time.Sleep(time.Second)
 			totalTime++
 		}
-		task := services.RewardsTask{
-			Settings:    &settings,
-			DataService: services.NewDeviceDataClient(&settings),
-			DB:          pdb.DBS,
-			Logger:      &logger,
+
+		st := storage.NewDB(pdb.DBS)
+		err := st.AssignTokens(ctx, week, new(big.Int).Mul(big.NewInt(1_105_000), ether))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to assign tokens.")
 		}
-		if strings.ToLower(settings.Environment) == "prod" {
-			logger.Fatal().Err(err).Msg("Token allocation not ready for production.")
+		rewards, err := st.Rewards(ctx, week)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to retrieve rewards.")
 		}
-		if err := task.Allocate(week); err != nil {
-			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate rewards.")
-		}
+		logger.Info().Interface("rewards", rewards).Msg("Output.")
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}

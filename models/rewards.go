@@ -36,6 +36,7 @@ type Reward struct {
 	CreatedAt           time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt           time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	Override            bool              `boil:"override" json:"override" toml:"override" yaml:"override"`
+	Tokens              types.NullDecimal `boil:"tokens" json:"tokens,omitempty" toml:"tokens" yaml:"tokens,omitempty"`
 
 	R *rewardR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L rewardL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -54,6 +55,7 @@ var RewardColumns = struct {
 	CreatedAt           string
 	UpdatedAt           string
 	Override            string
+	Tokens              string
 }{
 	IssuanceWeekID:      "issuance_week_id",
 	UserDeviceID:        "user_device_id",
@@ -67,6 +69,7 @@ var RewardColumns = struct {
 	CreatedAt:           "created_at",
 	UpdatedAt:           "updated_at",
 	Override:            "override",
+	Tokens:              "tokens",
 }
 
 var RewardTableColumns = struct {
@@ -82,6 +85,7 @@ var RewardTableColumns = struct {
 	CreatedAt           string
 	UpdatedAt           string
 	Override            string
+	Tokens              string
 }{
 	IssuanceWeekID:      "rewards.issuance_week_id",
 	UserDeviceID:        "rewards.user_device_id",
@@ -95,6 +99,7 @@ var RewardTableColumns = struct {
 	CreatedAt:           "rewards.created_at",
 	UpdatedAt:           "rewards.updated_at",
 	Override:            "rewards.override",
+	Tokens:              "rewards.tokens",
 }
 
 // Generated where
@@ -129,6 +134,32 @@ func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field
 func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
 func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
+type whereHelpertypes_NullDecimal struct{ field string }
+
+func (w whereHelpertypes_NullDecimal) EQ(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpertypes_NullDecimal) NEQ(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpertypes_NullDecimal) LT(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpertypes_NullDecimal) LTE(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertypes_NullDecimal) GT(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertypes_NullDecimal) GTE(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+func (w whereHelpertypes_NullDecimal) IsNull() qm.QueryMod { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpertypes_NullDecimal) IsNotNull() qm.QueryMod {
+	return qmhelper.WhereIsNotNull(w.field)
+}
+
 var RewardWhere = struct {
 	IssuanceWeekID      whereHelperint
 	UserDeviceID        whereHelperstring
@@ -142,6 +173,7 @@ var RewardWhere = struct {
 	CreatedAt           whereHelpertime_Time
 	UpdatedAt           whereHelpertime_Time
 	Override            whereHelperbool
+	Tokens              whereHelpertypes_NullDecimal
 }{
 	IssuanceWeekID:      whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
 	UserDeviceID:        whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
@@ -155,6 +187,7 @@ var RewardWhere = struct {
 	CreatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
 	UpdatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
 	Override:            whereHelperbool{field: "\"rewards_api\".\"rewards\".\"override\""},
+	Tokens:              whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"tokens\""},
 }
 
 // RewardRels is where relationship names are stored.
@@ -185,9 +218,9 @@ func (r *rewardR) GetIssuanceWeek() *IssuanceWeek {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "tokens", "created_at", "updated_at", "override"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override", "tokens"}
 	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "tokens", "created_at", "updated_at", "override"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override", "tokens"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )
