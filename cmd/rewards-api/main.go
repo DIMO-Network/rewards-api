@@ -186,6 +186,33 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to retrieve rewards.")
 		}
 		logger.Info().Interface("rewards", rewards).Msg("Output.")
+	case "test-transfer":
+		var week int
+		if len(os.Args) == 2 {
+			// We have to subtract 1 because we're getting the number of the newly beginning week.
+			week = services.GetWeekNumForCron(time.Now()) - 1
+		} else {
+			var err error
+			week, err = strconv.Atoi(os.Args[2])
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Could not parse week number.")
+			}
+		}
+		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
+		totalTime := 0
+		for !pdb.IsReady() {
+			if totalTime > 30 {
+				logger.Fatal().Msg("could not connect to postgres after 30 seconds")
+			}
+			time.Sleep(time.Second)
+			totalTime++
+		}
+		srvc := services.NewTokenTransferService(pdb.DBS)
+		err := srvc.TransferUserTokens(week, ctx)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to transfer tokens")
+		}
+		// need to add in parsing the response to determine success/ failure
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
