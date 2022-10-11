@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"math/big"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -133,6 +134,11 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		userPts += pts
 
+		tkns := big.NewInt(0)
+		for _, t := range rewards {
+			tkns.Add(tkns, t.Tokens.Int(nil))
+		}
+
 		lvl := 1
 		connectionStreak := 0
 		disconnectionStreak := 0
@@ -145,6 +151,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		outLi[i] = &UserResponseDevice{
 			ID:                   device.Id,
 			Points:               pts,
+			Tokens:               tkns,
 			ConnectedThisWeek:    activeThisWeek,
 			IntegrationsThisWeek: outInts,
 			LastActive:           maybeLastActive,
@@ -194,6 +201,8 @@ type UserResponseDevice struct {
 	ID string `json:"id" example:"27cv7gVTh9h4RJuTsmJHpBcr4I9"`
 	// Points is the total number of points that the device has earned across all weeks.
 	Points int `json:"points" example:"5000"`
+	// Tokens is the total number of tokens that the device has earned across all weeks.
+	Tokens *big.Int `json:"tokens,omitempty" example:"5000"`
 	// ConnectedThisWeek is true if we've seen activity from the device during the current issuance
 	// week.
 	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
@@ -285,10 +294,12 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		weekNum := maxWeek - i
 		weeks[i].Start = services.NumToWeekStart(weekNum)
 		weeks[i].End = services.NumToWeekEnd(weekNum)
+		weeks[i].Tokens = big.NewInt(0)
 	}
 
 	for _, r := range rs {
 		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.IntegrationPoints
+		weeks[maxWeek-r.IssuanceWeekID].Tokens.Add(weeks[maxWeek-r.IssuanceWeekID].Tokens, r.Tokens.Int(nil))
 	}
 
 	return c.JSON(HistoryResponse{Weeks: weeks})
@@ -305,4 +316,89 @@ type HistoryResponseWeek struct {
 	End time.Time `json:"end" example:"2022-04-18T05:00:00Z"`
 	// Points is the number of points the user earned this week.
 	Points int `json:"points" example:"4000"`
+	// Tokens is the number of tokens the user earned this week.
+	Tokens *big.Int `json:"tokens" example:"4000"`
+}
+
+type PointsDistributed struct {
+	WeekStart time.Time `json:"weekStart"`
+	WeekEnd   time.Time `json:"weekEnd"`
+	Points    int64     `json:"points,omitempty"`
+	Tokens    *big.Int  `json:"tokens,omitempty"`
+}
+
+type QueryValues struct {
+	DeviceID string `query:"deviceid"`
+}
+
+// GetPointsThisWeek godoc
+// @Description  Total number of points distributed to users this week
+// @Success      200 {object} controllers.PointsDistributed
+// @Router       /points [get]
+func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
+	now := time.Now()
+	weekNum := services.GetWeekNum(now)
+	var points int64
+	pointsDistributed, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(weekNum-1)).All(c.Context(), r.DB().Reader)
+	if err != nil {
+		return err
+	}
+	for _, row := range pointsDistributed {
+		points += int64(row.IntegrationPoints)
+		points += int64(row.StreakPoints)
+	}
+
+	return c.JSON(PointsDistributed{WeekStart: services.NumToWeekStart(weekNum), WeekEnd: services.NumToWeekEnd(weekNum), Points: points})
+}
+
+// GetTokensThisWeek godoc
+// @Description  Total number of tokens distributed to users this week
+// @Success      200 {object} controllers.PointsDistributed
+// @Router       /tokens [get]
+func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
+	now := time.Now()
+	weekNum := services.GetWeekNum(now)
+
+	tokensDistributed, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(weekNum-1)).All(c.Context(), r.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	tokenSum := new(big.Int)
+
+	for _, row := range tokensDistributed {
+		tokenSum.Add(tokenSum, row.Tokens.Int(nil))
+	}
+
+	return c.JSON(PointsDistributed{WeekStart: services.NumToWeekStart(weekNum), WeekEnd: services.NumToWeekEnd(weekNum), Tokens: tokenSum})
+}
+
+// GetUserAllocation godoc
+// @Description  Total number of tokens allocated to a device
+// @Success      200 {object} controllers.UserResponse
+// @Security     BearerAuth
+// @Router       /allocation [get]
+func (r *RewardsController) GetUserAllocation(c *fiber.Ctx) error {
+	var params QueryValues
+	err := c.QueryParser(&params)
+	if err != nil {
+		return err
+	}
+	resp, err := models.Rewards(models.RewardWhere.UserDeviceID.EQ(params.DeviceID)).All(c.Context(), r.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	response := make(map[string]*big.Int, 0)
+
+	for _, r := range resp {
+		num := r.Tokens.Int(nil)
+		_, ok := response[r.UserDeviceID]
+		if !ok {
+			response[r.UserDeviceID] = big.NewInt(0)
+		}
+		response[r.UserDeviceID].Add(response[r.UserDeviceID], num)
+
+	}
+	return c.JSON(response)
 }

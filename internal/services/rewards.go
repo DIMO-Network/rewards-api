@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -23,7 +24,12 @@ var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
 
-// GeetWeekNum calculates the number of the week in which the given time lies for DIMO point
+var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+var base = new(big.Int).Mul(big.NewInt(1_105_000), ether)
+var rateNum = big.NewInt(85)
+var rateDen = big.NewInt(100)
+
+// GetWeekNum calculates the number of the week in which the given time lies for DIMO point
 // issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
 // zero-based.
 func GetWeekNum(t time.Time) int {
@@ -32,7 +38,7 @@ func GetWeekNum(t time.Time) int {
 	return weekNum
 }
 
-// GeetWeekNumForCron calculates the week number for the current run of the cron job. We expect
+// GetWeekNumForCron calculates the week number for the current run of the cron job. We expect
 // the job to run every Monday at 05:00 UTC, but due to skew we just round the time.
 func GetWeekNumForCron(t time.Time) int {
 	sinceStart := t.Sub(startTime)
@@ -205,7 +211,6 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 				return err
 			}
 		}
-
 		override.UserID = ud.UserId
 
 		streakInput := StreakInput{
@@ -224,7 +229,8 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			delete(lastWeekByDevice, override.UserDeviceID)
 		}
 
-		setStreakFields(override, ComputeStreak(streakInput))
+		streak := ComputeStreak(streakInput)
+		setStreakFields(override, streak)
 
 		override.IntegrationPoints = integCalc.Calculate(override.IntegrationIds)
 
@@ -274,7 +280,8 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			delete(lastWeekByDevice, device.ID)
 		}
 
-		setStreakFields(thisWeek, ComputeStreak(streakInput))
+		streak := ComputeStreak(streakInput)
+		setStreakFields(thisWeek, streak)
 
 		// Integration or "connected method" rewards.
 		thisWeek.IntegrationIds = device.Integrations
@@ -297,7 +304,8 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			ExistingConnectionStreak:    lastWeek.ConnectionStreak,
 			ExistingDisconnectionStreak: lastWeek.DisconnectionStreak,
 		}
-		setStreakFields(thisWeek, ComputeStreak(streakInput))
+		streak := ComputeStreak(streakInput)
+		setStreakFields(thisWeek, streak)
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
 		}
@@ -315,4 +323,20 @@ func setStreakFields(reward *models.Reward, streakOutput StreakOutput) {
 	reward.ConnectionStreak = streakOutput.ConnectionStreak
 	reward.DisconnectionStreak = streakOutput.DisconnectionStreak
 	reward.StreakPoints = streakOutput.Points
+}
+
+// TODO(elffjs): Bring this decrease back.
+// WeeklyTokenAllocation determine number of tokens allocated to all eligible users in a given week
+func WeeklyTokenAllocation(issuanceWeek int) *big.Int {
+
+	yr := issuanceWeek / 52
+	val := new(big.Int).Set(base)
+
+	for yr > 0 {
+		val.Mul(val, rateNum)
+		val.Div(val, rateDen)
+		yr--
+	}
+
+	return val
 }
