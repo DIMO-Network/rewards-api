@@ -14,8 +14,6 @@ require (
 	github.com/pressly/goose/v3 v3.7.0
 	github.com/rs/zerolog v1.28.0
 	github.com/swaggo/swag v1.8.6
-	github.com/volatiletech/null/v8 v8.1.2
-	github.com/volatiletech/sqlboiler v3.7.1+incompatible
 	github.com/volatiletech/sqlboiler/v4 v4.13.0
 	github.com/volatiletech/strmangle v0.0.4
 	google.golang.org/grpc v1.49.0
@@ -46,7 +44,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.40.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	github.com/volatiletech/null v8.0.0+incompatible // indirect
+	github.com/volatiletech/null/v8 v8.1.2 // indirect
 	github.com/volatiletech/randomize v0.0.1 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
