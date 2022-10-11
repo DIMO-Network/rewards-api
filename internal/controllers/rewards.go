@@ -358,12 +358,13 @@ func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
 func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
 	now := time.Now()
 	weekNum := services.GetWeekNum(now)
-	tokenSum := new(big.Int)
 
 	tokensDistributed, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(weekNum-1)).All(c.Context(), r.DB().Reader)
 	if err != nil {
 		return err
 	}
+
+	tokenSum := new(big.Int)
 
 	for _, row := range tokensDistributed {
 		tokenSum.Add(tokenSum, row.Tokens.Int(nil))
