@@ -12,7 +12,6 @@ import (
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -116,7 +115,6 @@ func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb_defs.GetIntegra
 
 func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	ctx := context.Background()
-	var totalPointsDistributed int64
 
 	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
 	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
@@ -130,13 +128,11 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		return err
 	}
 
-	dimo := WeeklyTokenAllocation(issuanceWeek)
 	week := models.IssuanceWeek{
-		ID:                    issuanceWeek,
-		JobStatus:             models.IssuanceWeeksJobStatusStarted,
-		StartsAt:              weekStart,
-		EndsAt:                weekEnd,
-		WeeklyTokenAllocation: dimo.String(),
+		ID:        issuanceWeek,
+		JobStatus: models.IssuanceWeeksJobStatusStarted,
+		StartsAt:  weekStart,
+		EndsAt:    weekEnd,
 	}
 
 	if err := week.Upsert(ctx, t.DB().Writer.DB, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
@@ -235,10 +231,8 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 		streak := ComputeStreak(streakInput)
 		setStreakFields(override, streak)
-		totalPointsDistributed += int64(streak.Points)
 
 		override.IntegrationPoints = integCalc.Calculate(override.IntegrationIds)
-		totalPointsDistributed += int64(override.IntegrationPoints)
 
 		if _, err := override.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
@@ -288,12 +282,10 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 		streak := ComputeStreak(streakInput)
 		setStreakFields(thisWeek, streak)
-		totalPointsDistributed += int64(streak.Points)
 
 		// Integration or "connected method" rewards.
 		thisWeek.IntegrationIds = device.Integrations
 		thisWeek.IntegrationPoints = integCalc.Calculate(device.Integrations)
-		totalPointsDistributed += int64(thisWeek.IntegrationPoints)
 
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
@@ -314,14 +306,12 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 		streak := ComputeStreak(streakInput)
 		setStreakFields(thisWeek, streak)
-		totalPointsDistributed += int64(streak.Points)
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
 		}
 	}
 
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished
-	week.PointsDistributed = null.Int64From(totalPointsDistributed)
 	if _, err := week.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
 	}

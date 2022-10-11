@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -24,57 +23,47 @@ import (
 
 // IssuanceWeek is an object representing the database table.
 type IssuanceWeek struct {
-	ID                    int        `boil:"id" json:"id" toml:"id" yaml:"id"`
-	JobStatus             string     `boil:"job_status" json:"job_status" toml:"job_status" yaml:"job_status"`
-	CreatedAt             time.Time  `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt             time.Time  `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	PointsDistributed     null.Int64 `boil:"points_distributed" json:"points_distributed,omitempty" toml:"points_distributed" yaml:"points_distributed,omitempty"`
-	WeeklyTokenAllocation string     `boil:"weekly_token_allocation" json:"weekly_token_allocation" toml:"weekly_token_allocation" yaml:"weekly_token_allocation"`
-	StartsAt              time.Time  `boil:"starts_at" json:"starts_at" toml:"starts_at" yaml:"starts_at"`
-	EndsAt                time.Time  `boil:"ends_at" json:"ends_at" toml:"ends_at" yaml:"ends_at"`
+	ID        int       `boil:"id" json:"id" toml:"id" yaml:"id"`
+	JobStatus string    `boil:"job_status" json:"job_status" toml:"job_status" yaml:"job_status"`
+	CreatedAt time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	StartsAt  time.Time `boil:"starts_at" json:"starts_at" toml:"starts_at" yaml:"starts_at"`
+	EndsAt    time.Time `boil:"ends_at" json:"ends_at" toml:"ends_at" yaml:"ends_at"`
 
 	R *issuanceWeekR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L issuanceWeekL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var IssuanceWeekColumns = struct {
-	ID                    string
-	JobStatus             string
-	CreatedAt             string
-	UpdatedAt             string
-	PointsDistributed     string
-	WeeklyTokenAllocation string
-	StartsAt              string
-	EndsAt                string
+	ID        string
+	JobStatus string
+	CreatedAt string
+	UpdatedAt string
+	StartsAt  string
+	EndsAt    string
 }{
-	ID:                    "id",
-	JobStatus:             "job_status",
-	CreatedAt:             "created_at",
-	UpdatedAt:             "updated_at",
-	PointsDistributed:     "points_distributed",
-	WeeklyTokenAllocation: "weekly_token_allocation",
-	StartsAt:              "starts_at",
-	EndsAt:                "ends_at",
+	ID:        "id",
+	JobStatus: "job_status",
+	CreatedAt: "created_at",
+	UpdatedAt: "updated_at",
+	StartsAt:  "starts_at",
+	EndsAt:    "ends_at",
 }
 
 var IssuanceWeekTableColumns = struct {
-	ID                    string
-	JobStatus             string
-	CreatedAt             string
-	UpdatedAt             string
-	PointsDistributed     string
-	WeeklyTokenAllocation string
-	StartsAt              string
-	EndsAt                string
+	ID        string
+	JobStatus string
+	CreatedAt string
+	UpdatedAt string
+	StartsAt  string
+	EndsAt    string
 }{
-	ID:                    "issuance_weeks.id",
-	JobStatus:             "issuance_weeks.job_status",
-	CreatedAt:             "issuance_weeks.created_at",
-	UpdatedAt:             "issuance_weeks.updated_at",
-	PointsDistributed:     "issuance_weeks.points_distributed",
-	WeeklyTokenAllocation: "issuance_weeks.weekly_token_allocation",
-	StartsAt:              "issuance_weeks.starts_at",
-	EndsAt:                "issuance_weeks.ends_at",
+	ID:        "issuance_weeks.id",
+	JobStatus: "issuance_weeks.job_status",
+	CreatedAt: "issuance_weeks.created_at",
+	UpdatedAt: "issuance_weeks.updated_at",
+	StartsAt:  "issuance_weeks.starts_at",
+	EndsAt:    "issuance_weeks.ends_at",
 }
 
 // Generated where
@@ -146,62 +135,20 @@ func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-type whereHelpernull_Int64 struct{ field string }
-
-func (w whereHelpernull_Int64) EQ(x null.Int64) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_Int64) NEQ(x null.Int64) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_Int64) LT(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_Int64) LTE(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_Int64) GT(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_Int64) GTE(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-func (w whereHelpernull_Int64) IN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelpernull_Int64) NIN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
-func (w whereHelpernull_Int64) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_Int64) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 var IssuanceWeekWhere = struct {
-	ID                    whereHelperint
-	JobStatus             whereHelperstring
-	CreatedAt             whereHelpertime_Time
-	UpdatedAt             whereHelpertime_Time
-	PointsDistributed     whereHelpernull_Int64
-	WeeklyTokenAllocation whereHelperstring
-	StartsAt              whereHelpertime_Time
-	EndsAt                whereHelpertime_Time
+	ID        whereHelperint
+	JobStatus whereHelperstring
+	CreatedAt whereHelpertime_Time
+	UpdatedAt whereHelpertime_Time
+	StartsAt  whereHelpertime_Time
+	EndsAt    whereHelpertime_Time
 }{
-	ID:                    whereHelperint{field: "\"rewards_api\".\"issuance_weeks\".\"id\""},
-	JobStatus:             whereHelperstring{field: "\"rewards_api\".\"issuance_weeks\".\"job_status\""},
-	CreatedAt:             whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"created_at\""},
-	UpdatedAt:             whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"updated_at\""},
-	PointsDistributed:     whereHelpernull_Int64{field: "\"rewards_api\".\"issuance_weeks\".\"points_distributed\""},
-	WeeklyTokenAllocation: whereHelperstring{field: "\"rewards_api\".\"issuance_weeks\".\"weekly_token_allocation\""},
-	StartsAt:              whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"starts_at\""},
-	EndsAt:                whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"ends_at\""},
+	ID:        whereHelperint{field: "\"rewards_api\".\"issuance_weeks\".\"id\""},
+	JobStatus: whereHelperstring{field: "\"rewards_api\".\"issuance_weeks\".\"job_status\""},
+	CreatedAt: whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"created_at\""},
+	UpdatedAt: whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"updated_at\""},
+	StartsAt:  whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"starts_at\""},
+	EndsAt:    whereHelpertime_Time{field: "\"rewards_api\".\"issuance_weeks\".\"ends_at\""},
 }
 
 // IssuanceWeekRels is where relationship names are stored.
@@ -232,9 +179,9 @@ func (r *issuanceWeekR) GetRewards() RewardSlice {
 type issuanceWeekL struct{}
 
 var (
-	issuanceWeekAllColumns            = []string{"id", "job_status", "created_at", "updated_at", "points_distributed", "weekly_token_allocation", "starts_at", "ends_at"}
-	issuanceWeekColumnsWithoutDefault = []string{"id", "job_status", "weekly_token_allocation", "starts_at", "ends_at"}
-	issuanceWeekColumnsWithDefault    = []string{"created_at", "updated_at", "points_distributed"}
+	issuanceWeekAllColumns            = []string{"id", "job_status", "created_at", "updated_at", "starts_at", "ends_at"}
+	issuanceWeekColumnsWithoutDefault = []string{"id", "job_status", "starts_at", "ends_at"}
+	issuanceWeekColumnsWithDefault    = []string{"created_at", "updated_at"}
 	issuanceWeekPrimaryKeyColumns     = []string{"id"}
 	issuanceWeekGeneratedColumns      = []string{}
 )
