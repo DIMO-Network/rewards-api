@@ -371,7 +371,6 @@ func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(PointsDistributed{WeekStart: services.NumToWeekStart(weekNum), WeekEnd: services.NumToWeekEnd(weekNum), Tokens: tokenSum})
-
 }
 
 // GetUserAllocation godoc
