@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"errors"
 	"math/big"
 	"time"
 
@@ -137,11 +136,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		tkns := big.NewInt(0)
 		for _, t := range rewards {
-			num, ok := tkns.SetString(t.Tokens.String(), 10)
-			if !ok {
-				return errors.New("cannot convert data in table to big int")
-			}
-			tkns.Add(tkns, num)
+			tkns.Add(tkns, t.Tokens.Int(nil))
 		}
 
 		lvl := 1
@@ -207,7 +202,7 @@ type UserResponseDevice struct {
 	// Points is the total number of points that the device has earned across all weeks.
 	Points int `json:"points" example:"5000"`
 	// Tokens is the total number of tokens that the device has earned across all weeks.
-	Tokens *big.Int `json:"tokens" example:"5000"`
+	Tokens *big.Int `json:"tokens,omitempty" example:"5000"`
 	// ConnectedThisWeek is true if we've seen activity from the device during the current issuance
 	// week.
 	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
@@ -302,13 +297,8 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	}
 
 	for _, r := range rs {
-		num := big.NewInt(0)
-		num, ok := num.SetString(r.Tokens.String(), 10)
-		if !ok {
-			return errors.New("cannot convert data in table to big int")
-		}
 		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.IntegrationPoints
-		weeks[maxWeek-r.IssuanceWeekID].Tokens = num
+		weeks[maxWeek-r.IssuanceWeekID].Tokens = r.Tokens.Int(nil)
 	}
 
 	return c.JSON(HistoryResponse{Weeks: weeks})
@@ -330,8 +320,8 @@ type HistoryResponseWeek struct {
 }
 
 type PointsDistributed struct {
-	WeekStart time.Time `json:"week_start"`
-	WeekEnd   time.Time `json:"week_end"`
+	WeekStart time.Time `json:"weekStart"`
+	WeekEnd   time.Time `json:"weekEnd"`
 	Points    int64     `json:"points,omitempty"`
 	Tokens    *big.Int  `json:"tokens,omitempty"`
 }
@@ -342,8 +332,7 @@ type QueryValues struct {
 
 // GetPointsThisWeek godoc
 // @Description  Total number of points distributed to users this week
-// @Success      200 {object} controllers.UserResponse
-// @Security     BearerAuth
+// @Success      200 {object} controllers.PointsDistributed
 // @Router       /points [get]
 func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
 	now := time.Now()
@@ -358,18 +347,17 @@ func (r *RewardsController) GetPointsThisWeek(c *fiber.Ctx) error {
 		points += int64(row.StreakPoints)
 	}
 
-	return c.JSON(PointsDistributed{Points: points})
+	return c.JSON(PointsDistributed{WeekStart: services.NumToWeekStart(weekNum), WeekEnd: services.NumToWeekEnd(weekNum), Points: points})
 }
 
 // GetTokensThisWeek godoc
 // @Description  Total number of tokens distributed to users this week
-// @Success      200 {object} controllers.UserResponse
-// @Security     BearerAuth
+// @Success      200 {object} controllers.PointsDistributed
 // @Router       /tokens [get]
 func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
 	now := time.Now()
 	weekNum := services.GetWeekNum(now)
-	var tokens *big.Int
+	tokenSum := new(big.Int)
 
 	tokensDistributed, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(weekNum-1)).All(c.Context(), r.DB().Reader)
 	if err != nil {
@@ -377,10 +365,10 @@ func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
 	}
 
 	for _, row := range tokensDistributed {
-		tokens.Add(tokens, row.Tokens.Int(nil))
+		tokenSum.Add(tokenSum, row.Tokens.Int(nil))
 	}
 
-	return c.JSON(PointsDistributed{Tokens: tokens})
+	return c.JSON(PointsDistributed{WeekStart: services.NumToWeekStart(weekNum), WeekEnd: services.NumToWeekEnd(weekNum), Tokens: tokenSum})
 
 }
 
@@ -403,22 +391,13 @@ func (r *RewardsController) GetUserAllocation(c *fiber.Ctx) error {
 	response := make(map[string]*big.Int, 0)
 
 	for _, r := range resp {
-		num := big.NewInt(0)
-		num, ok := num.SetString(r.Tokens.String(), 10)
-		if !ok {
-			return errors.New("cannot convert data in table to big int")
-		}
-		_, ok = response[r.UserDeviceID]
+		num := r.Tokens.Int(nil)
+		_, ok := response[r.UserDeviceID]
 		if !ok {
 			response[r.UserDeviceID] = big.NewInt(0)
 		}
-		response[r.UserDeviceID] = response[r.UserDeviceID].Add(response[r.UserDeviceID], num)
+		response[r.UserDeviceID].Add(response[r.UserDeviceID], num)
 
 	}
 	return c.JSON(response)
-}
-
-type deviceTokens struct {
-	DeviceID string   `json:"deviceID"`
-	Tokens   *big.Int `json:"tokens"`
 }

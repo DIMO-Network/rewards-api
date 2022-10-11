@@ -25,9 +25,9 @@ var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 var weekDuration = 7 * 24 * time.Hour
 
 var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
-var base = new(big.Int).Mul(big.NewInt(1_300_000), ether)
-var rateNum = big.NewInt(17)
-var rateDen = big.NewInt(20)
+var base = new(big.Int).Mul(big.NewInt(1_105_000), ether)
+var rateNum = big.NewInt(85)
+var rateDen = big.NewInt(100)
 
 // GetWeekNum calculates the number of the week in which the given time lies for DIMO point
 // issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
@@ -325,12 +325,12 @@ func setStreakFields(reward *models.Reward, streakOutput StreakOutput) {
 	reward.StreakPoints = streakOutput.Points
 }
 
+// TODO(elffjs): Bring this decrease back.
 // WeeklyTokenAllocation determine number of tokens allocated to all eligible users in a given week
 func WeeklyTokenAllocation(issuanceWeek int) *big.Int {
 
 	yr := issuanceWeek / 52
-	// val := new(big.Int).Set(base)
-	val := new(big.Int).Set(new(big.Int).Mul(big.NewInt(1_105_000), ether))
+	val := new(big.Int).Set(base)
 
 	for yr > 0 {
 		val.Mul(val, rateNum)

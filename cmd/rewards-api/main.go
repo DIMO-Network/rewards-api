@@ -29,6 +29,7 @@ import (
 )
 
 var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+var baseWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
 
 // @title                       DIMO Rewards API
 // @version                     1.0
@@ -97,9 +98,12 @@ func main() {
 		v1 := app.Group("/v1", jwtAuth)
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
-		v1.Get("/points", rewardsController.GetPointsThisWeek)
-		v1.Get("/tokens", rewardsController.GetTokensThisWeek)
-		v1.Get("/allocation", rewardsController.GetUserAllocation)
+
+		if settings.Environment != "prod" {
+			v1.Get("/points", rewardsController.GetPointsThisWeek)
+			v1.Get("/tokens", rewardsController.GetTokensThisWeek)
+			v1.Get("/allocation", rewardsController.GetUserAllocation)
+		}
 
 		go startGRPCServer(&settings, pdb.DBS, &logger)
 
@@ -173,7 +177,7 @@ func main() {
 		}
 
 		st := storage.NewDB(pdb.DBS)
-		err := st.AssignTokens(ctx, week, new(big.Int).Mul(big.NewInt(1_105_000), ether))
+		err := st.AssignTokens(ctx, week, baseWeeklyTokens)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to assign tokens.")
 		}
@@ -204,14 +208,16 @@ func startGRPCServer(settings *config.Settings, dbs func() *database.DBReaderWri
 
 func ErrorHandler(c *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError // Default.
+	message := "Internal error."
 
 	var fiberErr *fiber.Error
 	if errors.As(err, &fiberErr) {
 		code = fiberErr.Code
+		message = err.Error()
 	}
 
 	return c.Status(code).JSON(fiber.Map{
 		"code":    code,
-		"message": err.Error(),
+		"message": message,
 	})
 }
