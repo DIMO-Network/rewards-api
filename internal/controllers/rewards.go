@@ -136,6 +136,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		tkns := big.NewInt(0)
 		for _, t := range rewards {
+			if t.Tokens.IsZero() {
+				continue
+			}
 			tkns.Add(tkns, t.Tokens.Int(nil))
 		}
 
@@ -299,6 +302,9 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 
 	for _, r := range rs {
 		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.IntegrationPoints
+		if r.Tokens.IsZero() {
+			continue
+		}
 		weeks[maxWeek-r.IssuanceWeekID].Tokens.Add(weeks[maxWeek-r.IssuanceWeekID].Tokens, r.Tokens.Int(nil))
 	}
 
@@ -367,6 +373,9 @@ func (r *RewardsController) GetTokensThisWeek(c *fiber.Ctx) error {
 	tokenSum := new(big.Int)
 
 	for _, row := range tokensDistributed {
+		if row.Tokens.IsZero() {
+			continue
+		}
 		tokenSum.Add(tokenSum, row.Tokens.Int(nil))
 	}
 
@@ -392,6 +401,9 @@ func (r *RewardsController) GetUserAllocation(c *fiber.Ctx) error {
 	response := make(map[string]*big.Int, 0)
 
 	for _, r := range resp {
+		if r.Tokens.IsZero() {
+			continue
+		}
 		num := r.Tokens.Int(nil)
 		_, ok := response[r.UserDeviceID]
 		if !ok {
