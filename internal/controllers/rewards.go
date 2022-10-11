@@ -294,11 +294,12 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		weekNum := maxWeek - i
 		weeks[i].Start = services.NumToWeekStart(weekNum)
 		weeks[i].End = services.NumToWeekEnd(weekNum)
+		weeks[i].Tokens = big.NewInt(0)
 	}
 
 	for _, r := range rs {
 		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.IntegrationPoints
-		weeks[maxWeek-r.IssuanceWeekID].Tokens = r.Tokens.Int(nil)
+		weeks[maxWeek-r.IssuanceWeekID].Tokens.Add(weeks[maxWeek-r.IssuanceWeekID].Tokens, r.Tokens.Int(nil))
 	}
 
 	return c.JSON(HistoryResponse{Weeks: weeks})
