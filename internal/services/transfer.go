@@ -19,7 +19,7 @@ import (
 )
 
 type Transfer interface {
-	BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []string) error
+	BatchTransfer(requestID string, devices []deviceInfo) error
 	TransferUserTokens(week int, ctx context.Context) error
 }
 
@@ -57,6 +57,12 @@ type transferData struct {
 	Data string `json:"data"`
 }
 
+type deviceInfo struct {
+	To          common.Address
+	Amount      *big.Int
+	VehicleNode string
+}
+
 func (c *Client) TransferUserTokens(week int, ctx context.Context) error {
 
 	offset := 0
@@ -69,19 +75,17 @@ func (c *Client) TransferUserTokens(week int, ctx context.Context) error {
 			return err
 		}
 
-		userAddr := make([]common.Address, len(rewards))
-		tknValues := make([]*big.Int, len(rewards))
-		vehicleIds := make([]string, len(rewards))
+		devices := make([]deviceInfo, len(rewards))
 
 		for n, row := range rewards {
-			tknValues[n] = row.Tokens.Int(nil)
-			vehicleIds[n] = row.UserDeviceID
+			devices[n].Amount = row.Tokens.Int(nil)
+			devices[n].VehicleNode = row.UserDeviceID // confirm the type that this should be, uint?
 			// fetch user address from users api
-			userAddr[n] = common.Address{}
+			devices[n].To = common.Address{}
 		}
 
 		reqID := fmt.Sprintf("%d-Request %d", week, offset+1)
-		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
+		err = c.BatchTransfer(reqID, devices)
 		if err != nil {
 			return err
 		}
@@ -94,13 +98,13 @@ func (c *Client) TransferUserTokens(week int, ctx context.Context) error {
 
 }
 
-func (c *Client) BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []string) error {
+func (c *Client) BatchTransfer(requestID string, devices []deviceInfo) error {
 	abi, err := issuance.IssuanceMetaData.GetAbi()
 	if err != nil {
 		return err
 	}
 
-	data, err := abi.Pack("batchTransfer", users, values, vehicleIds)
+	data, err := abi.Pack("batchTransfer", devices)
 	if err != nil {
 		return err
 	}
