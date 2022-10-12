@@ -55,8 +55,8 @@ github.com/DATA-DOG/go-sqlmock v1.4.1 h1:ThlnYciV1iM/V0OSF/dtkqWb6xo5qITT1TJBG1M
 github.com/DATA-DOG/go-sqlmock v1.4.1/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/DIMO-Network/device-definitions-api v0.1.27 h1:ri37CdAuJTrbvMctmjoKoMhXAb995ok6glkbC7kUFZU=
 github.com/DIMO-Network/device-definitions-api v0.1.27/go.mod h1:zeimbRBW4bi/5lC4yzfnc6kgQBg6AxY5yPRsdDs9gxI=
-github.com/DIMO-Network/shared v0.4.3 h1:kg1+coGcIIa94HTKpiOmF+C2uqTXBYbtSDrVXEB4gHY=
-github.com/DIMO-Network/shared v0.4.3/go.mod h1:klPVntUChpkuE2Z9pSFLofGl8HFOaKSZzJzxasdhIU0=
+github.com/DIMO-Network/shared v0.4.4 h1:WG3/L9jQOis0y/jRjEUgV8k7k9aXm9KZK/F6koEdtrc=
+github.com/DIMO-Network/shared v0.4.4/go.mod h1:klPVntUChpkuE2Z9pSFLofGl8HFOaKSZzJzxasdhIU0=
 github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc=
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
 github.com/Masterminds/goutils v1.1.1/go.mod h1:8cTjp+g8YejhMuvIA5y2vz3BpJxksy863GQaJW2MFNU=

@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/DIMO-Network/device-definitions-api v0.1.27
-	github.com/DIMO-Network/shared v0.4.3
+	github.com/DIMO-Network/shared v0.4.4
 	github.com/aquasecurity/esquery v0.2.0
 	github.com/arsmn/fiber-swagger/v2 v2.31.1
 	github.com/elastic/go-elasticsearch/v7 v7.17.1
