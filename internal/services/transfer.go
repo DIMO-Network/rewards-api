@@ -3,14 +3,17 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log"
 	"math/big"
 	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	issuance "github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
+	pb_devices "github.com/DIMO-Network/shared/api/devices"
+	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -19,11 +22,16 @@ import (
 )
 
 type Transfer interface {
-	BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []string) error
+	// BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []string) error
 	TransferUserTokens(week int, ctx context.Context) error
 }
 
 func NewTokenTransferService(
+	settings *config.Settings,
+	producer sarama.SyncProducer,
+	usersClient pb_users.UserServiceClient,
+	devicesClient pb_devices.UserDeviceServiceClient,
+	contractAddress common.Address,
 	// settings config.Settings, producer sarama.SyncProducer, reqTopic string, contract Contract,
 	db func() *database.DBReaderWriter) Transfer {
 	return &Client{
@@ -34,18 +42,24 @@ func NewTokenTransferService(
 		// 	Address: settings.Address,
 		// 	Name:    settings.ContractName,
 		// 	Version: settings.ContractVersion},
-		db: db}
+		usersClient:     usersClient,
+		devicesClient:   devicesClient,
+		ContractAddress: contractAddress,
+		Producer:        producer,
+		RequestTopic:    "topic.transaction.request.send",
+		db:              db}
 }
 
 type Client struct {
-	Producer     sarama.SyncProducer
-	RequestTopic string
-	Contract     Contract
-	db           func() *database.DBReaderWriter
+	Producer        sarama.SyncProducer
+	RequestTopic    string
+	db              func() *database.DBReaderWriter
+	usersClient     pb_users.UserServiceClient
+	devicesClient   pb_devices.UserDeviceServiceClient
+	ContractAddress common.Address
 }
 
 type Contract struct {
-	ChainID *big.Int
 	Address common.Address
 	Name    string
 	Version string
@@ -59,42 +73,66 @@ type transferData struct {
 
 func (c *Client) TransferUserTokens(week int, ctx context.Context) error {
 
-	offset := 0
-	batchSize := 2
-	responseLength := 101
+	page := 0
+	pageSize := 2
+	responseSize := pageSize
 
-	for batchSize <= responseLength {
-		rewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(week), qm.Limit(batchSize), qm.Offset(offset*batchSize)).All(ctx, c.db().Reader)
+	for pageSize == responseSize {
+		rewards, err := models.Rewards(
+			models.RewardWhere.IssuanceWeekID.EQ(week),
+			qm.OrderBy(models.RewardColumns.UserDeviceID), // Somewhat dangerous, what if this changes?
+			qm.Limit(pageSize),
+			qm.Offset(page*pageSize),
+		).All(ctx, c.db().Reader)
 		if err != nil {
 			return err
 		}
 
-		userAddr := make([]common.Address, len(rewards))
-		tknValues := make([]*big.Int, len(rewards))
-		vehicleIds := make([]string, len(rewards))
+		responseSize = len(rewards)
 
-		for n, row := range rewards {
-			tknValues[n] = row.Tokens.Int(nil)
-			vehicleIds[n] = row.UserDeviceID
-			// fetch user address from users api
-			userAddr[n] = common.Address{}
+		userAddr := make([]common.Address, responseSize)
+		tknValues := make([]*big.Int, responseSize)
+		vehicleIds := make([]*big.Int, responseSize)
+
+		for i, row := range rewards {
+			tknValues[i] = row.Tokens.Int(nil)
+
+			log.Printf("userDeviceId=%q", row.UserDeviceID)
+
+			ud, err := c.devicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: row.UserDeviceID})
+			if err != nil {
+				return err
+			}
+			if ud.TokenId == nil {
+				continue
+			}
+			vehicleIds[i] = new(big.Int).SetUint64(*ud.TokenId)
+
+			user, err := c.usersClient.GetUser(ctx, &pb_users.GetUserRequest{Id: ud.UserId})
+			if err != nil {
+				return err
+			}
+			if user.EthereumAddress == nil {
+				continue
+			}
+
+			userAddr[i] = common.HexToAddress(*user.EthereumAddress)
 		}
 
-		reqID := fmt.Sprintf("%d-Request %d", week, offset+1)
+		reqID := ksuid.New().String()
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
 		}
 
-		offset++
-		responseLength = len(rewards)
+		page++
 	}
 
 	return nil
 
 }
 
-func (c *Client) BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []string) error {
+func (c *Client) BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []*big.Int) error {
 	abi, err := issuance.IssuanceMetaData.GetAbi()
 	if err != nil {
 		return err
@@ -118,7 +156,7 @@ func (c *Client) sendRequest(requestID string, data []byte) error {
 		Type:        "zone.dimo.transaction.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   hexutil.Encode(c.Contract.Address[:]),
+			To:   hexutil.Encode(c.ContractAddress[:]),
 			Data: hexutil.Encode(data),
 		},
 	}
@@ -128,13 +166,17 @@ func (c *Client) sendRequest(requestID string, data []byte) error {
 		return err
 	}
 
-	_, _, err = c.Producer.SendMessage(
+	log.Printf("topic=%q, requestId=%q", c.RequestTopic, requestID)
+
+	p, o, err := c.Producer.SendMessage(
 		&sarama.ProducerMessage{
 			Topic: c.RequestTopic,
 			Key:   sarama.StringEncoder(requestID),
 			Value: sarama.ByteEncoder(eventBytes),
 		},
 	)
+
+	log.Printf("err=%v, partition=%d, offset=%d", err, p, o)
 
 	return err
 }

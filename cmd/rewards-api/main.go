@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
 	"math/big"
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -20,7 +22,11 @@ import (
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
+	pb_users "github.com/DIMO-Network/shared/api/users"
+	"github.com/Shopify/sarama"
 	swagger "github.com/arsmn/fiber-swagger/v2"
+	"github.com/burdiyan/kafkautil"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/rs/zerolog"
@@ -207,8 +213,44 @@ func main() {
 			time.Sleep(time.Second)
 			totalTime++
 		}
-		srvc := services.NewTokenTransferService(pdb.DBS)
-		err := srvc.TransferUserTokens(week, ctx)
+
+		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
+		}
+		defer devicesConn.Close()
+
+		devicesClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
+
+		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
+		}
+		defer usersConn.Close()
+
+		usersClient := pb_users.NewUserServiceClient(usersConn)
+
+		kconf := sarama.NewConfig()
+		kconf.Version = sarama.V2_8_1_0
+		kconf.Producer.Return.Successes = true
+		kconf.Producer.Partitioner = kafkautil.NewJVMCompatiblePartitioner
+
+		kclient, err := sarama.NewClient(strings.Split(settings.KafkaBrokers, ","), kconf)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
+		}
+
+		log.Printf("brokers=%q", settings.KafkaBrokers)
+
+		producer, err := sarama.NewSyncProducerFromClient(kclient)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
+		}
+
+		addr := common.HexToAddress(settings.IssuanceContractAddress)
+
+		srvc := services.NewTokenTransferService(&settings, producer, usersClient, devicesClient, addr, pdb.DBS)
+		err = srvc.TransferUserTokens(week, ctx)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer tokens")
 		}
