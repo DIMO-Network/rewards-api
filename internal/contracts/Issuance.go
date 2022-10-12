@@ -28,16 +28,9 @@ var (
 	_ = event.NewSubscription
 )
 
-// IssuancetokenTransfer is an auto generated low-level Go binding around an user-defined struct.
-type IssuancetokenTransfer struct {
-	To          common.Address
-	Amount      *big.Int
-	VehicleNode *big.Int
-}
-
 // IssuanceMetaData contains all meta data concerning the Issuance contract.
 var IssuanceMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"vehicleNodeId\",\"type\":\"uint256\"}],\"name\":\"TokensTransferred\",\"type\":\"event\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"vehicleNode\",\"type\":\"uint256\"}],\"internalType\":\"structIssuance.tokenTransfer[]\",\"name\":\"data\",\"type\":\"tuple[]\"}],\"name\":\"batchTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"vehicleNodeId\",\"type\":\"uint256\"}],\"name\":\"TokensTransferred\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"users\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"vehicleIds\",\"type\":\"uint256[]\"}],\"name\":\"batchTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // IssuanceABI is the input ABI used to generate the binding from.
@@ -186,25 +179,25 @@ func (_Issuance *IssuanceTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _Issuance.Contract.contract.Transact(opts, method, params...)
 }
 
-// BatchTransfer is a paid mutator transaction binding the contract method 0x5a0c04fa.
+// BatchTransfer is a paid mutator transaction binding the contract method 0x1ef690c4.
 //
-// Solidity: function batchTransfer((address,uint256,uint256)[] data) returns()
-func (_Issuance *IssuanceTransactor) BatchTransfer(opts *bind.TransactOpts, data []IssuancetokenTransfer) (*types.Transaction, error) {
-	return _Issuance.contract.Transact(opts, "batchTransfer", data)
+// Solidity: function batchTransfer(address[] users, uint256[] values, uint256[] vehicleIds) returns()
+func (_Issuance *IssuanceTransactor) BatchTransfer(opts *bind.TransactOpts, users []common.Address, values []*big.Int, vehicleIds []*big.Int) (*types.Transaction, error) {
+	return _Issuance.contract.Transact(opts, "batchTransfer", users, values, vehicleIds)
 }
 
-// BatchTransfer is a paid mutator transaction binding the contract method 0x5a0c04fa.
+// BatchTransfer is a paid mutator transaction binding the contract method 0x1ef690c4.
 //
-// Solidity: function batchTransfer((address,uint256,uint256)[] data) returns()
-func (_Issuance *IssuanceSession) BatchTransfer(data []IssuancetokenTransfer) (*types.Transaction, error) {
-	return _Issuance.Contract.BatchTransfer(&_Issuance.TransactOpts, data)
+// Solidity: function batchTransfer(address[] users, uint256[] values, uint256[] vehicleIds) returns()
+func (_Issuance *IssuanceSession) BatchTransfer(users []common.Address, values []*big.Int, vehicleIds []*big.Int) (*types.Transaction, error) {
+	return _Issuance.Contract.BatchTransfer(&_Issuance.TransactOpts, users, values, vehicleIds)
 }
 
-// BatchTransfer is a paid mutator transaction binding the contract method 0x5a0c04fa.
+// BatchTransfer is a paid mutator transaction binding the contract method 0x1ef690c4.
 //
-// Solidity: function batchTransfer((address,uint256,uint256)[] data) returns()
-func (_Issuance *IssuanceTransactorSession) BatchTransfer(data []IssuancetokenTransfer) (*types.Transaction, error) {
-	return _Issuance.Contract.BatchTransfer(&_Issuance.TransactOpts, data)
+// Solidity: function batchTransfer(address[] users, uint256[] values, uint256[] vehicleIds) returns()
+func (_Issuance *IssuanceTransactorSession) BatchTransfer(users []common.Address, values []*big.Int, vehicleIds []*big.Int) (*types.Transaction, error) {
+	return _Issuance.Contract.BatchTransfer(&_Issuance.TransactOpts, users, values, vehicleIds)
 }
 
 // IssuanceTokensTransferredIterator is returned from FilterTokensTransferred and is used to iterate over the raw logs and unpacked data for TokensTransferred events raised by the Issuance contract.
