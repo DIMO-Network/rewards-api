@@ -213,7 +213,6 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 
 		respBody := new(DeviceListResp)
 		if err := json.NewDecoder(resp.Body).Decode(respBody); err != nil {
-			fmt.Printf("%v\n", err)
 			return nil, err
 		}
 

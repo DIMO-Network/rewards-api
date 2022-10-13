@@ -97,15 +97,15 @@ func (c *Client) TransferUserTokens(week int, ctx context.Context) error {
 		for i, row := range rewards {
 			tknValues[i] = row.Tokens.Int(nil)
 
-			log.Printf("userDeviceId=%q", row.UserDeviceID)
-
 			ud, err := c.devicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: row.UserDeviceID})
 			if err != nil {
 				return err
 			}
+
 			if ud.TokenId == nil {
 				continue
 			}
+
 			vehicleIds[i] = new(big.Int).SetUint64(*ud.TokenId)
 
 			user, err := c.usersClient.GetUser(ctx, &pb_users.GetUserRequest{Id: ud.UserId})
@@ -137,12 +137,10 @@ func (c *Client) BatchTransfer(requestID string, users []common.Address, values 
 	if err != nil {
 		return err
 	}
-
 	data, err := abi.Pack("batchTransfer", users, values, vehicleIds)
 	if err != nil {
 		return err
 	}
-
 	return c.sendRequest(requestID, data)
 }
 
