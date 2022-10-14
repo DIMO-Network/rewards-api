@@ -7,8 +7,10 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -248,13 +250,40 @@ func main() {
 		}
 
 		addr := common.HexToAddress(settings.IssuanceContractAddress)
-
 		srvc := services.NewTokenTransferService(&settings, producer, usersClient, devicesClient, addr, pdb.DBS)
 		err = srvc.TransferUserTokens(week, ctx)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer tokens")
 		}
 		// need to add in parsing the response to determine success/ failure
+	case "test-listen":
+		kconf := sarama.NewConfig()
+		kconf.Version = sarama.V2_8_1_0
+		kconf.Producer.Return.Successes = true
+		kconf.Producer.Partitioner = kafkautil.NewJVMCompatiblePartitioner
+
+		kclient, err := sarama.NewClient(strings.Split(settings.KafkaBrokers, ","), kconf)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
+		}
+
+		log.Printf("brokers=%q", settings.KafkaBrokers)
+
+		consumer, err := sarama.NewConsumerGroupFromClient("c1", kclient)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer consumer.Close()
+		var wg sync.WaitGroup
+		wg.Add(9)
+		go services.Consume(consumer, &wg, "c1")
+		wg.Wait()
+
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, os.Interrupt)
+		select {
+		case <-signals:
+		}
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}

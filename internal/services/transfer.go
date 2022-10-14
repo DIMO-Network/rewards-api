@@ -3,8 +3,10 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -15,8 +17,11 @@ import (
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/Shopify/sarama"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	eth_types "github.com/ethereum/go-ethereum/core/types"
+	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
@@ -26,6 +31,49 @@ type Transfer interface {
 	TransferUserTokens(week int, ctx context.Context) error
 }
 
+type consumerGroupHandler struct {
+	name string
+}
+
+func (consumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+func (consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+
+	abi, err := issuance.IssuanceMetaData.GetAbi()
+	if err != nil {
+		return err
+	}
+
+	temp := &S{ABI: abi}
+	for msg := range claim.Messages() {
+		err := temp.processMessages(msg)
+		if err != nil {
+			return err
+		}
+		sess.MarkMessage(msg, "")
+	}
+
+	return nil
+}
+
+func Consume(group sarama.ConsumerGroup, wg *sync.WaitGroup, name string) {
+	defer wg.Done()
+	ctx := context.Background()
+	for {
+		topics := []string{"topic.transaction.request.status"}
+		handler := consumerGroupHandler{name: name}
+		err := group.Consume(ctx, topics, handler)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
 func NewTokenTransferService(
 	settings *config.Settings,
 	producer sarama.SyncProducer,
@@ -34,6 +82,7 @@ func NewTokenTransferService(
 	contractAddress common.Address,
 	// settings config.Settings, producer sarama.SyncProducer, reqTopic string, contract Contract,
 	db func() *database.DBReaderWriter) Transfer {
+
 	return &Client{
 		// Producer:     producer,
 		// RequestTopic: reqTopic,
@@ -47,12 +96,15 @@ func NewTokenTransferService(
 		ContractAddress: contractAddress,
 		Producer:        producer,
 		RequestTopic:    "topic.transaction.request.send",
+		StatusTopic:     "topic.transaction.request.status",
 		db:              db}
 }
 
 type Client struct {
 	Producer        sarama.SyncProducer
+	Consumer        sarama.ConsumerGroup
 	RequestTopic    string
+	StatusTopic     string
 	db              func() *database.DBReaderWriter
 	usersClient     pb_users.UserServiceClient
 	devicesClient   pb_devices.UserDeviceServiceClient
@@ -177,4 +229,93 @@ func (c *Client) sendRequest(requestID string, data []byte) error {
 	log.Printf("err=%v, partition=%d, offset=%d", err, p, o)
 
 	return err
+}
+
+func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
+	event := shared.CloudEvent[ceData]{}
+	err := json.Unmarshal(msg.Value, &event)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%#+v\n", event.Data)
+	abi, err := issuance.IssuanceMetaData.GetAbi()
+	if err != nil {
+		return err
+	}
+
+	logs := event.Data.Transaction.Logs
+	for _, l := range logs {
+		converted := convertLog(&l)
+		rec := issuance.IssuanceTokensTransferred{}
+		err := s.parseLog(&rec, abi.Events["TokensTransferred"], *converted)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("Device: ", rec.VehicleNodeId, "\tTokens: ", rec.Amount, "\tAddress", rec.User)
+	}
+
+	return nil
+
+}
+
+type S struct {
+	ABI    *abi.ABI
+	DB     func() *database.DBReaderWriter
+	Logger *zerolog.Logger
+}
+
+func (s *S) parseLog(out any, event abi.Event, log eth_types.Log) error {
+	if len(log.Data) > 0 {
+		err := s.ABI.UnpackIntoInterface(out, event.Name, log.Data)
+		if err != nil {
+			return err
+		}
+	}
+
+	var indexed abi.Arguments
+	for _, arg := range event.Inputs {
+		if arg.Indexed {
+			indexed = append(indexed, arg)
+		}
+	}
+
+	err := abi.ParseTopics(out, indexed, log.Topics[1:])
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func convertLog(logIn *ceLog) *eth_types.Log {
+	topics := make([]common.Hash, len(logIn.Topics))
+	for i, t := range logIn.Topics {
+		topics[i] = common.HexToHash(t)
+	}
+
+	data := common.FromHex(logIn.Data)
+
+	return &eth_types.Log{
+		Topics: topics,
+		Data:   data,
+	}
+}
+
+type ceLog struct {
+	Address string   `json:"address"`
+	Topics  []string `json:"topics"`
+	Data    string   `json:"data"`
+}
+
+type ceTx struct {
+	Hash       string  `json:"hash"`
+	Successful *bool   `json:"successful,omitempty"`
+	Logs       []ceLog `json:"logs,omitempty"`
+}
+
+// Just using the same struct for all three event types. Lazy.
+type ceData struct {
+	RequestID   string `json:"requestId"`
+	Type        string `json:"type"`
+	Transaction ceTx   `json:"transaction"`
 }
