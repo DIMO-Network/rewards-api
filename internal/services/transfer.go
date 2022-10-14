@@ -23,6 +23,7 @@ import (
 	eth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
+	"github.com/tidwall/gjson"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
@@ -237,7 +238,7 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%#+v\n", event.Data)
+	// fmt.Printf("%#+v\n", event.Data)
 	abi, err := issuance.IssuanceMetaData.GetAbi()
 	if err != nil {
 		return err
@@ -245,13 +246,15 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 
 	logs := event.Data.Transaction.Logs
 	for _, l := range logs {
-		converted := convertLog(&l)
+		txLog := convertLog(&l)
 		rec := issuance.IssuanceTokensTransferred{}
-		err := s.parseLog(&rec, abi.Events["TokensTransferred"], *converted)
+		err := s.parseLog(&rec, abi.Events["TokensTransferred"], *txLog)
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println("Device: ", rec.VehicleNodeId, "\tTokens: ", rec.Amount, "\tAddress", rec.User)
+		txHash := gjson.Get(string(msg.Value), "data.transaction.hash")
+		success := gjson.Get(string(msg.Value), "data.transaction.successful").Str
+		fmt.Println("Device: ", rec.VehicleNodeId, "\n\tTokens: ", rec.Amount, "\tAddress", rec.User, "\tSuccessful", success, "\tHash", txHash)
 	}
 
 	return nil
