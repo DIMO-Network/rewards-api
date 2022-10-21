@@ -215,7 +215,6 @@ func main() {
 			time.Sleep(time.Second)
 			totalTime++
 		}
-
 		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
@@ -223,13 +222,11 @@ func main() {
 		defer devicesConn.Close()
 
 		devicesClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
-
 		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
 		}
 		defer usersConn.Close()
-
 		usersClient := pb_users.NewUserServiceClient(usersConn)
 
 		kconf := sarama.NewConfig()
@@ -248,10 +245,9 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
 		}
-
 		addr := common.HexToAddress(settings.IssuanceContractAddress)
 		srvc := services.NewTokenTransferService(&settings, producer, usersClient, devicesClient, addr, pdb.DBS)
-		err = srvc.TransferUserTokens(week, ctx)
+		err = srvc.TransferUserTokens(ctx, week)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer tokens")
 		}

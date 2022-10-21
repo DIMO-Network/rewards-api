@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"math/big"
 	"sync"
@@ -23,13 +22,12 @@ import (
 	eth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
-	"github.com/tidwall/gjson"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 type Transfer interface {
 	// BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []string) error
-	TransferUserTokens(week int, ctx context.Context) error
+	TransferUserTokens(ctx context.Context, week int) error
 }
 
 type consumerGroupHandler struct {
@@ -85,13 +83,6 @@ func NewTokenTransferService(
 	db func() *database.DBReaderWriter) Transfer {
 
 	return &Client{
-		// Producer:     producer,
-		// RequestTopic: reqTopic,
-		// Contract: Contract{
-		// 	ChainID: settings.ChainID,
-		// 	Address: settings.Address,
-		// 	Name:    settings.ContractName,
-		// 	Version: settings.ContractVersion},
 		usersClient:     usersClient,
 		devicesClient:   devicesClient,
 		ContractAddress: contractAddress,
@@ -124,14 +115,55 @@ type transferData struct {
 	Data string `json:"data"`
 }
 
-func (c *Client) TransferUserTokens(week int, ctx context.Context) error {
+func (c *Client) TransferUserTokens(ctx context.Context, week int) error {
+
+	// rewards, err := models.Rewards(
+	// 	models.RewardWhere.IssuanceWeekID.EQ(week),
+	// 	qm.OrderBy(models.RewardColumns.UserDeviceID),
+	// ).All(ctx, c.db().Reader)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, row := range rewards {
+	// 	ud, err := c.devicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: row.UserDeviceID})
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	user, err := c.usersClient.GetUser(ctx, &pb_users.GetUserRequest{Id: ud.UserId})
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	q := `
+	// 	UPDATE rewards
+	// 	SET user_ethereum_address = $1,
+	// 		user_device_token_id = $2
+	// 	WHERE user_id = $3 AND user_device_id = $4;`
+	// 	_, err = c.db().Writer.ExecContext(ctx, q, user.EthereumAddress, ud.TokenId, row.UserID, row.UserDeviceID)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	err := c.transfer(ctx, week)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func (c *Client) transfer(ctx context.Context, week int) error {
 
 	page := 0
 	pageSize := 2
 	responseSize := pageSize
 
 	for pageSize == responseSize {
-		rewards, err := models.Rewards(
+		reqID := ksuid.New().String()
+
+		transfer, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.EQ(week),
 			qm.OrderBy(models.RewardColumns.UserDeviceID), // Somewhat dangerous, what if this changes?
 			qm.Limit(pageSize),
@@ -141,48 +173,32 @@ func (c *Client) TransferUserTokens(week int, ctx context.Context) error {
 			return err
 		}
 
-		responseSize = len(rewards)
+		responseSize = len(transfer)
 
-		userAddr := make([]common.Address, responseSize)
-		tknValues := make([]*big.Int, responseSize)
-		vehicleIds := make([]*big.Int, responseSize)
+		var userAddr []common.Address
+		var tknValues []*big.Int
+		var vehicleIds []*big.Int
 
-		for i, row := range rewards {
-			tknValues[i] = row.Tokens.Int(nil)
-
-			ud, err := c.devicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: row.UserDeviceID})
+		for _, row := range transfer {
+			userAddr = append(userAddr, common.HexToAddress(row.UserEthereumAddress.String))
+			tknValues = append(tknValues, row.Tokens.Int(nil))
+			vehicleIds = append(vehicleIds, row.UserDeviceTokenID.Int(nil))
+			q := `
+			UPDATE rewards_api.rewards
+			SET transfer_meta_transaction_request_id = $1
+			WHERE user_id = $2 AND user_device_id = $3;`
+			_, err := c.db().Writer.ExecContext(ctx, q, reqID, row.UserID, row.UserDeviceID)
 			if err != nil {
 				return err
 			}
-
-			if ud.TokenId == nil {
-				continue
-			}
-
-			vehicleIds[i] = new(big.Int).SetUint64(*ud.TokenId)
-
-			user, err := c.usersClient.GetUser(ctx, &pb_users.GetUserRequest{Id: ud.UserId})
-			if err != nil {
-				return err
-			}
-			if user.EthereumAddress == nil {
-				continue
-			}
-
-			userAddr[i] = common.HexToAddress(*user.EthereumAddress)
 		}
-
-		reqID := ksuid.New().String()
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
 		}
-
 		page++
 	}
-
 	return nil
-
 }
 
 func (c *Client) BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []*big.Int) error {
@@ -238,7 +254,6 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 	if err != nil {
 		return err
 	}
-	// fmt.Printf("%#+v\n", event.Data)
 	abi, err := issuance.IssuanceMetaData.GetAbi()
 	if err != nil {
 		return err
@@ -250,11 +265,8 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		rec := issuance.IssuanceTokensTransferred{}
 		err := s.parseLog(&rec, abi.Events["TokensTransferred"], *txLog)
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
-		txHash := gjson.Get(string(msg.Value), "data.transaction.hash")
-		success := gjson.Get(string(msg.Value), "data.transaction.successful").Str
-		fmt.Println("Device: ", rec.VehicleNodeId, "\n\tTokens: ", rec.Amount, "\tAddress", rec.User, "\tSuccessful", success, "\tHash", txHash)
 	}
 
 	return nil

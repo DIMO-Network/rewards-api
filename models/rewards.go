@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -24,77 +25,97 @@ import (
 
 // Reward is an object representing the database table.
 type Reward struct {
-	IssuanceWeekID      int               `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
-	UserDeviceID        string            `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
-	UserID              string            `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	ConnectionStreak    int               `boil:"connection_streak" json:"connection_streak" toml:"connection_streak" yaml:"connection_streak"`
-	DisconnectionStreak int               `boil:"disconnection_streak" json:"disconnection_streak" toml:"disconnection_streak" yaml:"disconnection_streak"`
-	StreakPoints        int               `boil:"streak_points" json:"streak_points" toml:"streak_points" yaml:"streak_points"`
-	IntegrationIds      types.StringArray `boil:"integration_ids" json:"integration_ids" toml:"integration_ids" yaml:"integration_ids"`
-	IntegrationPoints   int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
-	CreatedAt           time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt           time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	Override            bool              `boil:"override" json:"override" toml:"override" yaml:"override"`
-	Tokens              types.NullDecimal `boil:"tokens" json:"tokens,omitempty" toml:"tokens" yaml:"tokens,omitempty"`
+	IssuanceWeekID                   int               `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
+	UserDeviceID                     string            `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
+	UserID                           string            `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	ConnectionStreak                 int               `boil:"connection_streak" json:"connection_streak" toml:"connection_streak" yaml:"connection_streak"`
+	DisconnectionStreak              int               `boil:"disconnection_streak" json:"disconnection_streak" toml:"disconnection_streak" yaml:"disconnection_streak"`
+	StreakPoints                     int               `boil:"streak_points" json:"streak_points" toml:"streak_points" yaml:"streak_points"`
+	IntegrationIds                   types.StringArray `boil:"integration_ids" json:"integration_ids" toml:"integration_ids" yaml:"integration_ids"`
+	IntegrationPoints                int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
+	CreatedAt                        time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt                        time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	Override                         bool              `boil:"override" json:"override" toml:"override" yaml:"override"`
+	Tokens                           types.NullDecimal `boil:"tokens" json:"tokens,omitempty" toml:"tokens" yaml:"tokens,omitempty"`
+	UserEthereumAddress              null.String       `boil:"user_ethereum_address" json:"user_ethereum_address,omitempty" toml:"user_ethereum_address" yaml:"user_ethereum_address,omitempty"`
+	UserDeviceTokenID                types.NullDecimal `boil:"user_device_token_id" json:"user_device_token_id,omitempty" toml:"user_device_token_id" yaml:"user_device_token_id,omitempty"`
+	TransferMetaTransactionRequestID null.String       `boil:"transfer_meta_transaction_request_id" json:"transfer_meta_transaction_request_id,omitempty" toml:"transfer_meta_transaction_request_id" yaml:"transfer_meta_transaction_request_id,omitempty"`
+	TransferSuccessful               null.Bool         `boil:"transfer_successful" json:"transfer_successful,omitempty" toml:"transfer_successful" yaml:"transfer_successful,omitempty"`
 
 	R *rewardR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L rewardL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var RewardColumns = struct {
-	IssuanceWeekID      string
-	UserDeviceID        string
-	UserID              string
-	ConnectionStreak    string
-	DisconnectionStreak string
-	StreakPoints        string
-	IntegrationIds      string
-	IntegrationPoints   string
-	CreatedAt           string
-	UpdatedAt           string
-	Override            string
-	Tokens              string
+	IssuanceWeekID                   string
+	UserDeviceID                     string
+	UserID                           string
+	ConnectionStreak                 string
+	DisconnectionStreak              string
+	StreakPoints                     string
+	IntegrationIds                   string
+	IntegrationPoints                string
+	CreatedAt                        string
+	UpdatedAt                        string
+	Override                         string
+	Tokens                           string
+	UserEthereumAddress              string
+	UserDeviceTokenID                string
+	TransferMetaTransactionRequestID string
+	TransferSuccessful               string
 }{
-	IssuanceWeekID:      "issuance_week_id",
-	UserDeviceID:        "user_device_id",
-	UserID:              "user_id",
-	ConnectionStreak:    "connection_streak",
-	DisconnectionStreak: "disconnection_streak",
-	StreakPoints:        "streak_points",
-	IntegrationIds:      "integration_ids",
-	IntegrationPoints:   "integration_points",
-	CreatedAt:           "created_at",
-	UpdatedAt:           "updated_at",
-	Override:            "override",
-	Tokens:              "tokens",
+	IssuanceWeekID:                   "issuance_week_id",
+	UserDeviceID:                     "user_device_id",
+	UserID:                           "user_id",
+	ConnectionStreak:                 "connection_streak",
+	DisconnectionStreak:              "disconnection_streak",
+	StreakPoints:                     "streak_points",
+	IntegrationIds:                   "integration_ids",
+	IntegrationPoints:                "integration_points",
+	CreatedAt:                        "created_at",
+	UpdatedAt:                        "updated_at",
+	Override:                         "override",
+	Tokens:                           "tokens",
+	UserEthereumAddress:              "user_ethereum_address",
+	UserDeviceTokenID:                "user_device_token_id",
+	TransferMetaTransactionRequestID: "transfer_meta_transaction_request_id",
+	TransferSuccessful:               "transfer_successful",
 }
 
 var RewardTableColumns = struct {
-	IssuanceWeekID      string
-	UserDeviceID        string
-	UserID              string
-	ConnectionStreak    string
-	DisconnectionStreak string
-	StreakPoints        string
-	IntegrationIds      string
-	IntegrationPoints   string
-	CreatedAt           string
-	UpdatedAt           string
-	Override            string
-	Tokens              string
+	IssuanceWeekID                   string
+	UserDeviceID                     string
+	UserID                           string
+	ConnectionStreak                 string
+	DisconnectionStreak              string
+	StreakPoints                     string
+	IntegrationIds                   string
+	IntegrationPoints                string
+	CreatedAt                        string
+	UpdatedAt                        string
+	Override                         string
+	Tokens                           string
+	UserEthereumAddress              string
+	UserDeviceTokenID                string
+	TransferMetaTransactionRequestID string
+	TransferSuccessful               string
 }{
-	IssuanceWeekID:      "rewards.issuance_week_id",
-	UserDeviceID:        "rewards.user_device_id",
-	UserID:              "rewards.user_id",
-	ConnectionStreak:    "rewards.connection_streak",
-	DisconnectionStreak: "rewards.disconnection_streak",
-	StreakPoints:        "rewards.streak_points",
-	IntegrationIds:      "rewards.integration_ids",
-	IntegrationPoints:   "rewards.integration_points",
-	CreatedAt:           "rewards.created_at",
-	UpdatedAt:           "rewards.updated_at",
-	Override:            "rewards.override",
-	Tokens:              "rewards.tokens",
+	IssuanceWeekID:                   "rewards.issuance_week_id",
+	UserDeviceID:                     "rewards.user_device_id",
+	UserID:                           "rewards.user_id",
+	ConnectionStreak:                 "rewards.connection_streak",
+	DisconnectionStreak:              "rewards.disconnection_streak",
+	StreakPoints:                     "rewards.streak_points",
+	IntegrationIds:                   "rewards.integration_ids",
+	IntegrationPoints:                "rewards.integration_points",
+	CreatedAt:                        "rewards.created_at",
+	UpdatedAt:                        "rewards.updated_at",
+	Override:                         "rewards.override",
+	Tokens:                           "rewards.tokens",
+	UserEthereumAddress:              "rewards.user_ethereum_address",
+	UserDeviceTokenID:                "rewards.user_device_token_id",
+	TransferMetaTransactionRequestID: "rewards.transfer_meta_transaction_request_id",
+	TransferSuccessful:               "rewards.transfer_successful",
 }
 
 // Generated where
@@ -155,32 +176,102 @@ func (w whereHelpertypes_NullDecimal) IsNotNull() qm.QueryMod {
 	return qmhelper.WhereIsNotNull(w.field)
 }
 
+type whereHelpernull_String struct{ field string }
+
+func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+func (w whereHelpernull_String) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
+type whereHelpernull_Bool struct{ field string }
+
+func (w whereHelpernull_Bool) EQ(x null.Bool) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Bool) NEQ(x null.Bool) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Bool) LT(x null.Bool) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Bool) LTE(x null.Bool) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Bool) GT(x null.Bool) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Bool) GTE(x null.Bool) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+func (w whereHelpernull_Bool) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Bool) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var RewardWhere = struct {
-	IssuanceWeekID      whereHelperint
-	UserDeviceID        whereHelperstring
-	UserID              whereHelperstring
-	ConnectionStreak    whereHelperint
-	DisconnectionStreak whereHelperint
-	StreakPoints        whereHelperint
-	IntegrationIds      whereHelpertypes_StringArray
-	IntegrationPoints   whereHelperint
-	CreatedAt           whereHelpertime_Time
-	UpdatedAt           whereHelpertime_Time
-	Override            whereHelperbool
-	Tokens              whereHelpertypes_NullDecimal
+	IssuanceWeekID                   whereHelperint
+	UserDeviceID                     whereHelperstring
+	UserID                           whereHelperstring
+	ConnectionStreak                 whereHelperint
+	DisconnectionStreak              whereHelperint
+	StreakPoints                     whereHelperint
+	IntegrationIds                   whereHelpertypes_StringArray
+	IntegrationPoints                whereHelperint
+	CreatedAt                        whereHelpertime_Time
+	UpdatedAt                        whereHelpertime_Time
+	Override                         whereHelperbool
+	Tokens                           whereHelpertypes_NullDecimal
+	UserEthereumAddress              whereHelpernull_String
+	UserDeviceTokenID                whereHelpertypes_NullDecimal
+	TransferMetaTransactionRequestID whereHelpernull_String
+	TransferSuccessful               whereHelpernull_Bool
 }{
-	IssuanceWeekID:      whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
-	UserDeviceID:        whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
-	UserID:              whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_id\""},
-	ConnectionStreak:    whereHelperint{field: "\"rewards_api\".\"rewards\".\"connection_streak\""},
-	DisconnectionStreak: whereHelperint{field: "\"rewards_api\".\"rewards\".\"disconnection_streak\""},
-	StreakPoints:        whereHelperint{field: "\"rewards_api\".\"rewards\".\"streak_points\""},
-	IntegrationIds:      whereHelpertypes_StringArray{field: "\"rewards_api\".\"rewards\".\"integration_ids\""},
-	IntegrationPoints:   whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
-	CreatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
-	UpdatedAt:           whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
-	Override:            whereHelperbool{field: "\"rewards_api\".\"rewards\".\"override\""},
-	Tokens:              whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"tokens\""},
+	IssuanceWeekID:                   whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
+	UserDeviceID:                     whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
+	UserID:                           whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_id\""},
+	ConnectionStreak:                 whereHelperint{field: "\"rewards_api\".\"rewards\".\"connection_streak\""},
+	DisconnectionStreak:              whereHelperint{field: "\"rewards_api\".\"rewards\".\"disconnection_streak\""},
+	StreakPoints:                     whereHelperint{field: "\"rewards_api\".\"rewards\".\"streak_points\""},
+	IntegrationIds:                   whereHelpertypes_StringArray{field: "\"rewards_api\".\"rewards\".\"integration_ids\""},
+	IntegrationPoints:                whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
+	CreatedAt:                        whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
+	UpdatedAt:                        whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
+	Override:                         whereHelperbool{field: "\"rewards_api\".\"rewards\".\"override\""},
+	Tokens:                           whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"tokens\""},
+	UserEthereumAddress:              whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"user_ethereum_address\""},
+	UserDeviceTokenID:                whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"user_device_token_id\""},
+	TransferMetaTransactionRequestID: whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_meta_transaction_request_id\""},
+	TransferSuccessful:               whereHelpernull_Bool{field: "\"rewards_api\".\"rewards\".\"transfer_successful\""},
 }
 
 // RewardRels is where relationship names are stored.
@@ -211,9 +302,9 @@ func (r *rewardR) GetIssuanceWeek() *IssuanceWeek {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override", "tokens"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful"}
 	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override", "tokens"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )
