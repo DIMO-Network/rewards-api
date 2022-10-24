@@ -212,8 +212,8 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 
 		q := `
 		INSERT INTO rewards_api.meta_transaction_requests
-		(id, status) VALUES ($1, $2);`
-		_, err = c.db().Writer.ExecContext(ctx, q, reqID, "started")
+		(id) VALUES ($1);`
+		_, err = c.db().Writer.ExecContext(ctx, q, reqID)
 		if err != nil {
 			return err
 		}
@@ -284,17 +284,13 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 
 	logs := event.Data.Transaction.Logs
 	success := gjson.Get(string(msg.Value), "data.transaction.successful").Bool()
-	status := "completed"
-	if !success {
-		status = "failed"
-	}
+	status := event.Data.Type
 
 	q := `
-	INSERT INTO rewards_api.meta_transaction_requests
-	(id, hash, status, successful)
-	VALUES
-	($1, $2, $3, $4);`
-	_, err = s.DB().Writer.Exec(q, event.Data.RequestID, event.Data.Transaction.Hash, status, event.Data.Transaction.Successful)
+	UPDATE rewards_api.meta_transaction_requests
+	SET hash = $1, status = $2, successful = $3
+	WHERE id = $4;`
+	_, err = s.DB().Writer.Exec(q, event.Data.Transaction.Hash, status, event.Data.Transaction.Successful, event.Data.RequestID)
 	if err != nil {
 		return err
 	}
