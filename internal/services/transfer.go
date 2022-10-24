@@ -170,6 +170,14 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 	for pageSize == responseSize {
 		reqID := ksuid.New().String()
 
+		q := `
+		INSERT INTO rewards_api.meta_transaction_requests
+		(id, status) VALUES ($1, $2);`
+		_, err := c.db().Writer.ExecContext(ctx, q, reqID, "Unsubmitted")
+		if err != nil {
+			return err
+		}
+
 		transfer, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.EQ(week),
 			qm.OrderBy(models.RewardColumns.UserDeviceID), // Somewhat dangerous, what if this changes?
@@ -206,14 +214,6 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		}
 
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
-		if err != nil {
-			return err
-		}
-
-		q := `
-		INSERT INTO rewards_api.meta_transaction_requests
-		(id) VALUES ($1);`
-		_, err = c.db().Writer.ExecContext(ctx, q, reqID)
 		if err != nil {
 			return err
 		}
@@ -283,7 +283,6 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 	}
 
 	logs := event.Data.Transaction.Logs
-	success := gjson.Get(string(msg.Value), "data.transaction.successful").Bool()
 	status := event.Data.Type
 
 	q := `
@@ -306,6 +305,8 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		if err != nil {
 			return err
 		}
+
+		success := gjson.Get(string(msg.Value), "data.transaction.successful").Bool() // getting event using gjson because it defaults to false if not present, whereas the event struct defaults to nil
 		_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId)
 		if err != nil {
 			tx.Rollback()

@@ -5,7 +5,7 @@
 SET search_path TO rewards_api, public;
 
 CREATE TABLE meta_transaction_requests (
-    id char(27) NOT NULL,
+    id char(27) PRIMARY KEY,
     "hash" BYTEA,
     "status" TEXT,
     successful BOOLEAN,
@@ -13,6 +13,7 @@ CREATE TABLE meta_transaction_requests (
     updated_at timestamptz NOT NULL DEFAULT current_timestamp
 );
 
+ALTER TABLE rewards ADD CONSTRAINT meta_transaction_id_fkey FOREIGN KEY(transfer_meta_transaction_request_id) REFERENCES meta_transaction_requests(id);
 
 -- +goose Down
 -- +goose StatementBegin

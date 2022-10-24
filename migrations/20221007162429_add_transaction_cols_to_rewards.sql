@@ -3,11 +3,12 @@
 SET search_path TO rewards_api, public;
 
 ALTER TABLE rewards 
-    ADD COLUMN tokens numeric(26),
+    ADD COLUMN tokens NUMERIC(26),
     ADD COLUMN user_ethereum_address CHAR(42),
-    ADD COLUMN user_device_token_id numeric(78, 0),
-    ADD COLUMN transfer_meta_transaction_request_id VARCHAR,
+    ADD COLUMN user_device_token_id NUMERIC(78, 0),
+    ADD COLUMN transfer_meta_transaction_request_id char(27),
     ADD COLUMN transfer_successful BOOLEAN;
+
 -- +goose StatementEnd
 
 -- +goose Down
