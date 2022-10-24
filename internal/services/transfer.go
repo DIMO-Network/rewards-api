@@ -22,6 +22,7 @@ import (
 	eth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
+	"github.com/tidwall/gjson"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
@@ -49,7 +50,13 @@ func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cla
 		return err
 	}
 
-	temp := &S{ABI: abi}
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	if err != nil {
+		return err
+	}
+	pdb := database.NewDbConnectionFromSettings(context.Background(), &settings)
+
+	temp := &S{ABI: abi, DB: pdb.DBS}
 	for msg := range claim.Messages() {
 		err := temp.processMessages(msg)
 		if err != nil {
@@ -174,28 +181,43 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		}
 
 		responseSize = len(transfer)
-
 		var userAddr []common.Address
 		var tknValues []*big.Int
 		var vehicleIds []*big.Int
 
+		tx, _ := c.db().GetWriterConn().BeginTx(ctx, nil)
+		stmt, _ := tx.Prepare(`UPDATE rewards_api.rewards
+			SET transfer_meta_transaction_request_id = $1
+			WHERE user_id = $2 AND user_device_id = $3;`)
 		for _, row := range transfer {
 			userAddr = append(userAddr, common.HexToAddress(row.UserEthereumAddress.String))
 			tknValues = append(tknValues, row.Tokens.Int(nil))
 			vehicleIds = append(vehicleIds, row.UserDeviceTokenID.Int(nil))
-			q := `
-			UPDATE rewards_api.rewards
-			SET transfer_meta_transaction_request_id = $1
-			WHERE user_id = $2 AND user_device_id = $3;`
-			_, err := c.db().Writer.ExecContext(ctx, q, reqID, row.UserID, row.UserDeviceID)
+			_, err := stmt.Exec(reqID, row.UserID, row.UserDeviceID)
 			if err != nil {
+				tx.Rollback()
 				return err
 			}
+
 		}
+		err = tx.Commit()
+		if err != nil {
+			return err
+		}
+
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
 		}
+
+		q := `
+		INSERT INTO rewards_api.meta_transaction_requests
+		(id, status) VALUES ($1, $2);`
+		_, err = c.db().Writer.ExecContext(ctx, q, reqID, "started")
+		if err != nil {
+			return err
+		}
+
 		page++
 	}
 	return nil
@@ -255,11 +277,32 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		return err
 	}
 	abi, err := issuance.IssuanceMetaData.GetAbi()
+
 	if err != nil {
 		return err
 	}
 
 	logs := event.Data.Transaction.Logs
+	success := gjson.Get(string(msg.Value), "data.transaction.successful").Bool()
+	status := "completed"
+	if !success {
+		status = "failed"
+	}
+
+	q := `
+	INSERT INTO rewards_api.meta_transaction_requests
+	(id, hash, status, successful)
+	VALUES
+	($1, $2, $3, $4);`
+	_, err = s.DB().Writer.Exec(q, event.Data.RequestID, event.Data.Transaction.Hash, status, event.Data.Transaction.Successful)
+	if err != nil {
+		return err
+	}
+
+	tx, _ := s.DB().GetWriterConn().BeginTx(context.Background(), nil)
+	stmt, _ := tx.Prepare(`UPDATE rewards_api.rewards
+			SET transfer_succesful = $1
+			WHERE transfer_meta_transaction_request_id = $2 AND user_device_id = $3;`)
 	for _, l := range logs {
 		txLog := convertLog(&l)
 		rec := issuance.IssuanceTokensTransferred{}
@@ -267,6 +310,16 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		if err != nil {
 			return err
 		}
+		_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -252,7 +252,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to transfer tokens")
 		}
 		// need to add in parsing the response to determine success/ failure
-	case "test-listen":
+	case "listen":
 		kconf := sarama.NewConfig()
 		kconf.Version = sarama.V2_8_1_0
 		kconf.Producer.Return.Successes = true
