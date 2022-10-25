@@ -212,7 +212,6 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		if err != nil {
 			return err
 		}
-
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
@@ -293,11 +292,10 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 	if err != nil {
 		return err
 	}
-
 	tx, _ := s.DB().GetWriterConn().BeginTx(context.Background(), nil)
 	stmt, _ := tx.Prepare(`UPDATE rewards_api.rewards
-			SET transfer_succesful = $1
-			WHERE transfer_meta_transaction_request_id = $2 AND user_device_id = $3;`)
+			SET transfer_successful = $1
+			WHERE transfer_meta_transaction_request_id = $2 AND user_device_token_id = $3;`)
 	for _, l := range logs {
 		txLog := convertLog(&l)
 		rec := issuance.IssuanceTokensTransferred{}
@@ -305,9 +303,8 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		if err != nil {
 			return err
 		}
-
 		success := gjson.Get(string(msg.Value), "data.transaction.successful").Bool() // getting event using gjson because it defaults to false if not present, whereas the event struct defaults to nil
-		_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId)
+		_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -318,7 +315,6 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 
 }
