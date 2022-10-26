@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/big"
 	"sync"
@@ -20,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	eth_types "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/tidwall/gjson"
@@ -203,7 +205,12 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			vehicleIds = append(vehicleIds, row.UserDeviceTokenID.Int(nil))
 			_, err := stmt.Exec(reqID, row.UserID, row.UserDeviceID)
 			if err != nil {
-				tx.Rollback()
+				rollbackErr := tx.Rollback()
+
+				if rollbackErr != nil {
+					combinedErrors := fmt.Sprintf("error rolling back transaction: %s", rollbackErr.Error())
+					err = errors.Wrap(err, combinedErrors)
+				}
 				return err
 			}
 
@@ -306,7 +313,12 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		success := gjson.Get(string(msg.Value), "data.transaction.successful").Bool() // getting event using gjson because it defaults to false if not present, whereas the event struct defaults to nil
 		_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
 		if err != nil {
-			tx.Rollback()
+			rollbackErr := tx.Rollback()
+
+			if rollbackErr != nil {
+				combinedErrors := fmt.Sprintf("error rolling back transaction: %s", rollbackErr.Error())
+				err = errors.Wrap(err, combinedErrors)
+			}
 			return err
 		}
 

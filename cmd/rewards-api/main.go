@@ -264,7 +264,6 @@ func main() {
 		}
 
 		log.Printf("brokers=%q", settings.KafkaBrokers)
-
 		consumer, err := sarama.NewConsumerGroupFromClient("c1", kclient)
 		if err != nil {
 			log.Fatal(err)
@@ -277,9 +276,7 @@ func main() {
 
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt)
-		select {
-		case <-signals:
-		}
+		<-signals
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
