@@ -258,6 +258,19 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			}
 		}
 
+		if ud.TokenId == nil || ud.OptedInAt == nil {
+			t.Logger.Info().Str("userDeviceId", ud.Id).Str("userId", ud.UserId).Msg("Device either not minted or not opted in.")
+			if _, ok := lastWeekByDevice[device.ID]; !ok {
+				lastWeekByDevice[device.ID] = &models.Reward{
+					UserDeviceID:        device.ID,
+					UserID:              ud.UserId,
+					ConnectionStreak:    0,
+					DisconnectionStreak: 0,
+				}
+			}
+			continue
+		}
+
 		thisWeek := &models.Reward{
 			UserDeviceID:   device.ID,
 			IssuanceWeekID: issuanceWeek,

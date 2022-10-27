@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/DIMO-Network/device-definitions-api v0.1.27
-	github.com/DIMO-Network/shared v0.4.4
+	github.com/DIMO-Network/shared v0.5.0
 	github.com/Shopify/sarama v1.37.2
 	github.com/aquasecurity/esquery v0.2.0
 	github.com/arsmn/fiber-swagger/v2 v2.31.1
@@ -29,12 +29,12 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/avast/retry-go v3.0.0+incompatible // indirect
-	github.com/avast/retry-go/v4 v4.1.0 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.16.15 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.22 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.16 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kms v1.18.10 // indirect
-	github.com/aws/smithy-go v1.13.3 // indirect
+	github.com/avast/retry-go/v4 v4.3.0 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.17.1 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.25 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.19 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.18.15 // indirect
+	github.com/aws/smithy-go v1.13.4 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v1.8.0 // indirect
