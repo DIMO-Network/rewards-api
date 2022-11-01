@@ -21,10 +21,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	eth_types "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
-	"github.com/tidwall/gjson"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
@@ -125,42 +125,11 @@ type transferData struct {
 }
 
 func (c *Client) TransferUserTokens(ctx context.Context, week int) error {
-
-	// rewards, err := models.Rewards(
-	// 	models.RewardWhere.IssuanceWeekID.EQ(week),
-	// 	qm.OrderBy(models.RewardColumns.UserDeviceID),
-	// ).All(ctx, c.db().Reader)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// for _, row := range rewards {
-	// 	ud, err := c.devicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: row.UserDeviceID})
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	user, err := c.usersClient.GetUser(ctx, &pb_users.GetUserRequest{Id: ud.UserId})
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	q := `
-	// 	UPDATE rewards
-	// 	SET user_ethereum_address = $1,
-	// 		user_device_token_id = $2
-	// 	WHERE user_id = $3 AND user_device_id = $4;`
-	// 	_, err = c.db().Writer.ExecContext(ctx, q, user.EthereumAddress, ud.TokenId, row.UserID, row.UserDeviceID)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
 	err := c.transfer(ctx, week)
 	if err != nil {
 		return err
 	}
-
 	return nil
-
 }
 
 func (c *Client) transfer(ctx context.Context, week int) error {
@@ -277,44 +246,41 @@ func (c *Client) sendRequest(requestID string, data []byte) error {
 }
 
 func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
+	var DidNotQualifyHash = crypto.Keccak256Hash([]byte("DidntQualify(address,uint256,uint256)"))
 	event := shared.CloudEvent[ceData]{}
 	err := json.Unmarshal(msg.Value, &event)
 	if err != nil {
 		return err
 	}
 	abi, err := issuance.IssuanceMetaData.GetAbi()
-
 	if err != nil {
 		return err
 	}
 
-	logs := event.Data.Transaction.Logs
-	status := event.Data.Type
-
-	q := `
-	UPDATE rewards_api.meta_transaction_requests
-	SET hash = $1, status = $2, successful = $3
-	WHERE id = $4;`
-	_, err = s.DB().Writer.Exec(q, event.Data.Transaction.Hash, status, event.Data.Transaction.Successful, event.Data.RequestID)
-	if err != nil {
-		return err
-	}
 	tx, _ := s.DB().GetWriterConn().BeginTx(context.Background(), nil)
 	stmt, _ := tx.Prepare(`UPDATE rewards_api.rewards
 			SET transfer_successful = $1
 			WHERE transfer_meta_transaction_request_id = $2 AND user_device_token_id = $3;`)
+
+	logs := event.Data.Transaction.Logs
 	for _, l := range logs {
+		var success bool
 		txLog := convertLog(&l)
 		rec := issuance.IssuanceTokensTransferred{}
 		err := s.parseLog(&rec, abi.Events["TokensTransferred"], *txLog)
 		if err != nil {
 			return err
 		}
-		success := gjson.Get(string(msg.Value), "data.transaction.successful").Bool() // getting event using gjson because it defaults to false if not present, whereas the event struct defaults to nil
-		_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
+
+		if !(l.Topics[0] == DidNotQualifyHash.String()) {
+			success = *event.Data.Transaction.Successful
+			_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
+		} else {
+			_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
+		}
+
 		if err != nil {
 			rollbackErr := tx.Rollback()
-
 			if rollbackErr != nil {
 				combinedErrors := fmt.Sprintf("error rolling back transaction: %s", rollbackErr.Error())
 				err = errors.Wrap(err, combinedErrors)
@@ -327,6 +293,16 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 	if err != nil {
 		return err
 	}
+
+	q := `
+	UPDATE rewards_api.meta_transaction_requests
+	SET hash = $1, status = $2, successful = $3
+	WHERE id = $4;`
+	_, err = s.DB().Writer.Exec(q, event.Data.Transaction.Hash, event.Data.Type, event.Data.Transaction.Successful, event.Data.RequestID)
+	if err != nil {
+		return err
+	}
+
 	return nil
 
 }
