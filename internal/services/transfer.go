@@ -21,7 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	eth_types "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
@@ -246,7 +245,9 @@ func (c *Client) sendRequest(requestID string, data []byte) error {
 }
 
 func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
-	var DidNotQualifyHash = crypto.Keccak256Hash([]byte("DidntQualify(address,uint256,uint256)"))
+	DidNotQualifyEvent := s.ABI.Events["DidntQualify"]
+	TokenTransferredEvent := s.ABI.Events["TokensTransferred"]
+
 	event := shared.CloudEvent[ceData]{}
 	err := json.Unmarshal(msg.Value, &event)
 	if err != nil {
@@ -262,21 +263,23 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 			SET transfer_successful = $1
 			WHERE transfer_meta_transaction_request_id = $2 AND user_device_token_id = $3;`)
 
-	logs := event.Data.Transaction.Logs
-	for _, l := range logs {
+	for _, log := range event.Data.Transaction.Logs {
 		var success bool
-		txLog := convertLog(&l)
+		txLog := convertLog(&log)
 		rec := issuance.IssuanceTokensTransferred{}
 		err := s.parseLog(&rec, abi.Events["TokensTransferred"], *txLog)
 		if err != nil {
 			return err
 		}
 
-		if !(l.Topics[0] == DidNotQualifyHash.String()) {
-			success = *event.Data.Transaction.Successful
-			_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
-		} else {
-			_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
+		for _, t := range txLog.Topics {
+			if t == DidNotQualifyEvent.ID {
+				_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
+			}
+			if t == TokenTransferredEvent.ID {
+				success = *event.Data.Transaction.Successful
+				_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
+			}
 		}
 
 		if err != nil {
