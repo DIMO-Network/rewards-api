@@ -1,7 +1,5 @@
 -- +goose Up
 -- +goose StatementBegin
--- +goose StatementEnd
-
 SET search_path TO rewards_api, public;
 
 CREATE TABLE meta_transaction_requests (
@@ -14,6 +12,7 @@ CREATE TABLE meta_transaction_requests (
 );
 
 ALTER TABLE rewards ADD CONSTRAINT meta_transaction_id_fkey FOREIGN KEY(transfer_meta_transaction_request_id) REFERENCES meta_transaction_requests(id);
+-- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
