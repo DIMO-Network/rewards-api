@@ -194,7 +194,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to retrieve rewards.")
 		}
 		logger.Info().Interface("rewards", rewards).Msg("Output.")
-	case "test-transfer":
+	case "transfer":
 		var week int
 		if len(os.Args) == 2 {
 			// We have to subtract 1 because we're getting the number of the newly beginning week.
@@ -251,7 +251,6 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer tokens")
 		}
-		// need to add in parsing the response to determine success/ failure
 	case "listen":
 		kconf := sarama.NewConfig()
 		kconf.Version = sarama.V2_8_1_0
@@ -270,10 +269,8 @@ func main() {
 		}
 		defer consumer.Close()
 		var wg sync.WaitGroup
-		wg.Add(9)
 		go services.Consume(consumer, &wg, "c1")
 		wg.Wait()
-
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt)
 		<-signals

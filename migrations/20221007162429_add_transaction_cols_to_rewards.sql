@@ -7,7 +7,8 @@ ALTER TABLE rewards
     ADD COLUMN user_ethereum_address CHAR(42),
     ADD COLUMN user_device_token_id NUMERIC(78, 0),
     ADD COLUMN transfer_meta_transaction_request_id char(27),
-    ADD COLUMN transfer_successful BOOLEAN;
+    ADD COLUMN transfer_successful BOOLEAN,
+    ADD COLUMN transfer_fail_reason CHAR(20);
 
 -- +goose StatementEnd
 

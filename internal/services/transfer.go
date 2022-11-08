@@ -24,6 +24,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
+	"github.com/volatiletech/null/v8"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
@@ -132,27 +134,23 @@ func (c *Client) TransferUserTokens(ctx context.Context, week int) error {
 }
 
 func (c *Client) transfer(ctx context.Context, week int) error {
-
-	page := 0
 	pageSize := 2
 	responseSize := pageSize
 
 	for pageSize == responseSize {
 		reqID := ksuid.New().String()
-
-		q := `
-		INSERT INTO rewards_api.meta_transaction_requests
-		(id, status) VALUES ($1, $2);`
-		_, err := c.db().Writer.ExecContext(ctx, q, reqID, "Unsubmitted")
+		var metaTxRequest models.MetaTransactionRequest
+		metaTxRequest.ID = reqID
+		metaTxRequest.Status = null.NewString("Unsubmitted", true)
+		err := metaTxRequest.Upsert(ctx, c.db().GetWriterConn(), true, []string{"id"}, boil.Whitelist("status"), boil.Infer())
 		if err != nil {
 			return err
 		}
 
 		transfer, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.EQ(week),
-			qm.OrderBy(models.RewardColumns.UserDeviceID), // Somewhat dangerous, what if this changes?
+			models.RewardWhere.TransferMetaTransactionRequestID.IsNull(),
 			qm.Limit(pageSize),
-			qm.Offset(page*pageSize),
 		).All(ctx, c.db().Reader)
 		if err != nil {
 			return err
@@ -183,16 +181,14 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			}
 
 		}
-		err = tx.Commit()
-		if err != nil {
-			return err
-		}
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
 		}
-
-		page++
+		err = tx.Commit()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -260,9 +256,8 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 
 	tx, _ := s.DB().GetWriterConn().BeginTx(context.Background(), nil)
 	stmt, _ := tx.Prepare(`UPDATE rewards_api.rewards
-			SET transfer_successful = $1
-			WHERE transfer_meta_transaction_request_id = $2 AND user_device_token_id = $3;`)
-
+			SET transfer_successful = $1, transfer_fail_reason = $2
+			WHERE transfer_meta_transaction_request_id = $3 AND user_device_token_id = $4;`)
 	for _, log := range event.Data.Transaction.Logs {
 		var success bool
 		txLog := convertLog(&log)
@@ -271,14 +266,21 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		if err != nil {
 			return err
 		}
-
 		for _, t := range txLog.Topics {
 			if t == DidNotQualifyEvent.ID {
-				_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
+				_, err = stmt.Exec(success, "Did Not Qualify", event.Data.RequestID, rec.VehicleNodeId.Int64())
+				if err != nil {
+					s.Logger.Err(err)
+				}
+				s.Logger.Info().Msgf("did not qualify event: %d", rec.VehicleNodeId.Int64())
 			}
 			if t == TokenTransferredEvent.ID {
 				success = *event.Data.Transaction.Successful
-				_, err = stmt.Exec(success, event.Data.RequestID, rec.VehicleNodeId.Int64())
+				_, err = stmt.Exec(success, nil, event.Data.RequestID, rec.VehicleNodeId.Int64())
+				if err != nil {
+					s.Logger.Err(err)
+				}
+				s.Logger.Info().Msgf("successful transfer log: %d", rec.VehicleNodeId.Int64())
 			}
 		}
 
@@ -297,12 +299,13 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		return err
 	}
 
-	q := `
-	UPDATE rewards_api.meta_transaction_requests
-	SET hash = $1, status = $2, successful = $3
-	WHERE id = $4;`
-	_, err = s.DB().Writer.Exec(q, event.Data.Transaction.Hash, event.Data.Type, event.Data.Transaction.Successful, event.Data.RequestID)
-	if err != nil {
+	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB().Reader, event.Data.RequestID)
+	txnRow.Hash = null.StringFrom(event.Data.Transaction.Hash)
+	txnRow.Status = null.StringFrom(event.Data.Type)
+	if event.Data.Transaction.Successful != nil {
+		txnRow.Successful = null.BoolFrom(*event.Data.Transaction.Successful)
+	}
+	if err := txnRow.Upsert(context.Background(), s.DB().GetWriterConn(), true, []string{models.MetaTransactionRequestColumns.ID}, boil.Infer(), boil.Infer()); err != nil {
 		return err
 	}
 

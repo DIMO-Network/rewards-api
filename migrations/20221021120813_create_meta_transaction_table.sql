@@ -4,7 +4,7 @@ SET search_path TO rewards_api, public;
 
 CREATE TABLE meta_transaction_requests (
     id char(27) PRIMARY KEY,
-    "hash" BYTEA,
+    "hash" TEXT,
     "status" TEXT,
     successful BOOLEAN,
     created_at timestamptz NOT NULL DEFAULT current_timestamp,
