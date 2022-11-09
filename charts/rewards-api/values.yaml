@@ -44,7 +44,7 @@ env:
   META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
   KAFKA_BROKERS: kafka-dev-dimo-kafka-kafka-brokers:9092
   CONSUMER_GROUP: rewards-api
-  ISSUANCE_CONTRACT_ADDRESS: '0x7fc4016396d6f382f0de82cb53b2ff331f53cdbf'
+  ISSUANCE_CONTRACT_ADDRESS: '0xd306971B94cB6E4B07b416d46E20b4847Dcb3431'
 service:
   type: ClusterIP
   ports:
