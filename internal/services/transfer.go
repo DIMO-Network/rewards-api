@@ -12,12 +12,15 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	"github.com/Shopify/sarama"
+	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 type Transfer interface {
@@ -84,6 +87,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		}
 
 		transfer, err := models.Rewards(
+			models.RewardWhere.Tokens.GT(types.NewNullDecimal(decimal.New(0, 0))),
 			models.RewardWhere.IssuanceWeekID.EQ(week),
 			models.RewardWhere.TransferMetaTransactionRequestID.IsNull(),
 			qm.Limit(batchSize),
