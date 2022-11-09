@@ -39,6 +39,13 @@ env:
   AWS_REGION: us-east-2
   DEVICES_API_GRPC_ADDR: devices-api-dev:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-dev:8086
+  USERS_API_GRPC_ADDR: users-api-dev:8086
+  META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
+  META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
+  KAFKA_BROKERS: kafka-dev-dimo-kafka-kafka-brokers:9092
+  CONSUMER_GROUP: rewards-api
+  ISSUANCE_CONTRACT_ADDRESS: '0xd306971B94cB6E4B07b416d46E20b4847Dcb3431'
+  TRANSFER_BATCH_SIZE: 2
 service:
   type: ClusterIP
   ports:

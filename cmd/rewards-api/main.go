@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"errors"
-	"math/big"
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -16,20 +16,19 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
-	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
+	"github.com/Shopify/sarama"
 	swagger "github.com/arsmn/fiber-swagger/v2"
+	"github.com/burdiyan/kafkautil"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
-
-var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
-var baseWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
 
 // @title                       DIMO Rewards API
 // @version                     1.0
@@ -99,13 +98,34 @@ func main() {
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 
-		if settings.Environment != "prod" {
-			v1.Get("/points", rewardsController.GetPointsThisWeek)
-			v1.Get("/tokens", rewardsController.GetTokensThisWeek)
-			v1.Get("/allocation", rewardsController.GetUserAllocation)
-		}
-
 		go startGRPCServer(&settings, pdb.DBS, &logger)
+
+		// Start metatransaction listener
+		if settings.Environment != "prod" {
+			kclient, err := createKafkaClient(&settings)
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
+			}
+
+			consumer, err := sarama.NewConsumerGroupFromClient(settings.ConsumerGroup, kclient)
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Failed to initialize consumer group.")
+			}
+			defer consumer.Close()
+
+			// need to pass logger here
+			statusProc, err := services.NewStatusProcessor(pdb.DBS, &logger)
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Failed to create transaction status processor.")
+			}
+
+			go func() {
+				err := services.Consume(ctx, consumer, &settings, statusProc)
+				if err != nil {
+					logger.Fatal().Err(err).Send()
+				}
+			}()
+		}
 
 		logger.Info().Msgf("Starting HTTP server on port %s.", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {
@@ -145,47 +165,34 @@ func main() {
 			time.Sleep(time.Second)
 			totalTime++
 		}
-		task := services.RewardsTask{
-			Settings:    &settings,
-			DataService: services.NewDeviceDataClient(&settings),
-			DB:          pdb.DBS,
-			Logger:      &logger,
-		}
-		if err := task.Calculate(week); err != nil {
-			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate rewards.")
-		}
-	case "test-tokens":
-		var week int
-		if len(os.Args) == 2 {
-			// We have to subtract 1 because we're getting the number of the newly beginning week.
-			week = services.GetWeekNumForCron(time.Now()) - 1
-		} else {
-			var err error
-			week, err = strconv.Atoi(os.Args[2])
+
+		var transferService services.Transfer
+
+		if settings.Environment != "prod" {
+			kclient, err := createKafkaClient(&settings)
 			if err != nil {
-				logger.Fatal().Err(err).Msg("Could not parse week number.")
+				logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
 			}
-		}
-		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
-		totalTime := 0
-		for !pdb.IsReady() {
-			if totalTime > 30 {
-				logger.Fatal().Msg("could not connect to postgres after 30 seconds")
+
+			producer, err := sarama.NewSyncProducerFromClient(kclient)
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
 			}
-			time.Sleep(time.Second)
-			totalTime++
+
+			addr := common.HexToAddress(settings.IssuanceContractAddress)
+			transferService = services.NewTokenTransferService(&settings, producer, addr, pdb.DBS)
 		}
 
-		st := storage.NewDB(pdb.DBS)
-		err := st.AssignTokens(ctx, week, baseWeeklyTokens)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to assign tokens.")
+		task := services.RewardsTask{
+			Settings:        &settings,
+			DataService:     services.NewDeviceDataClient(&settings),
+			DB:              pdb.DBS,
+			Logger:          &logger,
+			TransferService: transferService,
 		}
-		rewards, err := st.Rewards(ctx, week)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to retrieve rewards.")
+		if err := task.Calculate(week); err != nil {
+			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
 		}
-		logger.Info().Interface("rewards", rewards).Msg("Output.")
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
@@ -220,4 +227,13 @@ func ErrorHandler(c *fiber.Ctx, err error) error {
 		"code":    code,
 		"message": message,
 	})
+}
+
+func createKafkaClient(settings *config.Settings) (sarama.Client, error) {
+	kconf := sarama.NewConfig()
+	kconf.Version = sarama.V2_8_1_0
+	kconf.Producer.Return.Successes = true
+	kconf.Producer.Partitioner = kafkautil.NewJVMCompatiblePartitioner
+
+	return sarama.NewClient(strings.Split(settings.KafkaBrokers, ","), kconf)
 }

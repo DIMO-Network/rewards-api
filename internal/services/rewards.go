@@ -8,11 +8,17 @@ import (
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/database"
+	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
+	pb_users "github.com/DIMO-Network/shared/api/users"
+	"github.com/ericlagergren/decimal"
+	"github.com/volatiletech/null/v8"
+
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -20,14 +26,12 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+var baseWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
+
 var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
-
-var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
-var base = new(big.Int).Mul(big.NewInt(1_105_000), ether)
-var rateNum = big.NewInt(85)
-var rateDen = big.NewInt(100)
 
 // GetWeekNum calculates the number of the week in which the given time lies for DIMO point
 // issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
@@ -55,10 +59,11 @@ func NumToWeekEnd(n int) time.Time {
 }
 
 type RewardsTask struct {
-	Settings    *config.Settings
-	Logger      *zerolog.Logger
-	DataService DeviceDataClient
-	DB          func() *database.DBReaderWriter
+	Settings        *config.Settings
+	Logger          *zerolog.Logger
+	DataService     DeviceDataClient
+	DB              func() *database.DBReaderWriter
+	TransferService Transfer
 }
 
 type ConnectionMethod struct {
@@ -157,6 +162,12 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 	defer definitionsConn.Close()
 
+	usersConn, err := grpc.Dial(t.Settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+	defer usersConn.Close()
+
 	definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 	integs, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -170,6 +181,8 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 
 	deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
+
+	usersClient := pb_users.NewUserServiceClient(usersConn)
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB().Reader)
 	if err != nil {
@@ -246,22 +259,46 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 		ud, err := deviceClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: device.ID})
 		if err != nil {
-			if s, ok := status.FromError(err); ok {
-				if s.Code() == codes.NotFound {
-					t.Logger.Info().Str("userDeviceId", device.ID).Msg("Device was active during the week but was later deleted.")
-					continue
-				} else {
-					return err
-				}
-			} else {
-				return err
+			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+				t.Logger.Info().Str("userDeviceId", device.ID).Msg("Device was active during the week but was later deleted.")
+				continue
 			}
+			return err
 		}
 
 		thisWeek := &models.Reward{
 			UserDeviceID:   device.ID,
 			IssuanceWeekID: issuanceWeek,
 			UserID:         ud.UserId,
+		}
+
+		if t.Settings.Environment != "prod" {
+			if ud.TokenId == nil {
+				t.Logger.Info().Str("userDeviceId", ud.Id).Str("userId", ud.UserId).Msg("Device not minted.")
+				continue
+			}
+
+			if ud.OptedInAt == nil {
+				t.Logger.Info().Str("userDeviceId", ud.Id).Str("userId", ud.UserId).Msg("User has not opted in for this device.")
+				continue
+			}
+
+			user, err := usersClient.GetUser(ctx, &pb_users.GetUserRequest{Id: ud.UserId})
+			if err != nil {
+				if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+					t.Logger.Error().Str("userDeviceId", device.ID).Str("userId", ud.UserId).Msg("User not found.")
+					continue
+				}
+				return err
+			}
+
+			if user.EthereumAddress == nil {
+				t.Logger.Error().Str("userId", ud.UserId).Msg("User has minted a car but has no Ethereum address on file.")
+				continue
+			}
+
+			thisWeek.UserDeviceTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId))
+			thisWeek.UserEthereumAddress = null.StringFromPtr(user.EthereumAddress)
 		}
 
 		// Streak rewards.
@@ -311,6 +348,19 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 	}
 
+	if t.Settings.Environment != "prod" {
+		st := storage.NewDB(t.DB)
+		err = st.AssignTokens(ctx, issuanceWeek, baseWeeklyTokens)
+		if err != nil {
+			return err
+		}
+
+		err = t.TransferService.TransferUserTokens(ctx, issuanceWeek)
+		if err != nil {
+			return err
+		}
+	}
+
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished
 	if _, err := week.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
@@ -323,20 +373,4 @@ func setStreakFields(reward *models.Reward, streakOutput StreakOutput) {
 	reward.ConnectionStreak = streakOutput.ConnectionStreak
 	reward.DisconnectionStreak = streakOutput.DisconnectionStreak
 	reward.StreakPoints = streakOutput.Points
-}
-
-// TODO(elffjs): Bring this decrease back.
-// WeeklyTokenAllocation determine number of tokens allocated to all eligible users in a given week
-func WeeklyTokenAllocation(issuanceWeek int) *big.Int {
-
-	yr := issuanceWeek / 52
-	val := new(big.Int).Set(base)
-
-	for yr > 0 {
-		val.Mul(val, rateNum)
-		val.Div(val, rateDen)
-		yr--
-	}
-
-	return val
 }
