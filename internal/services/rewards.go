@@ -359,7 +359,10 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			return err
 		}
 
-		t.TransferService.TransferUserTokens(ctx, issuanceWeek)
+		err = t.TransferService.TransferUserTokens(ctx, issuanceWeek)
+		if err != nil {
+			return err
+		}
 	}
 
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished
