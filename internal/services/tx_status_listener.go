@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"math/big"
 
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -22,6 +24,55 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
 )
+
+type consumerGroupHandler struct {
+}
+
+func (consumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+func (consumerGroupHandler) Cleanup(sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+
+	abi, err := contracts.RewardMetaData.GetAbi()
+	if err != nil {
+		return err
+	}
+
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	if err != nil {
+		return err
+	}
+	pdb := database.NewDbConnectionFromSettings(context.Background(), &settings)
+
+	// need to pass logger here
+	temp := &TransferStatusProcessor{ABI: abi, DB: pdb.DBS}
+
+	for msg := range claim.Messages() {
+		err := temp.processMessage(msg)
+		if err != nil {
+			return err
+		}
+		sess.MarkMessage(msg, "")
+	}
+
+	return nil
+}
+
+func Consume(ctx context.Context, group sarama.ConsumerGroup, settings *config.Settings) {
+	for {
+		topics := []string{settings.MetaTransactionStatusTopic}
+		handler := consumerGroupHandler{}
+		err := group.Consume(ctx, topics, handler)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
 
 func NewStatusProcessor(pdb func() *database.DBReaderWriter, logger *zerolog.Logger) (*TransferStatusProcessor, error) {
 	abi, err := contracts.RewardMetaData.GetAbi()

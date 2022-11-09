@@ -3,10 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -14,13 +11,11 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	pb_devices "github.com/DIMO-Network/shared/api/devices"
-	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 	"github.com/segmentio/ksuid"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
@@ -30,74 +25,20 @@ type Transfer interface {
 	TransferUserTokens(ctx context.Context, week int) error
 }
 
-type consumerGroupHandler struct {
-	name string
-}
-
-func (consumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error {
-	return nil
-}
-
-func (consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error {
-	return nil
-}
-
-func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-
-	abi, err := contracts.RewardMetaData.GetAbi()
-	if err != nil {
-		return err
-	}
-
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
-	if err != nil {
-		return err
-	}
-	pdb := database.NewDbConnectionFromSettings(context.Background(), &settings)
-
-	// need to pass logger here
-	temp := &TransferStatusProcessor{ABI: abi, DB: pdb.DBS}
-
-	for msg := range claim.Messages() {
-		err := temp.processMessage(msg)
-		if err != nil {
-			return err
-		}
-		sess.MarkMessage(msg, "")
-	}
-
-	return nil
-}
-
-func Consume(group sarama.ConsumerGroup, wg *sync.WaitGroup, name string) {
-	defer wg.Done()
-	ctx := context.Background()
-	for {
-		topics := []string{"topic.transaction.request.status"}
-		handler := consumerGroupHandler{name: name}
-		err := group.Consume(ctx, topics, handler)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-}
 func NewTokenTransferService(
 	settings *config.Settings,
 	producer sarama.SyncProducer,
-	usersClient pb_users.UserServiceClient,
-	devicesClient pb_devices.UserDeviceServiceClient,
 	contractAddress common.Address,
 	// settings config.Settings, producer sarama.SyncProducer, reqTopic string, contract Contract,
 	db func() *database.DBReaderWriter) Transfer {
 
 	return &Client{
-		usersClient:     usersClient,
-		devicesClient:   devicesClient,
 		ContractAddress: contractAddress,
 		Producer:        producer,
 		RequestTopic:    settings.MetaTransactionSendTopic,
 		StatusTopic:     settings.MetaTransactionStatusTopic,
-		db:              db}
+		db:              db,
+	}
 }
 
 type Client struct {
@@ -106,9 +47,8 @@ type Client struct {
 	RequestTopic    string
 	StatusTopic     string
 	db              func() *database.DBReaderWriter
-	usersClient     pb_users.UserServiceClient
-	devicesClient   pb_devices.UserDeviceServiceClient
 	ContractAddress common.Address
+	Settings        *config.Settings
 }
 
 type transferData struct {
@@ -129,12 +69,15 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 	pageSize := 2
 	responseSize := pageSize
 
+	// If responseSize < pageSize then there must be no more pages of unsubmitted rewards.
 	for pageSize == responseSize {
 		reqID := ksuid.New().String()
-		var metaTxRequest models.MetaTransactionRequest
-		metaTxRequest.ID = reqID
-		metaTxRequest.Status = models.MetaTransactionRequestStatusUnsubmitted
-		err := metaTxRequest.Upsert(ctx, c.db().GetWriterConn(), true, []string{"id"}, boil.Whitelist("status"), boil.Infer())
+		metaTxRequest := &models.MetaTransactionRequest{
+			ID:     reqID,
+			Status: models.MetaTransactionRequestStatusUnsubmitted,
+		}
+
+		err := metaTxRequest.Insert(ctx, c.db().Writer, boil.Infer())
 		if err != nil {
 			return err
 		}
@@ -149,39 +92,39 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		}
 
 		responseSize = len(transfer)
-		var userAddr []common.Address
-		var tknValues []*big.Int
-		var vehicleIds []*big.Int
+		userAddr := make([]common.Address, responseSize)
+		tknValues := make([]*big.Int, responseSize)
+		vehicleIds := make([]*big.Int, responseSize)
 
-		tx, _ := c.db().GetWriterConn().BeginTx(ctx, nil)
-		stmt, _ := tx.Prepare(`UPDATE rewards_api.rewards
-			SET transfer_meta_transaction_request_id = $1
-			WHERE user_id = $2 AND user_device_id = $3;`)
-		for _, row := range transfer {
-			userAddr = append(userAddr, common.HexToAddress(row.UserEthereumAddress.String))
-			tknValues = append(tknValues, row.Tokens.Int(nil))
-			vehicleIds = append(vehicleIds, row.UserDeviceTokenID.Int(nil))
-			_, err := stmt.Exec(reqID, row.UserID, row.UserDeviceID)
+		tx, err := c.db().Writer.BeginTx(ctx, nil)
+		if err != nil {
+			return err
+		}
+
+		for i, row := range transfer {
+			userAddr[i] = common.HexToAddress(row.UserEthereumAddress.String)
+			tknValues[i] = row.Tokens.Int(nil)
+			vehicleIds[i] = row.UserDeviceTokenID.Int(nil)
+
+			row.TransferMetaTransactionRequestID = null.StringFrom(reqID)
+
+			_, err = row.Update(ctx, tx, boil.Whitelist(models.RewardColumns.TransferMetaTransactionRequestID))
 			if err != nil {
-				rollbackErr := tx.Rollback()
-
-				if rollbackErr != nil {
-					combinedErrors := fmt.Sprintf("error rolling back transaction: %s", rollbackErr.Error())
-					err = errors.Wrap(err, combinedErrors)
-				}
 				return err
 			}
-
 		}
+
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
 		}
+
 		err = tx.Commit()
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -217,17 +160,13 @@ func (c *Client) sendRequest(requestID string, data []byte) error {
 		return err
 	}
 
-	log.Printf("topic=%q, requestId=%q", c.RequestTopic, requestID)
-
-	p, o, err := c.Producer.SendMessage(
+	_, _, err = c.Producer.SendMessage(
 		&sarama.ProducerMessage{
 			Topic: c.RequestTopic,
 			Key:   sarama.StringEncoder(requestID),
 			Value: sarama.ByteEncoder(eventBytes),
 		},
 	)
-
-	log.Printf("err=%v, partition=%d, offset=%d", err, p, o)
 
 	return err
 }

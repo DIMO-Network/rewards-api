@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -24,7 +23,6 @@ import (
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
-	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/Shopify/sarama"
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/burdiyan/kafkautil"
@@ -215,19 +213,6 @@ func main() {
 			time.Sleep(time.Second)
 			totalTime++
 		}
-		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
-		}
-		defer devicesConn.Close()
-
-		devicesClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
-		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
-		}
-		defer usersConn.Close()
-		usersClient := pb_users.NewUserServiceClient(usersConn)
 
 		kconf := sarama.NewConfig()
 		kconf.Version = sarama.V2_8_1_0
@@ -246,7 +231,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
 		}
 		addr := common.HexToAddress(settings.IssuanceContractAddress)
-		srvc := services.NewTokenTransferService(&settings, producer, usersClient, devicesClient, addr, pdb.DBS)
+		srvc := services.NewTokenTransferService(&settings, producer, addr, pdb.DBS)
 		err = srvc.TransferUserTokens(ctx, week)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer tokens")
@@ -262,15 +247,12 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
 		}
 
-		log.Printf("brokers=%q", settings.KafkaBrokers)
 		consumer, err := sarama.NewConsumerGroupFromClient("c1", kclient)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer consumer.Close()
-		var wg sync.WaitGroup
-		go services.Consume(consumer, &wg, "c1")
-		wg.Wait()
+		go services.Consume(ctx, consumer, &settings)
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt)
 		<-signals
