@@ -94,6 +94,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		}
 
 		responseSize = len(transfer)
+
 		userAddr := make([]common.Address, responseSize)
 		tknValues := make([]*big.Int, responseSize)
 		vehicleIds := make([]*big.Int, responseSize)
