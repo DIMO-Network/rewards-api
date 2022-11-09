@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -61,8 +62,9 @@ func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cla
 
 	// need to pass logger here
 	temp := &S{ABI: abi, DB: pdb.DBS}
+
 	for msg := range claim.Messages() {
-		err := temp.processMessages(msg)
+		err := temp.processMessage(msg)
 		if err != nil {
 			return err
 		}
@@ -142,7 +144,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		reqID := ksuid.New().String()
 		var metaTxRequest models.MetaTransactionRequest
 		metaTxRequest.ID = reqID
-		metaTxRequest.Status = null.NewString("Unsubmitted", true)
+		metaTxRequest.Status = models.MetaTransactionRequestStatusUnsubmitted
 		err := metaTxRequest.Upsert(ctx, c.db().GetWriterConn(), true, []string{"id"}, boil.Whitelist("status"), boil.Infer())
 		if err != nil {
 			return err
@@ -241,7 +243,7 @@ func (c *Client) sendRequest(requestID string, data []byte) error {
 	return err
 }
 
-func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
+func (s *S) processMessage(msg *sarama.ConsumerMessage) error {
 	DidNotQualifyEvent := s.ABI.Events["DidntQualify"]
 	TokenTransferredEvent := s.ABI.Events["TokensTransferred"]
 
@@ -255,7 +257,19 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		return err
 	}
 
-	tx, _ := s.DB().GetWriterConn().BeginTx(context.Background(), nil)
+	tx, err := s.DB().Writer.BeginTx(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
+	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB().Reader, event.Data.RequestID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return err
+	}
+
 	stmt, _ := tx.Prepare(`UPDATE rewards_api.rewards
 			SET transfer_successful = $1, transfer_fail_reason = $2
 			WHERE transfer_meta_transaction_request_id = $3 AND user_device_token_id = $4;`)
@@ -298,12 +312,14 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 	if err != nil {
 		return err
 	}
-	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB().Reader, event.Data.RequestID)
+
 	txnRow.Hash = null.StringFrom(event.Data.Transaction.Hash)
-	txnRow.Status = null.StringFrom(event.Data.Type)
+	txnRow.Status = event.Data.Type
+
 	if event.Data.Transaction.Successful != nil {
 		txnRow.Successful = null.BoolFrom(*event.Data.Transaction.Successful)
 	}
+
 	if err := txnRow.Upsert(context.Background(), s.DB().GetWriterConn(), true, []string{models.MetaTransactionRequestColumns.ID}, boil.Infer(), boil.Infer()); err != nil {
 		return err
 	}

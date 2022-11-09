@@ -65,3 +65,33 @@ func AllIssuanceWeeksJobStatus() []string {
 		IssuanceWeeksJobStatusFinished,
 	}
 }
+
+// Enum values for MetaTransactionRequestStatus
+const (
+	MetaTransactionRequestStatusUnsubmitted string = "Unsubmitted"
+	MetaTransactionRequestStatusSubmitted   string = "Submitted"
+	MetaTransactionRequestStatusMined       string = "Mined"
+	MetaTransactionRequestStatusConfirmed   string = "Confirmed"
+)
+
+func AllMetaTransactionRequestStatus() []string {
+	return []string{
+		MetaTransactionRequestStatusUnsubmitted,
+		MetaTransactionRequestStatusSubmitted,
+		MetaTransactionRequestStatusMined,
+		MetaTransactionRequestStatusConfirmed,
+	}
+}
+
+// Enum values for RewardsTransferFailureReason
+const (
+	RewardsTransferFailureReasonDidntQualify string = "DidntQualify"
+	RewardsTransferFailureReasonTxReverted   string = "TxReverted"
+)
+
+func AllRewardsTransferFailureReason() []string {
+	return []string{
+		RewardsTransferFailureReasonDidntQualify,
+		RewardsTransferFailureReasonTxReverted,
+	}
+}

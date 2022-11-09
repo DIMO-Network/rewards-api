@@ -26,7 +26,7 @@ import (
 type MetaTransactionRequest struct {
 	ID         string      `boil:"id" json:"id" toml:"id" yaml:"id"`
 	Hash       null.String `boil:"hash" json:"hash,omitempty" toml:"hash" yaml:"hash,omitempty"`
-	Status     null.String `boil:"status" json:"status,omitempty" toml:"status" yaml:"status,omitempty"`
+	Status     string      `boil:"status" json:"status" toml:"status" yaml:"status"`
 	Successful null.Bool   `boil:"successful" json:"successful,omitempty" toml:"successful" yaml:"successful,omitempty"`
 	CreatedAt  time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt  time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
@@ -134,14 +134,14 @@ func (w whereHelpernull_Bool) IsNotNull() qm.QueryMod { return qmhelper.WhereIsN
 var MetaTransactionRequestWhere = struct {
 	ID         whereHelperstring
 	Hash       whereHelpernull_String
-	Status     whereHelpernull_String
+	Status     whereHelperstring
 	Successful whereHelpernull_Bool
 	CreatedAt  whereHelpertime_Time
 	UpdatedAt  whereHelpertime_Time
 }{
 	ID:         whereHelperstring{field: "\"rewards_api\".\"meta_transaction_requests\".\"id\""},
 	Hash:       whereHelpernull_String{field: "\"rewards_api\".\"meta_transaction_requests\".\"hash\""},
-	Status:     whereHelpernull_String{field: "\"rewards_api\".\"meta_transaction_requests\".\"status\""},
+	Status:     whereHelperstring{field: "\"rewards_api\".\"meta_transaction_requests\".\"status\""},
 	Successful: whereHelpernull_Bool{field: "\"rewards_api\".\"meta_transaction_requests\".\"successful\""},
 	CreatedAt:  whereHelpertime_Time{field: "\"rewards_api\".\"meta_transaction_requests\".\"created_at\""},
 	UpdatedAt:  whereHelpertime_Time{field: "\"rewards_api\".\"meta_transaction_requests\".\"updated_at\""},
@@ -176,8 +176,8 @@ type metaTransactionRequestL struct{}
 
 var (
 	metaTransactionRequestAllColumns            = []string{"id", "hash", "status", "successful", "created_at", "updated_at"}
-	metaTransactionRequestColumnsWithoutDefault = []string{"id"}
-	metaTransactionRequestColumnsWithDefault    = []string{"hash", "status", "successful", "created_at", "updated_at"}
+	metaTransactionRequestColumnsWithoutDefault = []string{"id", "status"}
+	metaTransactionRequestColumnsWithDefault    = []string{"hash", "successful", "created_at", "updated_at"}
 	metaTransactionRequestPrimaryKeyColumns     = []string{"id"}
 	metaTransactionRequestGeneratedColumns      = []string{}
 )

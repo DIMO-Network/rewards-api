@@ -41,7 +41,7 @@ type Reward struct {
 	UserDeviceTokenID                types.NullDecimal `boil:"user_device_token_id" json:"user_device_token_id,omitempty" toml:"user_device_token_id" yaml:"user_device_token_id,omitempty"`
 	TransferMetaTransactionRequestID null.String       `boil:"transfer_meta_transaction_request_id" json:"transfer_meta_transaction_request_id,omitempty" toml:"transfer_meta_transaction_request_id" yaml:"transfer_meta_transaction_request_id,omitempty"`
 	TransferSuccessful               null.Bool         `boil:"transfer_successful" json:"transfer_successful,omitempty" toml:"transfer_successful" yaml:"transfer_successful,omitempty"`
-	TransferFailReason               null.String       `boil:"transfer_fail_reason" json:"transfer_fail_reason,omitempty" toml:"transfer_fail_reason" yaml:"transfer_fail_reason,omitempty"`
+	TransferFailureReason            null.String       `boil:"transfer_failure_reason" json:"transfer_failure_reason,omitempty" toml:"transfer_failure_reason" yaml:"transfer_failure_reason,omitempty"`
 
 	R *rewardR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L rewardL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -64,7 +64,7 @@ var RewardColumns = struct {
 	UserDeviceTokenID                string
 	TransferMetaTransactionRequestID string
 	TransferSuccessful               string
-	TransferFailReason               string
+	TransferFailureReason            string
 }{
 	IssuanceWeekID:                   "issuance_week_id",
 	UserDeviceID:                     "user_device_id",
@@ -82,7 +82,7 @@ var RewardColumns = struct {
 	UserDeviceTokenID:                "user_device_token_id",
 	TransferMetaTransactionRequestID: "transfer_meta_transaction_request_id",
 	TransferSuccessful:               "transfer_successful",
-	TransferFailReason:               "transfer_fail_reason",
+	TransferFailureReason:            "transfer_failure_reason",
 }
 
 var RewardTableColumns = struct {
@@ -102,7 +102,7 @@ var RewardTableColumns = struct {
 	UserDeviceTokenID                string
 	TransferMetaTransactionRequestID string
 	TransferSuccessful               string
-	TransferFailReason               string
+	TransferFailureReason            string
 }{
 	IssuanceWeekID:                   "rewards.issuance_week_id",
 	UserDeviceID:                     "rewards.user_device_id",
@@ -120,7 +120,7 @@ var RewardTableColumns = struct {
 	UserDeviceTokenID:                "rewards.user_device_token_id",
 	TransferMetaTransactionRequestID: "rewards.transfer_meta_transaction_request_id",
 	TransferSuccessful:               "rewards.transfer_successful",
-	TransferFailReason:               "rewards.transfer_fail_reason",
+	TransferFailureReason:            "rewards.transfer_failure_reason",
 }
 
 // Generated where
@@ -198,7 +198,7 @@ var RewardWhere = struct {
 	UserDeviceTokenID                whereHelpertypes_NullDecimal
 	TransferMetaTransactionRequestID whereHelpernull_String
 	TransferSuccessful               whereHelpernull_Bool
-	TransferFailReason               whereHelpernull_String
+	TransferFailureReason            whereHelpernull_String
 }{
 	IssuanceWeekID:                   whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
 	UserDeviceID:                     whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
@@ -216,34 +216,27 @@ var RewardWhere = struct {
 	UserDeviceTokenID:                whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"user_device_token_id\""},
 	TransferMetaTransactionRequestID: whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_meta_transaction_request_id\""},
 	TransferSuccessful:               whereHelpernull_Bool{field: "\"rewards_api\".\"rewards\".\"transfer_successful\""},
-	TransferFailReason:               whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_fail_reason\""},
+	TransferFailureReason:            whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_failure_reason\""},
 }
 
 // RewardRels is where relationship names are stored.
 var RewardRels = struct {
-	TransferMetaTransactionRequest string
 	IssuanceWeek                   string
+	TransferMetaTransactionRequest string
 }{
-	TransferMetaTransactionRequest: "TransferMetaTransactionRequest",
 	IssuanceWeek:                   "IssuanceWeek",
+	TransferMetaTransactionRequest: "TransferMetaTransactionRequest",
 }
 
 // rewardR is where relationships are stored.
 type rewardR struct {
-	TransferMetaTransactionRequest *MetaTransactionRequest `boil:"TransferMetaTransactionRequest" json:"TransferMetaTransactionRequest" toml:"TransferMetaTransactionRequest" yaml:"TransferMetaTransactionRequest"`
 	IssuanceWeek                   *IssuanceWeek           `boil:"IssuanceWeek" json:"IssuanceWeek" toml:"IssuanceWeek" yaml:"IssuanceWeek"`
+	TransferMetaTransactionRequest *MetaTransactionRequest `boil:"TransferMetaTransactionRequest" json:"TransferMetaTransactionRequest" toml:"TransferMetaTransactionRequest" yaml:"TransferMetaTransactionRequest"`
 }
 
 // NewStruct creates a new relationship struct
 func (*rewardR) NewStruct() *rewardR {
 	return &rewardR{}
-}
-
-func (r *rewardR) GetTransferMetaTransactionRequest() *MetaTransactionRequest {
-	if r == nil {
-		return nil
-	}
-	return r.TransferMetaTransactionRequest
 }
 
 func (r *rewardR) GetIssuanceWeek() *IssuanceWeek {
@@ -253,13 +246,20 @@ func (r *rewardR) GetIssuanceWeek() *IssuanceWeek {
 	return r.IssuanceWeek
 }
 
+func (r *rewardR) GetTransferMetaTransactionRequest() *MetaTransactionRequest {
+	if r == nil {
+		return nil
+	}
+	return r.TransferMetaTransactionRequest
+}
+
 // rewardL is where Load methods for each relationship are stored.
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_fail_reason"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason"}
 	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_fail_reason"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )
@@ -542,6 +542,17 @@ func (q rewardQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (boo
 	return count > 0, nil
 }
 
+// IssuanceWeek pointed to by the foreign key.
+func (o *Reward) IssuanceWeek(mods ...qm.QueryMod) issuanceWeekQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.IssuanceWeekID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return IssuanceWeeks(queryMods...)
+}
+
 // TransferMetaTransactionRequest pointed to by the foreign key.
 func (o *Reward) TransferMetaTransactionRequest(mods ...qm.QueryMod) metaTransactionRequestQuery {
 	queryMods := []qm.QueryMod{
@@ -553,15 +564,124 @@ func (o *Reward) TransferMetaTransactionRequest(mods ...qm.QueryMod) metaTransac
 	return MetaTransactionRequests(queryMods...)
 }
 
-// IssuanceWeek pointed to by the foreign key.
-func (o *Reward) IssuanceWeek(mods ...qm.QueryMod) issuanceWeekQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.IssuanceWeekID),
+// LoadIssuanceWeek allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (rewardL) LoadIssuanceWeek(ctx context.Context, e boil.ContextExecutor, singular bool, maybeReward interface{}, mods queries.Applicator) error {
+	var slice []*Reward
+	var object *Reward
+
+	if singular {
+		var ok bool
+		object, ok = maybeReward.(*Reward)
+		if !ok {
+			object = new(Reward)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeReward)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeReward))
+			}
+		}
+	} else {
+		s, ok := maybeReward.(*[]*Reward)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeReward)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeReward))
+			}
+		}
 	}
 
-	queryMods = append(queryMods, mods...)
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &rewardR{}
+		}
+		args = append(args, object.IssuanceWeekID)
 
-	return IssuanceWeeks(queryMods...)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &rewardR{}
+			}
+
+			for _, a := range args {
+				if a == obj.IssuanceWeekID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.IssuanceWeekID)
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`rewards_api.issuance_weeks`),
+		qm.WhereIn(`rewards_api.issuance_weeks.id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load IssuanceWeek")
+	}
+
+	var resultSlice []*IssuanceWeek
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice IssuanceWeek")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for issuance_weeks")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for issuance_weeks")
+	}
+
+	if len(rewardAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.IssuanceWeek = foreign
+		if foreign.R == nil {
+			foreign.R = &issuanceWeekR{}
+		}
+		foreign.R.Rewards = append(foreign.R.Rewards, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.IssuanceWeekID == foreign.ID {
+				local.R.IssuanceWeek = foreign
+				if foreign.R == nil {
+					foreign.R = &issuanceWeekR{}
+				}
+				foreign.R.Rewards = append(foreign.R.Rewards, local)
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 // LoadTransferMetaTransactionRequest allows an eager lookup of values, cached into the
@@ -688,121 +808,48 @@ func (rewardL) LoadTransferMetaTransactionRequest(ctx context.Context, e boil.Co
 	return nil
 }
 
-// LoadIssuanceWeek allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (rewardL) LoadIssuanceWeek(ctx context.Context, e boil.ContextExecutor, singular bool, maybeReward interface{}, mods queries.Applicator) error {
-	var slice []*Reward
-	var object *Reward
-
-	if singular {
-		var ok bool
-		object, ok = maybeReward.(*Reward)
-		if !ok {
-			object = new(Reward)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeReward)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeReward))
-			}
-		}
-	} else {
-		s, ok := maybeReward.(*[]*Reward)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeReward)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeReward))
-			}
+// SetIssuanceWeek of the reward to the related item.
+// Sets o.R.IssuanceWeek to related.
+// Adds o to related.R.Rewards.
+func (o *Reward) SetIssuanceWeek(ctx context.Context, exec boil.ContextExecutor, insert bool, related *IssuanceWeek) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
 		}
 	}
 
-	args := make([]interface{}, 0, 1)
-	if singular {
-		if object.R == nil {
-			object.R = &rewardR{}
-		}
-		args = append(args, object.IssuanceWeekID)
-
-	} else {
-	Outer:
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &rewardR{}
-			}
-
-			for _, a := range args {
-				if a == obj.IssuanceWeekID {
-					continue Outer
-				}
-			}
-
-			args = append(args, obj.IssuanceWeekID)
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	query := NewQuery(
-		qm.From(`rewards_api.issuance_weeks`),
-		qm.WhereIn(`rewards_api.issuance_weeks.id in ?`, args...),
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"rewards_api\".\"rewards\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"issuance_week_id"}),
+		strmangle.WhereClause("\"", "\"", 2, rewardPrimaryKeyColumns),
 	)
-	if mods != nil {
-		mods.Apply(query)
+	values := []interface{}{related.ID, o.IssuanceWeekID, o.UserDeviceID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
 	}
 
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load IssuanceWeek")
-	}
-
-	var resultSlice []*IssuanceWeek
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice IssuanceWeek")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for issuance_weeks")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for issuance_weeks")
-	}
-
-	if len(rewardAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
+	o.IssuanceWeekID = related.ID
+	if o.R == nil {
+		o.R = &rewardR{
+			IssuanceWeek: related,
 		}
+	} else {
+		o.R.IssuanceWeek = related
 	}
 
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.IssuanceWeek = foreign
-		if foreign.R == nil {
-			foreign.R = &issuanceWeekR{}
+	if related.R == nil {
+		related.R = &issuanceWeekR{
+			Rewards: RewardSlice{o},
 		}
-		foreign.R.Rewards = append(foreign.R.Rewards, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if local.IssuanceWeekID == foreign.ID {
-				local.R.IssuanceWeek = foreign
-				if foreign.R == nil {
-					foreign.R = &issuanceWeekR{}
-				}
-				foreign.R.Rewards = append(foreign.R.Rewards, local)
-				break
-			}
-		}
+	} else {
+		related.R.Rewards = append(related.R.Rewards, o)
 	}
 
 	return nil
@@ -885,53 +932,6 @@ func (o *Reward) RemoveTransferMetaTransactionRequest(ctx context.Context, exec 
 		related.R.TransferMetaTransactionRequestRewards = related.R.TransferMetaTransactionRequestRewards[:ln-1]
 		break
 	}
-	return nil
-}
-
-// SetIssuanceWeek of the reward to the related item.
-// Sets o.R.IssuanceWeek to related.
-// Adds o to related.R.Rewards.
-func (o *Reward) SetIssuanceWeek(ctx context.Context, exec boil.ContextExecutor, insert bool, related *IssuanceWeek) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	}
-
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"rewards_api\".\"rewards\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"issuance_week_id"}),
-		strmangle.WhereClause("\"", "\"", 2, rewardPrimaryKeyColumns),
-	)
-	values := []interface{}{related.ID, o.IssuanceWeekID, o.UserDeviceID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	o.IssuanceWeekID = related.ID
-	if o.R == nil {
-		o.R = &rewardR{
-			IssuanceWeek: related,
-		}
-	} else {
-		o.R.IssuanceWeek = related
-	}
-
-	if related.R == nil {
-		related.R = &issuanceWeekR{
-			Rewards: RewardSlice{o},
-		}
-	} else {
-		related.R.Rewards = append(related.R.Rewards, o)
-	}
-
 	return nil
 }
 
