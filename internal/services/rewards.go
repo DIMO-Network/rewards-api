@@ -8,6 +8,7 @@ import (
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/database"
+	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
@@ -25,11 +26,13 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+var baseWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
+
 var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
 
-var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 var base = new(big.Int).Mul(big.NewInt(1_105_000), ether)
 var rateNum = big.NewInt(85)
 var rateDen = big.NewInt(100)
@@ -60,10 +63,11 @@ func NumToWeekEnd(n int) time.Time {
 }
 
 type RewardsTask struct {
-	Settings    *config.Settings
-	Logger      *zerolog.Logger
-	DataService DeviceDataClient
-	DB          func() *database.DBReaderWriter
+	Settings        *config.Settings
+	Logger          *zerolog.Logger
+	DataService     DeviceDataClient
+	DB              func() *database.DBReaderWriter
+	TransferService Transfer
 }
 
 type ConnectionMethod struct {
@@ -348,6 +352,16 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 	}
 
+	if t.Settings.Environment != "prod" {
+		st := storage.NewDB(t.DB)
+		err = st.AssignTokens(ctx, issuanceWeek, baseWeeklyTokens)
+		if err != nil {
+			return err
+		}
+
+		t.TransferService.TransferUserTokens(ctx, issuanceWeek)
+	}
+
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished
 	if _, err := week.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
 		return err
@@ -364,16 +378,16 @@ func setStreakFields(reward *models.Reward, streakOutput StreakOutput) {
 
 // TODO(elffjs): Bring this decrease back.
 // WeeklyTokenAllocation determine number of tokens allocated to all eligible users in a given week
-func WeeklyTokenAllocation(issuanceWeek int) *big.Int {
+// func WeeklyTokenAllocation(issuanceWeek int) *big.Int {
 
-	yr := issuanceWeek / 52
-	val := new(big.Int).Set(base)
+// 	yr := issuanceWeek / 52
+// 	val := new(big.Int).Set(base)
 
-	for yr > 0 {
-		val.Mul(val, rateNum)
-		val.Div(val, rateDen)
-		yr--
-	}
+// 	for yr > 0 {
+// 		val.Mul(val, rateNum)
+// 		val.Div(val, rateDen)
+// 		yr--
+// 	}
 
-	return val
-}
+// 	return val
+// }

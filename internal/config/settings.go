@@ -29,6 +29,7 @@ type Settings struct {
 	MetaTransactionSendTopic       string `yaml:"META_TRANSACTION_SEND_TOPIC"`
 	MetaTransactionStatusTopic     string `yaml:"META_TRANSACTION_STATUS_TOPIC"`
 	IssuanceContractAddress        string `yaml:"ISSUANCE_CONTRACT_ADDRESS"`
+	ConsumerGroup                  string `yaml:"CONSUMER_GROUP"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

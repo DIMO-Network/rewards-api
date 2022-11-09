@@ -14,3 +14,5 @@ ELASTIC_SEARCH_ANALYTICS_HOST: http://localhost:9200
 DEVICE_DATA_INDEX_NAME: device-status
 META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
 META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
+KAFKA_BROKERS: localhost:9092
+CONSUMER_GROUP: rewards-api

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"log"
 	"math/big"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -26,6 +25,7 @@ import (
 )
 
 type consumerGroupHandler struct {
+	tsp *TransferStatusProcessor
 }
 
 func (consumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
@@ -37,23 +37,8 @@ func (consumerGroupHandler) Cleanup(sarama.ConsumerGroupSession) error {
 }
 
 func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-
-	abi, err := contracts.RewardMetaData.GetAbi()
-	if err != nil {
-		return err
-	}
-
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
-	if err != nil {
-		return err
-	}
-	pdb := database.NewDbConnectionFromSettings(context.Background(), &settings)
-
-	// need to pass logger here
-	temp := &TransferStatusProcessor{ABI: abi, DB: pdb.DBS}
-
 	for msg := range claim.Messages() {
-		err := temp.processMessage(msg)
+		err := h.tsp.processMessage(msg)
 		if err != nil {
 			return err
 		}
@@ -63,13 +48,13 @@ func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cla
 	return nil
 }
 
-func Consume(ctx context.Context, group sarama.ConsumerGroup, settings *config.Settings) {
+func Consume(ctx context.Context, group sarama.ConsumerGroup, settings *config.Settings, statusProc *TransferStatusProcessor) error {
 	for {
 		topics := []string{settings.MetaTransactionStatusTopic}
-		handler := consumerGroupHandler{}
+		handler := consumerGroupHandler{tsp: statusProc}
 		err := group.Consume(ctx, topics, handler)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 }
@@ -155,6 +140,8 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 					}
 
 					userDeviceTokenID = event.VehicleNodeId
+				default:
+					continue
 				}
 
 				rewardRow, err := models.Rewards(
