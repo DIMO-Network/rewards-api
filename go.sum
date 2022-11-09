@@ -84,7 +84,6 @@ github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/apmckinlay/gsuneido v0.0.0-20180907175622-1f10244968e3/go.mod h1:hJnaqxrCRgMCTWtpNz9XUFkBCREiQdlcyK6YNmOfroM=
-github.com/apmckinlay/gsuneido v0.0.0-20190404155041-0b6cd442a18f/go.mod h1:JU2DOj5Fc6rol0yaT79Csr47QR0vONGwJtBNGRD7jmc=
 github.com/aquasecurity/esquery v0.2.0 h1:9WWXve95TE8hbm3736WB7nS6Owl8UGDeu+0jiyE9ttA=
 github.com/aquasecurity/esquery v0.2.0/go.mod h1:VU+CIFR6C+H142HHZf9RUkp4Eedpo9UrEKeCQHWf9ao=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
@@ -169,9 +168,8 @@ github.com/envoyproxy/go-control-plane v0.9.9-0.20201210154907-fd9021fe5dad/go.m
 github.com/envoyproxy/go-control-plane v0.9.9-0.20210217033140-668b12f5399d/go.mod h1:cXg6YxExXjJnVBQHBLXeUAgxn2UodCpnH306RInaBQk=
 github.com/envoyproxy/go-control-plane v0.9.9-0.20210512163311-63b5d3c536b0/go.mod h1:hliV/p42l8fGbc6Y9bQ70uLwIvmJyVE5k4iMKlh8wCQ=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
+github.com/ericlagergren/decimal v0.0.0-20181231230500-73749d4874d5 h1:HQGCJNlqt1dUs/BhtEKmqWd6LWS+DWYVxi9+Jo4r0jE=
 github.com/ericlagergren/decimal v0.0.0-20181231230500-73749d4874d5/go.mod h1:1yj25TwtUlJ+pfOu9apAVaM1RWfZGg+aFpd4hPQZekQ=
-github.com/ericlagergren/decimal v0.0.0-20211103172832-aca2edc11f73 h1:odNUt+pGupjtZyfaNIGLT/PUxT7r3fZ0Kf+QH9reIoM=
-github.com/ericlagergren/decimal v0.0.0-20211103172832-aca2edc11f73/go.mod h1:5sruVSMrZCk0U4hwRaGD0D8wIMFVsBWQqG74jQDFg4k=
 github.com/ethereum/go-ethereum v1.10.25 h1:5dFrKJDnYf8L6/5o42abCE6a9yJm9cs4EJVRyYMr55s=
 github.com/ethereum/go-ethereum v1.10.25/go.mod h1:EYFyF19u3ezGLD4RqOkLq+ZCXzYbLoNDdZlMt7kyKFg=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
