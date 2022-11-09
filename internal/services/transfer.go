@@ -38,6 +38,7 @@ func NewTokenTransferService(
 		RequestTopic:    settings.MetaTransactionSendTopic,
 		StatusTopic:     settings.MetaTransactionStatusTopic,
 		db:              db,
+		batchSize:       settings.TransferBatchSize,
 	}
 }
 
@@ -49,6 +50,7 @@ type Client struct {
 	db              func() *database.DBReaderWriter
 	ContractAddress common.Address
 	Settings        *config.Settings
+	batchSize       int
 }
 
 type transferData struct {
@@ -66,11 +68,11 @@ func (c *Client) TransferUserTokens(ctx context.Context, week int) error {
 }
 
 func (c *Client) transfer(ctx context.Context, week int) error {
-	pageSize := 2
-	responseSize := pageSize
+	batchSize := c.Settings.TransferBatchSize
+	responseSize := batchSize
 
 	// If responseSize < pageSize then there must be no more pages of unsubmitted rewards.
-	for pageSize == responseSize {
+	for batchSize == responseSize {
 		reqID := ksuid.New().String()
 		metaTxRequest := &models.MetaTransactionRequest{
 			ID:     reqID,
@@ -85,7 +87,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		transfer, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.EQ(week),
 			models.RewardWhere.TransferMetaTransactionRequestID.IsNull(),
-			qm.Limit(pageSize),
+			qm.Limit(batchSize),
 		).All(ctx, c.db().Reader)
 		if err != nil {
 			return err

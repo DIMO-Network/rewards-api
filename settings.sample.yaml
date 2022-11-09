@@ -16,3 +16,4 @@ META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
 META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
 KAFKA_BROKERS: localhost:9092
 CONSUMER_GROUP: rewards-api
+TRANSFER_BATCH_SIZE: 2

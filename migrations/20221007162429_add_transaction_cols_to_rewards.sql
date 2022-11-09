@@ -6,7 +6,6 @@ CREATE TYPE rewards_transfer_failure_reason AS ENUM ('DidntQualify', 'TxReverted
 
 ALTER TABLE rewards
     -- Max weekly is 1.3e6 * 1e18, so 25 digits or numeric(25) would be enough.
-    ADD COLUMN tokens NUMERIC(26),
     ADD COLUMN user_ethereum_address CHAR(42),
     ADD COLUMN user_device_token_id NUMERIC(78),
     ADD COLUMN transfer_meta_transaction_request_id CHAR(27),
