@@ -59,6 +59,7 @@ func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cla
 	}
 	pdb := database.NewDbConnectionFromSettings(context.Background(), &settings)
 
+	// need to pass logger here
 	temp := &S{ABI: abi, DB: pdb.DBS}
 	for msg := range claim.Messages() {
 		err := temp.processMessages(msg)
@@ -259,6 +260,8 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 			SET transfer_successful = $1, transfer_fail_reason = $2
 			WHERE transfer_meta_transaction_request_id = $3 AND user_device_token_id = $4;`)
 	for _, log := range event.Data.Transaction.Logs {
+		// how to best pass logger in?
+		fmt.Println("processing logs for transaction: ", event.Data.Transaction.Hash)
 		var success bool
 		txLog := convertLog(&log)
 		rec := issuance.IssuanceTokensTransferred{}
@@ -268,22 +271,19 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 		}
 		for _, t := range txLog.Topics {
 			if t == DidNotQualifyEvent.ID {
-				_, err = stmt.Exec(success, "Did Not Qualify", event.Data.RequestID, rec.VehicleNodeId.Int64())
+				_, err = stmt.Exec(success, DidNotQualifyEvent.Name, event.Data.RequestID, rec.VehicleNodeId.Int64())
 				if err != nil {
-					s.Logger.Err(err)
+					fmt.Println(err)
 				}
-				s.Logger.Info().Msgf("did not qualify event: %d", rec.VehicleNodeId.Int64())
 			}
 			if t == TokenTransferredEvent.ID {
 				success = *event.Data.Transaction.Successful
-				_, err = stmt.Exec(success, nil, event.Data.RequestID, rec.VehicleNodeId.Int64())
+				_, err = stmt.Exec(success, "", event.Data.RequestID, rec.VehicleNodeId.Int64())
 				if err != nil {
-					s.Logger.Err(err)
+					fmt.Println(err)
 				}
-				s.Logger.Info().Msgf("successful transfer log: %d", rec.VehicleNodeId.Int64())
 			}
 		}
-
 		if err != nil {
 			rollbackErr := tx.Rollback()
 			if rollbackErr != nil {
@@ -298,7 +298,6 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 	if err != nil {
 		return err
 	}
-
 	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB().Reader, event.Data.RequestID)
 	txnRow.Hash = null.StringFrom(event.Data.Transaction.Hash)
 	txnRow.Status = null.StringFrom(event.Data.Type)
@@ -308,7 +307,6 @@ func (s *S) processMessages(msg *sarama.ConsumerMessage) error {
 	if err := txnRow.Upsert(context.Background(), s.DB().GetWriterConn(), true, []string{models.MetaTransactionRequestColumns.ID}, boil.Infer(), boil.Infer()); err != nil {
 		return err
 	}
-
 	return nil
 
 }
