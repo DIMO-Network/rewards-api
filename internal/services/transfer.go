@@ -49,7 +49,6 @@ type Client struct {
 	StatusTopic     string
 	db              func() *database.DBReaderWriter
 	ContractAddress common.Address
-	Settings        *config.Settings
 	batchSize       int
 }
 
@@ -68,7 +67,7 @@ func (c *Client) TransferUserTokens(ctx context.Context, week int) error {
 }
 
 func (c *Client) transfer(ctx context.Context, week int) error {
-	batchSize := c.Settings.TransferBatchSize
+	batchSize := c.batchSize
 	responseSize := batchSize
 
 	// If responseSize < pageSize then there must be no more pages of unsubmitted rewards.
