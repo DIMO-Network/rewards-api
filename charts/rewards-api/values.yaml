@@ -39,6 +39,8 @@ env:
   AWS_REGION: us-east-2
   DEVICES_API_GRPC_ADDR: devices-api-dev:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-dev:8086
+  META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
+  META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
 service:
   type: ClusterIP
   ports:

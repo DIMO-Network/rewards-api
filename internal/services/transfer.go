@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,21 +10,17 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
-	issuance "github.com/DIMO-Network/rewards-api/internal/contracts"
+	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/Shopify/sarama"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	eth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
@@ -49,7 +44,7 @@ func (consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error {
 
 func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 
-	abi, err := issuance.IssuanceMetaData.GetAbi()
+	abi, err := contracts.RewardMetaData.GetAbi()
 	if err != nil {
 		return err
 	}
@@ -61,7 +56,7 @@ func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cla
 	pdb := database.NewDbConnectionFromSettings(context.Background(), &settings)
 
 	// need to pass logger here
-	temp := &S{ABI: abi, DB: pdb.DBS}
+	temp := &TransferStatusProcessor{ABI: abi, DB: pdb.DBS}
 
 	for msg := range claim.Messages() {
 		err := temp.processMessage(msg)
@@ -100,8 +95,8 @@ func NewTokenTransferService(
 		devicesClient:   devicesClient,
 		ContractAddress: contractAddress,
 		Producer:        producer,
-		RequestTopic:    "topic.transaction.request.send",
-		StatusTopic:     "topic.transaction.request.status",
+		RequestTopic:    settings.MetaTransactionSendTopic,
+		StatusTopic:     settings.MetaTransactionStatusTopic,
 		db:              db}
 }
 
@@ -114,12 +109,6 @@ type Client struct {
 	usersClient     pb_users.UserServiceClient
 	devicesClient   pb_devices.UserDeviceServiceClient
 	ContractAddress common.Address
-}
-
-type Contract struct {
-	Address common.Address
-	Name    string
-	Version string
 }
 
 type transferData struct {
@@ -197,7 +186,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 }
 
 func (c *Client) BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []*big.Int) error {
-	abi, err := issuance.IssuanceMetaData.GetAbi()
+	abi, err := contracts.RewardMetaData.GetAbi()
 	if err != nil {
 		return err
 	}
@@ -241,150 +230,4 @@ func (c *Client) sendRequest(requestID string, data []byte) error {
 	log.Printf("err=%v, partition=%d, offset=%d", err, p, o)
 
 	return err
-}
-
-func (s *S) processMessage(msg *sarama.ConsumerMessage) error {
-	DidNotQualifyEvent := s.ABI.Events["DidntQualify"]
-	TokenTransferredEvent := s.ABI.Events["TokensTransferred"]
-
-	event := shared.CloudEvent[ceData]{}
-	err := json.Unmarshal(msg.Value, &event)
-	if err != nil {
-		return err
-	}
-	abi, err := issuance.IssuanceMetaData.GetAbi()
-	if err != nil {
-		return err
-	}
-
-	tx, err := s.DB().Writer.BeginTx(context.Background(), nil)
-	if err != nil {
-		return err
-	}
-
-	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB().Reader, event.Data.RequestID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
-		return err
-	}
-
-	stmt, _ := tx.Prepare(`UPDATE rewards_api.rewards
-			SET transfer_successful = $1, transfer_fail_reason = $2
-			WHERE transfer_meta_transaction_request_id = $3 AND user_device_token_id = $4;`)
-	for _, log := range event.Data.Transaction.Logs {
-		// how to best pass logger in?
-		fmt.Println("processing logs for transaction: ", event.Data.Transaction.Hash)
-		var success bool
-		txLog := convertLog(&log)
-		rec := issuance.IssuanceTokensTransferred{}
-		err := s.parseLog(&rec, abi.Events["TokensTransferred"], *txLog)
-		if err != nil {
-			return err
-		}
-		for _, t := range txLog.Topics {
-			if t == DidNotQualifyEvent.ID {
-				_, err = stmt.Exec(success, DidNotQualifyEvent.Name, event.Data.RequestID, rec.VehicleNodeId.Int64())
-				if err != nil {
-					fmt.Println(err)
-				}
-			}
-			if t == TokenTransferredEvent.ID {
-				success = *event.Data.Transaction.Successful
-				_, err = stmt.Exec(success, "", event.Data.RequestID, rec.VehicleNodeId.Int64())
-				if err != nil {
-					fmt.Println(err)
-				}
-			}
-		}
-		if err != nil {
-			rollbackErr := tx.Rollback()
-			if rollbackErr != nil {
-				combinedErrors := fmt.Sprintf("error rolling back transaction: %s", rollbackErr.Error())
-				err = errors.Wrap(err, combinedErrors)
-			}
-			return err
-		}
-
-	}
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
-
-	txnRow.Hash = null.StringFrom(event.Data.Transaction.Hash)
-	txnRow.Status = event.Data.Type
-
-	if event.Data.Transaction.Successful != nil {
-		txnRow.Successful = null.BoolFrom(*event.Data.Transaction.Successful)
-	}
-
-	if err := txnRow.Upsert(context.Background(), s.DB().GetWriterConn(), true, []string{models.MetaTransactionRequestColumns.ID}, boil.Infer(), boil.Infer()); err != nil {
-		return err
-	}
-	return nil
-
-}
-
-type S struct {
-	ABI    *abi.ABI
-	DB     func() *database.DBReaderWriter
-	Logger *zerolog.Logger
-}
-
-func (s *S) parseLog(out any, event abi.Event, log eth_types.Log) error {
-	if len(log.Data) > 0 {
-		err := s.ABI.UnpackIntoInterface(out, event.Name, log.Data)
-		if err != nil {
-			return err
-		}
-	}
-
-	var indexed abi.Arguments
-	for _, arg := range event.Inputs {
-		if arg.Indexed {
-			indexed = append(indexed, arg)
-		}
-	}
-
-	err := abi.ParseTopics(out, indexed, log.Topics[1:])
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func convertLog(logIn *ceLog) *eth_types.Log {
-	topics := make([]common.Hash, len(logIn.Topics))
-	for i, t := range logIn.Topics {
-		topics[i] = common.HexToHash(t)
-	}
-
-	data := common.FromHex(logIn.Data)
-
-	return &eth_types.Log{
-		Topics: topics,
-		Data:   data,
-	}
-}
-
-type ceLog struct {
-	Address string   `json:"address"`
-	Topics  []string `json:"topics"`
-	Data    string   `json:"data"`
-}
-
-type ceTx struct {
-	Hash       string  `json:"hash"`
-	Successful *bool   `json:"successful,omitempty"`
-	Logs       []ceLog `json:"logs,omitempty"`
-}
-
-// Just using the same struct for all three event types. Lazy.
-type ceData struct {
-	RequestID   string `json:"requestId"`
-	Type        string `json:"type"`
-	Transaction ceTx   `json:"transaction"`
 }

@@ -27,6 +27,7 @@ type Settings struct {
 	DefinitionsAPIGRPCAddr         string `yaml:"DEFINITIONS_API_GRPC_ADDR"`
 	KafkaBrokers                   string `yaml:"KAFKA_BROKERS"`
 	MetaTransactionSendTopic       string `yaml:"META_TRANSACTION_SEND_TOPIC"`
+	MetaTransactionStatusTopic     string `yaml:"META_TRANSACTION_STATUS_TOPIC"`
 	IssuanceContractAddress        string `yaml:"ISSUANCE_CONTRACT_ADDRESS"`
 }
 
