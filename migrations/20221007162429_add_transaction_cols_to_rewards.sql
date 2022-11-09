@@ -18,7 +18,6 @@ ALTER TABLE rewards
 SET search_path TO rewards_api, public;
 
 ALTER TABLE rewards 
-    DROP COLUMN tokens,
     DROP COLUMN user_ethereum_address,
     DROP COLUMN user_device_token_id,
     DROP COLUMN transfer_meta_transaction_request_id,
