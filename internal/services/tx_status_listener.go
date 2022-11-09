@@ -100,7 +100,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		return err
 	}
 
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint
 
 	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB().Reader, event.Data.RequestID)
 	if err != nil {
