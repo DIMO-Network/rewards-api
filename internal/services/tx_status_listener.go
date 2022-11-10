@@ -154,6 +154,11 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 				if !success {
 					rewardRow.TransferFailureReason = null.StringFrom(models.RewardsTransferFailureReasonDidntQualify)
 				}
+
+				_, err = rewardRow.Update(context.TODO(), tx, boil.Whitelist(models.RewardColumns.TransferSuccessful, models.RewardColumns.TransferFailureReason))
+				if err != nil {
+					return err
+				}
 			}
 		} else {
 			_, err := models.Rewards(
