@@ -90,9 +90,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 	}
 
 	s.Logger.Info().
-		Str("requestId", event.Data.RequestID).
-		Str("hash", event.Data.Transaction.Hash).
-		Str("status", event.Data.Type).
+		Interface("eventData", event.Data).
 		Msg("Processing transaction status.")
 
 	tx, err := s.DB().Writer.BeginTx(context.Background(), nil)
