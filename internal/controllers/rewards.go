@@ -66,6 +66,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
 	userPts := 0
+	userTokens := big.NewInt(0)
 
 	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
@@ -142,6 +143,8 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			tkns.Add(tkns, t.Tokens.Int(nil))
 		}
 
+		userTokens.Add(userTokens, tkns)
+
 		lvl := 1
 		connectionStreak := 0
 		disconnectionStreak := 0
@@ -166,6 +169,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 	return c.JSON(UserResponse{
 		Points: userPts,
+		Tokens: userTokens,
 		ThisWeek: UserResponseThisWeek{
 			Start: weekStart,
 			End:   services.NumToWeekEnd(weekNum),
@@ -192,6 +196,9 @@ func getLevelResp(level int) *UserResponseLevel {
 type UserResponse struct {
 	// Points is the user's total number of points, across all devices and issuance weeks.
 	Points int `json:"points" example:"5000"`
+	// Tokens is the number of tokens the user has earned, across all devices and issuance
+	// weeks.
+	Tokens *big.Int `json:"tokens" example:"1105000000000000000000000" swaggertype:"number"`
 	// Devices is a list of the user's devices, together with some information about their
 	// connectivity.
 	Devices []*UserResponseDevice `json:"devices"`
@@ -205,7 +212,7 @@ type UserResponseDevice struct {
 	// Points is the total number of points that the device has earned across all weeks.
 	Points int `json:"points" example:"5000"`
 	// Tokens is the total number of tokens that the device has earned across all weeks.
-	Tokens *big.Int `json:"tokens,omitempty" example:"5000"`
+	Tokens *big.Int `json:"tokens,omitempty" example:"5000" swaggertype:"number"`
 	// ConnectedThisWeek is true if we've seen activity from the device during the current issuance
 	// week.
 	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
@@ -323,5 +330,5 @@ type HistoryResponseWeek struct {
 	// Points is the number of points the user earned this week.
 	Points int `json:"points" example:"4000"`
 	// Tokens is the number of tokens the user earned this week.
-	Tokens *big.Int `json:"tokens" example:"4000"`
+	Tokens *big.Int `json:"tokens" example:"4000" swaggertype:"number"`
 }
