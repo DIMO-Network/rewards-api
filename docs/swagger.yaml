@@ -1,13 +1,13 @@
 basePath: /v1
 definitions:
-  github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponse:
+  controllers.HistoryResponse:
     properties:
       weeks:
         items:
-          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponseWeek'
+          $ref: '#/definitions/controllers.HistoryResponseWeek'
         type: array
     type: object
-  github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponseWeek:
+  controllers.HistoryResponseWeek:
     properties:
       end:
         description: End is the starting time of the issuance week after this one.
@@ -26,14 +26,14 @@ definitions:
         example: 4000
         type: number
     type: object
-  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse:
+  controllers.UserResponse:
     properties:
       devices:
         description: |-
           Devices is a list of the user's devices, together with some information about their
           connectivity.
         items:
-          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseDevice'
+          $ref: '#/definitions/controllers.UserResponseDevice'
         type: array
       points:
         description: Points is the user's total number of points, across all devices
@@ -41,7 +41,8 @@ definitions:
         example: 5000
         type: integer
       thisWeek:
-        $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek'
+        allOf:
+        - $ref: '#/definitions/controllers.UserResponseThisWeek'
         description: ThisWeek describes the current issuance week.
       tokens:
         description: |-
@@ -50,7 +51,7 @@ definitions:
         example: 1.105e+24
         type: number
     type: object
-  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseDevice:
+  controllers.UserResponseDevice:
     properties:
       connectedThisWeek:
         description: |-
@@ -79,14 +80,15 @@ definitions:
         description: IntegrationsThisWeek details the integrations we've seen active
           this week.
         items:
-          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration'
+          $ref: '#/definitions/controllers.UserResponseIntegration'
         type: array
       lastActive:
         description: LastActive is the last time we saw activity from the vehicle.
         example: "2022-04-12T09:23:01Z"
         type: string
       level:
-        $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel'
+        allOf:
+        - $ref: '#/definitions/controllers.UserResponseLevel'
         description: Level is the level 1-4 of the device. This is fully determined
           by ConnectionStreak.
       points:
@@ -100,7 +102,7 @@ definitions:
         example: 5000
         type: number
     type: object
-  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration:
+  controllers.UserResponseIntegration:
     properties:
       id:
         description: ID is the integration ID.
@@ -119,7 +121,7 @@ definitions:
         example: SmartCar
         type: string
     type: object
-  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel:
+  controllers.UserResponseLevel:
     properties:
       maxWeeks:
         description: MaxWeeks is the last streak week at this level. In the next week,
@@ -141,159 +143,7 @@ definitions:
         example: 1000
         type: integer
     type: object
-  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek:
-    properties:
-      end:
-        description: End is the timestamp of the start of the next issuance week.
-        example: "2022-04-18T05:00:00Z"
-        type: string
-      start:
-        description: Start is the timestamp of the start of the issuance week.
-        example: "2022-04-11T05:00:00Z"
-        type: string
-    type: object
-  internal_controllers.HistoryResponse:
-    properties:
-      weeks:
-        items:
-          $ref: '#/definitions/internal_controllers.HistoryResponseWeek'
-        type: array
-    type: object
-  internal_controllers.HistoryResponseWeek:
-    properties:
-      end:
-        description: End is the starting time of the issuance week after this one.
-        example: "2022-04-18T05:00:00Z"
-        type: string
-      points:
-        description: Points is the number of points the user earned this week.
-        example: 4000
-        type: integer
-      start:
-        description: Start is the starting time of the issuance week.
-        example: "2022-04-11T05:00:00Z"
-        type: string
-      tokens:
-        description: Tokens is the number of tokens the user earned this week.
-        example: 4000
-        type: number
-    type: object
-  internal_controllers.UserResponse:
-    properties:
-      devices:
-        description: |-
-          Devices is a list of the user's devices, together with some information about their
-          connectivity.
-        items:
-          $ref: '#/definitions/internal_controllers.UserResponseDevice'
-        type: array
-      points:
-        description: Points is the user's total number of points, across all devices
-          and issuance weeks.
-        example: 5000
-        type: integer
-      thisWeek:
-        $ref: '#/definitions/internal_controllers.UserResponseThisWeek'
-        description: ThisWeek describes the current issuance week.
-      tokens:
-        description: |-
-          Tokens is the number of tokens the user has earned, across all devices and issuance
-          weeks.
-        example: 1.105e+24
-        type: number
-    type: object
-  internal_controllers.UserResponseDevice:
-    properties:
-      connectedThisWeek:
-        description: |-
-          ConnectedThisWeek is true if we've seen activity from the device during the current issuance
-          week.
-        example: true
-        type: boolean
-      connectionStreak:
-        description: |-
-          ConnectionStreak is what we consider the streak of the device to be. This may not literally
-          be the number of consecutive connected weeks, because the user may disconnect for a week
-          without penalty, or have the connection streak reduced after three weeks of inactivity.
-        example: 4
-        type: integer
-      disconnectionStreak:
-        description: |-
-          DisconnectionStreak is the number of consecutive issuance weeks that the device has been
-          disconnected. This number resets to 0 as soon as a device earns rewards for a certain week.
-        example: 0
-        type: integer
-      id:
-        description: ID is the user device ID used across all services.
-        example: 27cv7gVTh9h4RJuTsmJHpBcr4I9
-        type: string
-      integrationsThisWeek:
-        description: IntegrationsThisWeek details the integrations we've seen active
-          this week.
-        items:
-          $ref: '#/definitions/internal_controllers.UserResponseIntegration'
-        type: array
-      lastActive:
-        description: LastActive is the last time we saw activity from the vehicle.
-        example: "2022-04-12T09:23:01Z"
-        type: string
-      level:
-        $ref: '#/definitions/internal_controllers.UserResponseLevel'
-        description: Level is the level 1-4 of the device. This is fully determined
-          by ConnectionStreak.
-      points:
-        description: Points is the total number of points that the device has earned
-          across all weeks.
-        example: 5000
-        type: integer
-      tokens:
-        description: Tokens is the total number of tokens that the device has earned
-          across all weeks.
-        example: 5000
-        type: number
-    type: object
-  internal_controllers.UserResponseIntegration:
-    properties:
-      id:
-        description: ID is the integration ID.
-        example: 27egBSLazAT7njT2VBjcISPIpiU
-        type: string
-      points:
-        description: |-
-          Points is the number of points a user earns for being connected with this integration
-          for a week.
-        example: 1000
-        type: integer
-      vendor:
-        description: |-
-          Vendor is the name of the integration vendor. At present, this uniquely determines the
-          integration.
-        example: SmartCar
-        type: string
-    type: object
-  internal_controllers.UserResponseLevel:
-    properties:
-      maxWeeks:
-        description: MaxWeeks is the last streak week at this level. In the next week,
-          we enter the next level.
-        example: 20
-        type: integer
-      minWeeks:
-        description: MinWeeks is the minimum streak of weeks needed to enter this
-          level.
-        example: 4
-        type: integer
-      number:
-        description: Number is the level number 1-4
-        example: 2
-        type: integer
-      streakPoints:
-        description: StreakPoints is the number of points you earn per week at this
-          level.
-        example: 1000
-        type: integer
-    type: object
-  internal_controllers.UserResponseThisWeek:
+  controllers.UserResponseThisWeek:
     properties:
       end:
         description: End is the timestamp of the start of the next issuance week.
@@ -316,7 +166,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.UserResponse'
+            $ref: '#/definitions/controllers.UserResponse'
       security:
       - BearerAuth: []
   /user/history:
@@ -326,7 +176,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.HistoryResponse'
+            $ref: '#/definitions/controllers.HistoryResponse'
       security:
       - BearerAuth: []
 securityDefinitions:
