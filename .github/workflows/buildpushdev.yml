@@ -32,7 +32,7 @@ jobs:
           tags: dimozone/rewards-api:${{ steps.slug.outputs.sha7 }}, dimozone/rewards-api:latest
 
       - name: Update Image Version in the related HelmChart values.yaml
-        uses: fjogeleit/yaml-update-action@master
+        uses: fjogeleit/yaml-update-action@v0.11.1
         with:
           valueFile: 'charts/rewards-api/values.yaml'
           propertyPath: 'image.tag'
