@@ -49,18 +49,16 @@ func (s *rewardsService) GetTotalPoints(ctx context.Context, _ *emptypb.Empty) (
 	return out, nil
 }
 
-func (s *rewardsService) GetQualifiedDevices(ctx context.Context, req *pb.GetQualifiedDevicesRequest) (*pb.GetQualifiedDevicesResponse, error) {
+func (s *rewardsService) GetQualifiedDevices(req *pb.GetQualifiedDevicesRequest, stream pb.RewardsService_GetQualifiedDevicesServer) error {
 	start, end := req.Start.AsTime(), req.End.AsTime()
 	data, err := s.dataClient.DescribeActiveDevices(start, end)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	devices := make([]*pb.GetQualifiedDevicesDevice, len(data))
-
-	for i, dev := range data {
-		devices[i] = &pb.GetQualifiedDevicesDevice{Id: dev.ID, IntegrationIds: dev.Integrations}
+	for _, device := range data {
+		stream.Send(&pb.GetQualifiedDevicesDevice{Id: device.ID, IntegrationIds: device.Integrations})
 	}
 
-	return &pb.GetQualifiedDevicesResponse{Devices: devices}, nil
+	return nil
 }
