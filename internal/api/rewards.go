@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/DIMO-Network/rewards-api/internal/database"
+	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/rs/zerolog"
@@ -22,8 +23,9 @@ func NewRewardsService(dbs func() *database.DBReaderWriter, logger *zerolog.Logg
 
 type rewardsService struct {
 	pb.UnimplementedRewardsServiceServer
-	dbs    func() *database.DBReaderWriter
-	logger *zerolog.Logger
+	dbs        func() *database.DBReaderWriter
+	logger     *zerolog.Logger
+	dataClient services.DeviceDataClient
 }
 
 type totalResp struct {
@@ -45,4 +47,20 @@ func (s *rewardsService) GetTotalPoints(ctx context.Context, _ *emptypb.Empty) (
 		TotalPoints: tp.TotalPoints,
 	}
 	return out, nil
+}
+
+func (s *rewardsService) GetQualifiedDevices(ctx context.Context, req *pb.GetQualifiedDevicesRequest) (*pb.GetQualifiedDevicesResponse, error) {
+	start, end := req.Start.AsTime(), req.End.AsTime()
+	data, err := s.dataClient.DescribeActiveDevices(start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	devices := make([]*pb.GetQualifiedDevicesDevice, len(data))
+
+	for i, dev := range data {
+		devices[i] = &pb.GetQualifiedDevicesDevice{Id: dev.ID, IntegrationIds: dev.Integrations}
+	}
+
+	return &pb.GetQualifiedDevicesResponse{Devices: devices}, nil
 }
