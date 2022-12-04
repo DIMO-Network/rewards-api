@@ -162,12 +162,6 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 	defer definitionsConn.Close()
 
-	usersConn, err := grpc.Dial(t.Settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	defer usersConn.Close()
-
 	definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 	integs, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
