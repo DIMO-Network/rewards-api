@@ -12,8 +12,8 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
-	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/ericlagergren/decimal"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"
 
 	"github.com/rs/zerolog"
@@ -82,18 +82,18 @@ func ContainsString(v []string, x string) bool {
 }
 
 type integrationPointsCalculator struct {
-	autoPiID, teslaID, smartcarID string
+	AutoPiID, TeslaID, SmartcarID string
 }
 
 func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
-	if ContainsString(integrationIDs, i.autoPiID) {
-		if ContainsString(integrationIDs, i.smartcarID) {
+	if ContainsString(integrationIDs, i.AutoPiID) {
+		if ContainsString(integrationIDs, i.SmartcarID) {
 			return 7000
 		}
 		return 6000
-	} else if ContainsString(integrationIDs, i.teslaID) {
+	} else if ContainsString(integrationIDs, i.TeslaID) {
 		return 4000
-	} else if ContainsString(integrationIDs, i.smartcarID) {
+	} else if ContainsString(integrationIDs, i.SmartcarID) {
 		return 1000
 	}
 	return 0
@@ -105,11 +105,11 @@ func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb_defs.GetIntegra
 	for _, integration := range resp.Integrations {
 		switch integration.Vendor {
 		case "AutoPi":
-			calc.autoPiID = integration.Id
+			calc.AutoPiID = integration.Id
 		case "Tesla":
-			calc.teslaID = integration.Id
+			calc.TeslaID = integration.Id
 		case "SmartCar":
-			calc.smartcarID = integration.Id
+			calc.SmartcarID = integration.Id
 		default:
 			t.Logger.Warn().Msgf("Unrecognized integration %s with vendor %s", integration.Id, integration.Vendor)
 		}
@@ -162,12 +162,6 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 	defer definitionsConn.Close()
 
-	usersConn, err := grpc.Dial(t.Settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	defer usersConn.Close()
-
 	definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 	integs, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -181,8 +175,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 
 	deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
-
-	usersClient := pb_users.NewUserServiceClient(usersConn)
+	aftermarketClient := pb_devices.NewAftermarketDeviceServiceClient(devicesConn)
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB().Reader)
 	if err != nil {
@@ -283,22 +276,51 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 				continue
 			}
 
-			user, err := usersClient.GetUser(ctx, &pb_users.GetUserRequest{Id: ud.UserId})
-			if err != nil {
-				if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-					t.Logger.Error().Str("userDeviceId", device.ID).Str("userId", ud.UserId).Msg("User not found.")
-					continue
-				}
-				return err
-			}
-
-			if user.EthereumAddress == nil {
-				t.Logger.Error().Str("userId", ud.UserId).Msg("User has minted a car but has no Ethereum address on file.")
+			if len(ud.OwnerAddress) != 20 {
+				t.Logger.Error().Str("userId", ud.UserId).Bytes("address", ud.OwnerAddress).Msg("User has minted a car but has no owner address?")
 				continue
 			}
 
+			if ContainsString(device.Integrations, integCalc.AutoPiID) {
+				foundPairing := false
+
+				for _, serial := range device.Serials {
+					dev, err := aftermarketClient.GetDeviceBySerial(ctx, &pb_devices.GetDeviceBySerialRequest{Serial: serial})
+					if err != nil {
+						if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+							t.Logger.Info().Str("serial", serial).Msg("AutoPi transmitting but unknown to the system.")
+							continue
+						}
+						return err
+					}
+
+					if dev.VehicleTokenId != nil && *dev.VehicleTokenId == *ud.TokenId {
+						foundPairing = true
+						break
+					}
+				}
+
+				if !foundPairing {
+					t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi activity but not paired on-chain.")
+
+					filtered := []string{}
+
+					for _, integ := range device.Integrations {
+						if integ != integCalc.AutoPiID {
+							filtered = append(filtered, integ)
+						}
+					}
+
+					if len(filtered) == 0 {
+						continue
+					}
+
+					device.Integrations = filtered
+				}
+			}
+
 			thisWeek.UserDeviceTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId))
-			thisWeek.UserEthereumAddress = null.StringFromPtr(user.EthereumAddress)
+			thisWeek.UserEthereumAddress = null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex())
 		}
 
 		// Streak rewards.

@@ -16,7 +16,7 @@ import (
 type DeviceDataClient interface {
 	GetLastActivity(userDeviceID string) (lastActivity time.Time, seen bool, err error)
 	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
-	GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, err error)
+	GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, units []string, err error)
 }
 
 type elasticDeviceDataClient struct {
@@ -48,6 +48,7 @@ type jsonMap map[string]interface{}
 type DeviceData struct {
 	ID           string
 	Integrations []string
+	Serials      []string
 }
 
 // activityFieldExists is a list of Elastic exists queries for all of the non-constant fields in
@@ -106,7 +107,7 @@ type ActivityResp struct {
 	} `json:"hits"`
 }
 
-func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, err error) {
+func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, units []string, err error) {
 	ctx := context.Background()
 
 	query := esquery.Search().
@@ -119,21 +120,24 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 				Should(activityFieldExists...).
 				MinimumShouldMatch(1),
 		).
-		Aggs(esquery.TermsAgg("integrations", "source")).
+		Aggs(
+			esquery.TermsAgg("integrations", "source"),
+			esquery.TermsAgg("unit_ids", "data.device.unit_id"),
+		).
 		Size(0)
 
 	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer res.Body.Close()
 
 	respb := new(DeviceIntegrationsResp)
 	if err := json.NewDecoder(res.Body).Decode(respb); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	integrations := make([]string, 0)
+	integrations := []string{}
 	for _, bucket := range respb.Aggregations.Integrations.Buckets {
 		key := bucket.Key
 		if strings.HasPrefix(key, integPrefix) {
@@ -141,7 +145,13 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 		}
 	}
 
-	return integrations, nil
+	unitIDs := []string{}
+	for _, bucket := range respb.Aggregations.UnitIDs.Buckets {
+		key := bucket.Key
+		unitIDs = append(unitIDs, key)
+	}
+
+	return integrations, unitIDs, nil
 }
 
 type DeviceIntegrationsResp struct {
@@ -151,6 +161,11 @@ type DeviceIntegrationsResp struct {
 				Key string `json:"key"`
 			} `json:"buckets"`
 		} `json:"integrations"`
+		UnitIDs struct {
+			Buckets []struct {
+				Key string `json:"key"`
+			} `json:"buckets"`
+		} `json:"unit_ids"`
 	} `json:"aggregations"`
 }
 
@@ -196,6 +211,11 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 								"field": "source",
 							},
 						},
+						"unit_ids": jsonMap{
+							"terms": jsonMap{
+								"field": "data.device.unit_id",
+							},
+						},
 					},
 				}),
 			).
@@ -225,9 +245,15 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 					integrations = append(integrations, strings.TrimPrefix(key, integPrefix))
 				}
 			}
+			serials := make([]string, 0)
+			for _, bucket := range dv.UnitIDs.Buckets {
+				key := bucket.Key
+				serials = append(serials, key)
+			}
 			out = append(out, &DeviceData{
 				ID:           deviceID,
 				Integrations: integrations,
+				Serials:      serials,
 			})
 		}
 
@@ -258,6 +284,11 @@ type DeviceListResp struct {
 						Key string `json:"key"`
 					} `json:"buckets"`
 				} `json:"integrations"`
+				UnitIDs struct {
+					Buckets []struct {
+						Key string `json:"key"`
+					} `json:"buckets"`
+				} `json:"unit_ids"`
 			} `json:"buckets"`
 		} `json:"active_devices"`
 	} `json:"aggregations"`

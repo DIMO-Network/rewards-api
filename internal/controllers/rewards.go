@@ -5,6 +5,7 @@ import (
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -22,6 +23,8 @@ type RewardsController struct {
 	DataClient        services.DeviceDataClient
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
+	AftermarketClient pb_devices.AftermarketDeviceServiceClient
+	Settings          *config.Settings
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -70,6 +73,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
+
 		var maybeLastActive *time.Time
 		lastActive, seen, err := r.DataClient.GetLastActivity(device.Id)
 		if err != nil {
@@ -77,47 +81,75 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			return opaqueInternalError
 		}
 
-		outInts := make([]UserResponseIntegration, 0)
+		outInts := []UserResponseIntegration{}
 
-		var activeThisWeek = false
 		if seen {
 			maybeLastActive = &lastActive
-			if !lastActive.Before(weekStart) {
-				activeThisWeek = true
+		}
 
-				ints, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
-				if err != nil {
-					return opaqueInternalError
-				}
+		var eligibleThisWeek = false
+		if seen {
+			maybeLastActive = &lastActive
+			if weekNum < r.Settings.FirstAutomatedWeek || (device.TokenId != nil && device.OptedInAt != nil) {
+				if !lastActive.Before(weekStart) {
+					ints, units, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
+					if err != nil {
+						return opaqueInternalError
+					}
 
-				if services.ContainsString(ints, intMap["AutoPi"]) {
-					outInts = append(outInts, UserResponseIntegration{
-						ID:     intMap["AutoPi"],
-						Vendor: "AutoPi",
-						Points: 6000,
-					})
-					if services.ContainsString(ints, intMap["SmartCar"]) {
+					if services.ContainsString(ints, intMap["AutoPi"]) {
+						pairedOnChain := false
+
+						if weekNum >= r.Settings.FirstAutomatedWeek {
+							for _, unit := range units {
+								ad, err := r.AftermarketClient.GetDeviceBySerial(c.Context(), &pb_devices.GetDeviceBySerialRequest{Serial: unit})
+								if err != nil {
+									return err
+								}
+
+								if ad.VehicleTokenId != nil && *ad.VehicleTokenId == *device.TokenId {
+									pairedOnChain = true
+									break
+								}
+							}
+						}
+
+						if weekNum < r.Settings.FirstAutomatedWeek || pairedOnChain {
+							eligibleThisWeek = true
+							outInts = append(outInts, UserResponseIntegration{
+								ID:     intMap["AutoPi"],
+								Vendor: "AutoPi",
+								Points: 6000,
+							})
+						}
+
+						if services.ContainsString(ints, intMap["SmartCar"]) {
+							eligibleThisWeek = true
+							outInts = append(outInts, UserResponseIntegration{
+								ID:     intMap["SmartCar"],
+								Vendor: "SmartCar",
+								Points: 1000,
+							})
+						}
+					} else if services.ContainsString(ints, intMap["Tesla"]) {
+						eligibleThisWeek = true
+						outInts = append(outInts, UserResponseIntegration{
+							ID:     intMap["Tesla"],
+							Vendor: "Tesla",
+							Points: 4000,
+						})
+					} else if services.ContainsString(ints, intMap["SmartCar"]) {
+						eligibleThisWeek = true
 						outInts = append(outInts, UserResponseIntegration{
 							ID:     intMap["SmartCar"],
 							Vendor: "SmartCar",
 							Points: 1000,
 						})
 					}
-				} else if services.ContainsString(ints, intMap["Tesla"]) {
-					outInts = append(outInts, UserResponseIntegration{
-						ID:     intMap["Tesla"],
-						Vendor: "Tesla",
-						Points: 4000,
-					})
-				} else if services.ContainsString(ints, intMap["SmartCar"]) {
-					outInts = append(outInts, UserResponseIntegration{
-						ID:     intMap["SmartCar"],
-						Vendor: "SmartCar",
-						Points: 1000,
-					})
 				}
 			}
 		}
+
 		rewards, err := models.Rewards(
 			models.RewardWhere.UserDeviceID.EQ(device.Id),
 			models.RewardWhere.UserID.EQ(userID),
@@ -158,7 +190,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			ID:                   device.Id,
 			Points:               pts,
 			Tokens:               tkns,
-			ConnectedThisWeek:    activeThisWeek,
+			ConnectedThisWeek:    eligibleThisWeek,
 			IntegrationsThisWeek: outInts,
 			LastActive:           maybeLastActive,
 			ConnectionStreak:     connectionStreak,

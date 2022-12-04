@@ -20,6 +20,12 @@ env:
   DEVICE_DATA_INDEX_NAME: device-status-prod*
   DEVICES_API_GRPC_ADDR: devices-api-prod:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-prod:8086
+  META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
+  META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
+  KAFKA_BROKERS: kafka-prod-dimo-kafka-kafka-brokers:9092
+  CONSUMER_GROUP: rewards-api
+  ISSUANCE_CONTRACT_ADDRESS: '0x0313C1508fd3fe5Ec7F8e2A9F9Bcd32f903c78e2'
+  TRANSFER_BATCH_SIZE: 50
 ingress:
   enabled: true
   className: nginx
