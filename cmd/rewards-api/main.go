@@ -84,6 +84,7 @@ func main() {
 			DevicesClient:     deviceClient,
 			DataClient:        dataClient,
 			AftermarketClient: aftermarketClient,
+			Settings:          &settings,
 		}
 
 		// secured paths

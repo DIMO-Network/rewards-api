@@ -5,6 +5,7 @@ import (
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -23,6 +24,7 @@ type RewardsController struct {
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
 	AftermarketClient pb_devices.AftermarketDeviceServiceClient
+	Settings          *config.Settings
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -86,38 +88,57 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 
 		var eligibleThisWeek = false
-		if seen && device.TokenId != nil && device.OptedInAt != nil {
-			if !lastActive.Before(weekStart) {
-				ints, units, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
-				if err != nil {
-					return opaqueInternalError
-				}
-
-				if services.ContainsString(ints, intMap["AutoPi"]) {
-					pairedOnChain := false
-
-					for _, unit := range units {
-						ad, err := r.AftermarketClient.GetDeviceBySerial(c.Context(), &pb_devices.GetDeviceBySerialRequest{Serial: unit})
-						if err != nil {
-							return err
-						}
-
-						if ad.VehicleTokenId != nil && *ad.VehicleTokenId == *device.TokenId {
-							pairedOnChain = true
-							break
-						}
+		if seen {
+			maybeLastActive = &lastActive
+			if weekNum < r.Settings.FirstAutomatedWeek || (device.TokenId != nil && device.OptedInAt != nil) {
+				if !lastActive.Before(weekStart) {
+					ints, units, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
+					if err != nil {
+						return opaqueInternalError
 					}
 
-					if pairedOnChain {
+					if services.ContainsString(ints, intMap["AutoPi"]) {
+						pairedOnChain := false
+
+						if weekNum >= r.Settings.FirstAutomatedWeek {
+							for _, unit := range units {
+								ad, err := r.AftermarketClient.GetDeviceBySerial(c.Context(), &pb_devices.GetDeviceBySerialRequest{Serial: unit})
+								if err != nil {
+									return err
+								}
+
+								if ad.VehicleTokenId != nil && *ad.VehicleTokenId == *device.TokenId {
+									pairedOnChain = true
+									break
+								}
+							}
+						}
+
+						if weekNum < r.Settings.FirstAutomatedWeek || pairedOnChain {
+							eligibleThisWeek = true
+							outInts = append(outInts, UserResponseIntegration{
+								ID:     intMap["AutoPi"],
+								Vendor: "AutoPi",
+								Points: 6000,
+							})
+						}
+
+						if services.ContainsString(ints, intMap["SmartCar"]) {
+							eligibleThisWeek = true
+							outInts = append(outInts, UserResponseIntegration{
+								ID:     intMap["SmartCar"],
+								Vendor: "SmartCar",
+								Points: 1000,
+							})
+						}
+					} else if services.ContainsString(ints, intMap["Tesla"]) {
 						eligibleThisWeek = true
 						outInts = append(outInts, UserResponseIntegration{
-							ID:     intMap["AutoPi"],
-							Vendor: "AutoPi",
-							Points: 6000,
+							ID:     intMap["Tesla"],
+							Vendor: "Tesla",
+							Points: 4000,
 						})
-					}
-
-					if services.ContainsString(ints, intMap["SmartCar"]) {
+					} else if services.ContainsString(ints, intMap["SmartCar"]) {
 						eligibleThisWeek = true
 						outInts = append(outInts, UserResponseIntegration{
 							ID:     intMap["SmartCar"],
@@ -125,20 +146,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 							Points: 1000,
 						})
 					}
-				} else if services.ContainsString(ints, intMap["Tesla"]) {
-					eligibleThisWeek = true
-					outInts = append(outInts, UserResponseIntegration{
-						ID:     intMap["Tesla"],
-						Vendor: "Tesla",
-						Points: 4000,
-					})
-				} else if services.ContainsString(ints, intMap["SmartCar"]) {
-					eligibleThisWeek = true
-					outInts = append(outInts, UserResponseIntegration{
-						ID:     intMap["SmartCar"],
-						Vendor: "SmartCar",
-						Points: 1000,
-					})
 				}
 			}
 		}
