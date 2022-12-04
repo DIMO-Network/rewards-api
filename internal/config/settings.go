@@ -23,7 +23,6 @@ type Settings struct {
 	ElasticSearchAnalyticsPassword string `yaml:"ELASTIC_SEARCH_ANALYTICS_PASSWORD"`
 	DeviceDataIndexName            string `yaml:"DEVICE_DATA_INDEX_NAME"`
 	DevicesAPIGRPCAddr             string `yaml:"DEVICES_API_GRPC_ADDR"`
-	UsersAPIGRPCAddr               string `yaml:"USERS_API_GRPC_ADDR"`
 	DefinitionsAPIGRPCAddr         string `yaml:"DEFINITIONS_API_GRPC_ADDR"`
 	KafkaBrokers                   string `yaml:"KAFKA_BROKERS"`
 	MetaTransactionSendTopic       string `yaml:"META_TRANSACTION_SEND_TOPIC"`
