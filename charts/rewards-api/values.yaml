@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/rewards-api
   pullPolicy: IfNotPresent
-  tag: 1c77840
+  tag: b1cb4a3
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
@@ -45,7 +45,7 @@ env:
   CONSUMER_GROUP: rewards-api
   ISSUANCE_CONTRACT_ADDRESS: '0x0313C1508fd3fe5Ec7F8e2A9F9Bcd32f903c78e2'
   TRANSFER_BATCH_SIZE: 2
-  FIRST_AUTOMATED_WEEK: 45
+  FIRST_AUTOMATED_WEEK: 44
 service:
   type: ClusterIP
   ports:
