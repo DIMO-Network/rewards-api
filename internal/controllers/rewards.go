@@ -99,7 +99,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 						return opaqueInternalError
 					}
 					
-					dlog.Info().Interface("ints", ints).Str("units", units).Msg("activity pull")
+					dlog.Info().Interface("ints", ints).Interface("units", units).Msg("activity pull")
 
 					if services.ContainsString(ints, intMap["AutoPi"]) {
 						pairedOnChain := false
