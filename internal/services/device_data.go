@@ -122,7 +122,7 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 		).
 		Aggs(
 			esquery.TermsAgg("integrations", "source"),
-			esquery.TermsAgg("unit_ids", "data.device.unit_id"),
+			// esquery.TermsAgg("unit_ids", "data.device.unit_id"),
 		).
 		Size(0)
 
