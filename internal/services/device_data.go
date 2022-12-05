@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"log"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -122,18 +123,26 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 		).
 		Aggs(
 			esquery.TermsAgg("integrations", "source"),
-			// esquery.TermsAgg("unit_ids", "data.device.unit_id"),
+			esquery.TermsAgg("unit_ids", "data.device.unit_id"),
 		).
 		Size(0)
+	
+	qb, _ := json.Marshal(query)
+	log.Print(string(qb))
 
 	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
 	if err != nil {
 		return nil, nil, err
 	}
 	defer res.Body.Close()
+	
+	log.Print("code", res.StatusCode)
+	
+	rb, _ := io.ReadAll(res.Body)
+	log.Print(string(rb))
 
 	respb := new(DeviceIntegrationsResp)
-	if err := json.NewDecoder(res.Body).Decode(respb); err != nil {
+	if err := json.Unmarshal(rb, respb); err != nil {
 		return nil, nil, err
 	}
 
