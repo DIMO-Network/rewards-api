@@ -124,7 +124,6 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 		).
 		Aggs(
 			esquery.TermsAgg("integrations", "source"),
-			esquery.TermsAgg("unit_ids", "data.device.unit_id"),
 		).
 		Size(0)
 	
@@ -223,11 +222,6 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 						"integrations": jsonMap{
 							"terms": jsonMap{
 								"field": "source",
-							},
-						},
-						"unit_ids": jsonMap{
-							"terms": jsonMap{
-								"field": "data.device.unit_id",
 							},
 						},
 					},
