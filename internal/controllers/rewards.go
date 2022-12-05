@@ -102,33 +102,14 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					dlog.Info().Interface("ints", ints).Interface("units", units).Msg("activity pull")
 
 					if services.ContainsString(ints, intMap["AutoPi"]) {
-						pairedOnChain := false
-
-						if weekNum >= r.Settings.FirstAutomatedWeek {
-							for _, unit := range units {
-								ad, err := r.AftermarketClient.GetDeviceBySerial(c.Context(), &pb_devices.GetDeviceBySerialRequest{Serial: unit})
-								if err != nil {
-									return err
-								}
-
-								if ad.VehicleTokenId != nil && *ad.VehicleTokenId == *device.TokenId {
-									pairedOnChain = true
-									break
-								}
-							}
-						}
-
-						if weekNum < r.Settings.FirstAutomatedWeek || pairedOnChain {
-							eligibleThisWeek = true
-							outInts = append(outInts, UserResponseIntegration{
-								ID:     intMap["AutoPi"],
-								Vendor: "AutoPi",
-								Points: 6000,
-							})
-						}
+						eligibleThisWeek = true
+						outInts = append(outInts, UserResponseIntegration{
+							ID:     intMap["AutoPi"],
+							Vendor: "AutoPi",
+							Points: 6000,
+						})
 
 						if services.ContainsString(ints, intMap["SmartCar"]) {
-							eligibleThisWeek = true
 							outInts = append(outInts, UserResponseIntegration{
 								ID:     intMap["SmartCar"],
 								Vendor: "SmartCar",
