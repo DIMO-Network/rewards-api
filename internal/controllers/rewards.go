@@ -80,6 +80,8 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			dlog.Err(err).Msg("Failed to retrieve last activity.")
 			return opaqueInternalError
 		}
+		
+		dlog.Info().Msgf("lastActive %s seen %s thisWeek %s firstWeek %s weekStart %s", lastActive, seen, weekNum, r.Settings.FirstAutomatedWeek)
 
 		outInts := []UserResponseIntegration{}
 
@@ -96,6 +98,8 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					if err != nil {
 						return opaqueInternalError
 					}
+					
+					dlog.Info().Interface("ints", ints).Str("units", units).Msg("activity pull")
 
 					if services.ContainsString(ints, intMap["AutoPi"]) {
 						pairedOnChain := false
