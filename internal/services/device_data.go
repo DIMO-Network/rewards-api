@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"fmt"
 	"strings"
 	"io"
 	"log"
 	"time"
+	"fmt"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/aquasecurity/esquery"
@@ -137,6 +139,10 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 	defer res.Body.Close()
 	
 	log.Print("code", res.StatusCode)
+	
+	if code := res.StatusCode; code != http.StatusOK {
+		return nil, nil, fmt.Errorf("status code %d", code)
+	}
 	
 	rb, _ := io.ReadAll(res.Body)
 	log.Print(string(rb))
