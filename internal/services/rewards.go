@@ -175,7 +175,6 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 
 	deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
-	aftermarketClient := pb_devices.NewAftermarketDeviceServiceClient(devicesConn)
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB().Reader)
 	if err != nil {
@@ -282,25 +281,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			}
 
 			if ContainsString(device.Integrations, integCalc.AutoPiID) {
-				foundPairing := false
-
-				for _, serial := range device.Serials {
-					dev, err := aftermarketClient.GetDeviceBySerial(ctx, &pb_devices.GetDeviceBySerialRequest{Serial: serial})
-					if err != nil {
-						if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-							t.Logger.Info().Str("serial", serial).Msg("AutoPi transmitting but unknown to the system.")
-							continue
-						}
-						return err
-					}
-
-					if dev.VehicleTokenId != nil && *dev.VehicleTokenId == *ud.TokenId {
-						foundPairing = true
-						break
-					}
-				}
-
-				if !foundPairing {
+				if ud.AftermarketDeviceTokenId == nil {
 					t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi activity but not paired on-chain.")
 
 					filtered := []string{}
