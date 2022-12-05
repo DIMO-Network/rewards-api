@@ -73,7 +73,6 @@ func main() {
 
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
-		aftermarketClient := pb_devices.NewAftermarketDeviceServiceClient(devicesConn)
 
 		dataClient := services.NewDeviceDataClient(&settings)
 
@@ -83,7 +82,6 @@ func main() {
 			DefinitionsClient: definitionsClient,
 			DevicesClient:     deviceClient,
 			DataClient:        dataClient,
-			AftermarketClient: aftermarketClient,
 			Settings:          &settings,
 		}
 

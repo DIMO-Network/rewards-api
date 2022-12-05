@@ -23,7 +23,6 @@ type RewardsController struct {
 	DataClient        services.DeviceDataClient
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
-	AftermarketClient pb_devices.AftermarketDeviceServiceClient
 	Settings          *config.Settings
 }
 
@@ -80,8 +79,8 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			dlog.Err(err).Msg("Failed to retrieve last activity.")
 			return opaqueInternalError
 		}
-		
-		dlog.Info().Msgf("lastActive %s seen %s thisWeek %s firstWeek %s weekStart %s", lastActive, seen, weekNum, r.Settings.FirstAutomatedWeek)
+
+		dlog.Info().Msgf("lastActive %s seen %s thisWeek %s", lastActive, seen, weekNum)
 
 		outInts := []UserResponseIntegration{}
 
@@ -92,24 +91,27 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		var eligibleThisWeek = false
 		if seen {
 			maybeLastActive = &lastActive
-			if weekNum < r.Settings.FirstAutomatedWeek || (device.TokenId != nil && device.OptedInAt != nil) {
+			if device.TokenId != nil && device.OptedInAt != nil {
 				if !lastActive.Before(weekStart) {
-					ints, units, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
+					ints, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
 					if err != nil {
 						return opaqueInternalError
 					}
-					
-					dlog.Info().Interface("ints", ints).Interface("units", units).Msg("activity pull")
+
+					dlog.Info().Interface("ints", ints).Msg("activity pull")
 
 					if services.ContainsString(ints, intMap["AutoPi"]) {
-						eligibleThisWeek = true
-						outInts = append(outInts, UserResponseIntegration{
-							ID:     intMap["AutoPi"],
-							Vendor: "AutoPi",
-							Points: 6000,
-						})
+						if device.AftermarketDeviceTokenId != nil {
+							eligibleThisWeek = true
+							outInts = append(outInts, UserResponseIntegration{
+								ID:     intMap["AutoPi"],
+								Vendor: "AutoPi",
+								Points: 6000,
+							})
+						}
 
 						if services.ContainsString(ints, intMap["SmartCar"]) {
+							eligibleThisWeek = true
 							outInts = append(outInts, UserResponseIntegration{
 								ID:     intMap["SmartCar"],
 								Vendor: "SmartCar",

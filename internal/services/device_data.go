@@ -3,12 +3,12 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"net/http"
-	"strings"
+	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"strings"
 	"time"
-	"fmt"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/aquasecurity/esquery"
@@ -18,7 +18,7 @@ import (
 type DeviceDataClient interface {
 	GetLastActivity(userDeviceID string) (lastActivity time.Time, seen bool, err error)
 	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
-	GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, units []string, err error)
+	GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, err error)
 }
 
 type elasticDeviceDataClient struct {
@@ -109,7 +109,7 @@ type ActivityResp struct {
 	} `json:"hits"`
 }
 
-func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, units []string, err error) {
+func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, err error) {
 	ctx := context.Background()
 
 	query := esquery.Search().
@@ -126,28 +126,28 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 			esquery.TermsAgg("integrations", "source"),
 		).
 		Size(0)
-	
+
 	qb, _ := json.Marshal(query)
 	log.Print(string(qb))
 
 	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer res.Body.Close()
-	
+
 	log.Print("code", res.StatusCode)
-	
+
 	if code := res.StatusCode; code != http.StatusOK {
-		return nil, nil, fmt.Errorf("status code %d", code)
+		return nil, fmt.Errorf("status code %d", code)
 	}
-	
+
 	rb, _ := io.ReadAll(res.Body)
 	log.Print(string(rb))
 
 	respb := new(DeviceIntegrationsResp)
 	if err := json.Unmarshal(rb, respb); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	integrations := []string{}
@@ -158,13 +158,7 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 		}
 	}
 
-	unitIDs := []string{}
-	for _, bucket := range respb.Aggregations.UnitIDs.Buckets {
-		key := bucket.Key
-		unitIDs = append(unitIDs, key)
-	}
-
-	return integrations, unitIDs, nil
+	return integrations, nil
 }
 
 type DeviceIntegrationsResp struct {
