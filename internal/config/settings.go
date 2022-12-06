@@ -31,6 +31,7 @@ type Settings struct {
 	ConsumerGroup                  string `yaml:"CONSUMER_GROUP"`
 	TransferBatchSize              int    `yaml:"TRANSFER_BATCH_SIZE"`
 	FirstAutomatedWeek             int    `yaml:"FIRST_AUTOMATED_WEEK"`
+	MonitoringPort                 string `yaml:"MONITORING_PORT"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

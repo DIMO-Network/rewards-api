@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"time"
@@ -23,8 +24,10 @@ import (
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/burdiyan/kafkautil"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -39,13 +42,14 @@ import (
 func main() {
 	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "rewards-api").Logger()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to load settings.")
 	}
 
 	if len(os.Args) == 1 {
+		monApp := serveMonitoring(settings.MonitoringPort, &logger)
 		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
 		app := fiber.New(fiber.Config{
 			DisableStartupMessage: true,
@@ -129,6 +133,16 @@ func main() {
 		if err := app.Listen(":" + settings.Port); err != nil {
 			logger.Fatal().Err(err).Msgf("Fiber server failed.")
 		}
+
+		sigterm := make(chan os.Signal, 1)
+		signal.Notify(sigterm, os.Interrupt)
+
+		sig := <-sigterm
+		logger.Info().Str("signal", sig.String()).Msg("Received signal, terminating.")
+
+		cancel()
+		monApp.Shutdown()
+
 		return
 	}
 
@@ -209,6 +223,24 @@ func startGRPCServer(settings *config.Settings, dbs func() *database.DBReaderWri
 	if err := server.Serve(lis); err != nil {
 		logger.Fatal().Err(err).Msg("gRPC server terminated unexpectedly")
 	}
+}
+
+func serveMonitoring(port string, logger *zerolog.Logger) *fiber.App {
+	monApp := fiber.New(fiber.Config{DisableStartupMessage: true})
+
+	// Health check.
+	monApp.Get("/", func(c *fiber.Ctx) error { return nil })
+	monApp.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+
+	go func() {
+		if err := monApp.Listen(":" + port); err != nil {
+			logger.Fatal().Err(err).Str("port", port).Msg("Failed to start monitoring web server.")
+		}
+	}()
+
+	logger.Info().Str("port", port).Msg("Started monitoring web server.")
+
+	return monApp
 }
 
 func ErrorHandler(c *fiber.Ctx, err error) error {
