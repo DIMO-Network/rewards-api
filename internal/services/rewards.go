@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -355,12 +356,12 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		st := storage.NewDB(t.DB)
 		err = st.AssignTokens(ctx, issuanceWeek, baseWeeklyTokens)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to convert points to tokens: %w", err)
 		}
 
 		err = t.TransferService.TransferUserTokens(ctx, issuanceWeek)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to submit transfers: %w", err)
 		}
 	}
 
