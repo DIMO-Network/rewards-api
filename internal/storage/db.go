@@ -27,7 +27,7 @@ func (s *dbStorage) AssignTokens(ctx context.Context, issuanceWeek int, totalTok
 		SET tokens =
 			(streak_points + integration_points)
 				* $2::numeric
-				/ (SELECT sum(streak_points + integration_points) FROM rewards WHERE issuance_week_id = $1)
+				/ (SELECT sum(streak_points + integration_points) FROM rewards_api.rewards WHERE issuance_week_id = $1)
 		WHERE issuance_week_id = $1;`
 
 	_, err := s.db().Writer.ExecContext(ctx, q, issuanceWeek, totalTokens.String())
