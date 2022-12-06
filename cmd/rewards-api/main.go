@@ -37,16 +37,13 @@ import (
 // @in                          header
 // @name                        Authorization
 func main() {
+	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "rewards-api").Logger()
+
 	ctx := context.Background()
 	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
 	if err != nil {
-		os.Exit(1)
+		logger.Fatal().Err(err).Msg("Failed to load settings.")
 	}
-
-	logger := zerolog.New(os.Stdout).With().
-		Timestamp().
-		Str("app", "rewards-api").
-		Logger()
 
 	if len(os.Args) == 1 {
 		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
@@ -69,7 +66,7 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
 		}
-		defer devicesConn.Close()
+		defer definitionsConn.Close()
 
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
