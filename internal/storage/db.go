@@ -23,7 +23,7 @@ type dbStorage struct {
 
 func (s *dbStorage) AssignTokens(ctx context.Context, issuanceWeek int, totalTokens *big.Int) error {
 	q := `
-		UPDATE rewards 
+		UPDATE rewards_api.rewards
 		SET tokens =
 			(streak_points + integration_points)
 				* $2::numeric
