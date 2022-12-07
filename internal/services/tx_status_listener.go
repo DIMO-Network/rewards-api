@@ -18,10 +18,41 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	eth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
+)
+
+var (
+	requestsTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "token_issuance_request",
+			Subsystem: "consumer",
+			Name:      "requests_total",
+			Help:      "all token issuance requests",
+		},
+	)
+
+	successfulTokenTransfer = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "transaction_status",
+			Subsystem: "consumer",
+			Name:      "successful_token_transfer",
+			Help:      "successful transactions",
+		},
+	)
+
+	failedTokenTransfer = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "transaction_status",
+			Subsystem: "consumer",
+			Name:      "failed_token_transfer",
+			Help:      "failed transactions",
+		},
+	)
 )
 
 type consumerGroupHandler struct {
@@ -83,6 +114,7 @@ type TransferStatusProcessor struct {
 }
 
 func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) error {
+	requestsTotal.Inc()
 	event := shared.CloudEvent[ceData]{}
 	err := json.Unmarshal(msg.Value, &event)
 	if err != nil {
@@ -115,6 +147,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		txnRow.Successful = null.BoolFrom(*event.Data.Transaction.Successful)
 
 		if *event.Data.Transaction.Successful {
+			successfulTokenTransfer.Inc()
 			for _, log := range event.Data.Transaction.Logs {
 				success := false
 				txLog := convertLog(&log)
@@ -161,6 +194,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 				}
 			}
 		} else {
+			failedTokenTransfer.Inc()
 			_, err := models.Rewards(
 				models.RewardWhere.TransferMetaTransactionRequestID.EQ(null.StringFrom(event.Data.RequestID)),
 			).UpdateAll(context.Background(), tx, models.M{
