@@ -36,21 +36,37 @@ var (
 		},
 	)
 
-	successfulTokenTransfer = promauto.NewCounter(
+	successfulTransaction = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Namespace: "transaction_status",
 			Subsystem: "consumer",
-			Name:      "successful_token_transfer",
+			Name:      "successful_transactions",
 			Help:      "successful transactions",
 		},
 	)
 
-	failedTokenTransfer = promauto.NewCounter(
+	failedTransaction = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Namespace: "transaction_status",
 			Subsystem: "consumer",
-			Name:      "failed_token_transfer",
+			Name:      "failed_transactions",
 			Help:      "failed transactions",
+		},
+	)
+	successfulTransfer = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "transfer_status",
+			Subsystem: "consumer",
+			Name:      "successful_token_transfer",
+			Help:      "successful transfer",
+		},
+	)
+	failedTransfer = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "transfer_status",
+			Subsystem: "consumer",
+			Name:      "failed_token_transfer",
+			Help:      "failed transfer",
 		},
 	)
 )
@@ -147,7 +163,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		txnRow.Successful = null.BoolFrom(*event.Data.Transaction.Successful)
 
 		if *event.Data.Transaction.Successful {
-			successfulTokenTransfer.Inc()
+			successfulTransaction.Inc()
 			for _, log := range event.Data.Transaction.Logs {
 				success := false
 				txLog := convertLog(&log)
@@ -163,6 +179,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 						return err
 					}
 					userDeviceTokenID = event.VehicleNodeId
+					successfulTransfer.Inc()
 				case s.DidntQualifyEvent.ID:
 					event := contracts.RewardDidntQualify{}
 					err := s.parseLog(&event, s.DidntQualifyEvent, *txLog)
@@ -171,6 +188,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 					}
 
 					userDeviceTokenID = event.VehicleNodeId
+					failedTransfer.Inc()
 				default:
 					continue
 				}
@@ -194,7 +212,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 				}
 			}
 		} else {
-			failedTokenTransfer.Inc()
+			failedTransaction.Inc()
 			_, err := models.Rewards(
 				models.RewardWhere.TransferMetaTransactionRequestID.EQ(null.StringFrom(event.Data.RequestID)),
 			).UpdateAll(context.Background(), tx, models.M{
