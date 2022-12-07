@@ -80,7 +80,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			return opaqueInternalError
 		}
 
-		dlog.Info().Msgf("lastActive %s seen %s thisWeek %s", lastActive, seen, weekNum)
+		dlog.Info().Msgf("lastActive %s seen %v thisWeek %v", lastActive, seen, weekNum)
 
 		outInts := []UserResponseIntegration{}
 

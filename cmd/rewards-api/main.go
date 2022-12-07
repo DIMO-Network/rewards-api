@@ -141,8 +141,10 @@ func main() {
 		logger.Info().Str("signal", sig.String()).Msg("Received signal, terminating.")
 
 		cancel()
-		monApp.Shutdown()
-
+		err = monApp.Shutdown()
+		if err != nil {
+			logger.Fatal().Err(err)
+		}
 		return
 	}
 
