@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -48,6 +50,7 @@ type jsonMap map[string]interface{}
 type DeviceData struct {
 	ID           string
 	Integrations []string
+	Serials      []string
 }
 
 // activityFieldExists is a list of Elastic exists queries for all of the non-constant fields in
@@ -119,8 +122,13 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 				Should(activityFieldExists...).
 				MinimumShouldMatch(1),
 		).
-		Aggs(esquery.TermsAgg("integrations", "source")).
+		Aggs(
+			esquery.TermsAgg("integrations", "source"),
+		).
 		Size(0)
+
+	qb, _ := json.Marshal(query)
+	log.Print(string(qb))
 
 	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
 	if err != nil {
@@ -128,12 +136,21 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 	}
 	defer res.Body.Close()
 
+	log.Print("code", res.StatusCode)
+
+	if code := res.StatusCode; code != http.StatusOK {
+		return nil, fmt.Errorf("status code %d", code)
+	}
+
+	rb, _ := io.ReadAll(res.Body)
+	log.Print(string(rb))
+
 	respb := new(DeviceIntegrationsResp)
-	if err := json.NewDecoder(res.Body).Decode(respb); err != nil {
+	if err := json.Unmarshal(rb, respb); err != nil {
 		return nil, err
 	}
 
-	integrations := make([]string, 0)
+	integrations := []string{}
 	for _, bucket := range respb.Aggregations.Integrations.Buckets {
 		key := bucket.Key
 		if strings.HasPrefix(key, integPrefix) {
@@ -151,6 +168,11 @@ type DeviceIntegrationsResp struct {
 				Key string `json:"key"`
 			} `json:"buckets"`
 		} `json:"integrations"`
+		UnitIDs struct {
+			Buckets []struct {
+				Key string `json:"key"`
+			} `json:"buckets"`
+		} `json:"unit_ids"`
 	} `json:"aggregations"`
 }
 
@@ -225,9 +247,15 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 					integrations = append(integrations, strings.TrimPrefix(key, integPrefix))
 				}
 			}
+			serials := make([]string, 0)
+			for _, bucket := range dv.UnitIDs.Buckets {
+				key := bucket.Key
+				serials = append(serials, key)
+			}
 			out = append(out, &DeviceData{
 				ID:           deviceID,
 				Integrations: integrations,
+				Serials:      serials,
 			})
 		}
 
@@ -258,6 +286,11 @@ type DeviceListResp struct {
 						Key string `json:"key"`
 					} `json:"buckets"`
 				} `json:"integrations"`
+				UnitIDs struct {
+					Buckets []struct {
+						Key string `json:"key"`
+					} `json:"buckets"`
+				} `json:"unit_ids"`
 			} `json:"buckets"`
 		} `json:"active_devices"`
 	} `json:"aggregations"`
