@@ -29,9 +29,9 @@ import (
 var (
 	requestsTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Namespace: "token_issuance_request",
+			Namespace: "token_issuance_requests",
 			Subsystem: "consumer",
-			Name:      "requests_total",
+			Name:      "token_issuance_requests_total",
 			Help:      "all token issuance requests",
 		},
 	)
