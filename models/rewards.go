@@ -42,6 +42,7 @@ type Reward struct {
 	TransferMetaTransactionRequestID null.String       `boil:"transfer_meta_transaction_request_id" json:"transfer_meta_transaction_request_id,omitempty" toml:"transfer_meta_transaction_request_id" yaml:"transfer_meta_transaction_request_id,omitempty"`
 	TransferSuccessful               null.Bool         `boil:"transfer_successful" json:"transfer_successful,omitempty" toml:"transfer_successful" yaml:"transfer_successful,omitempty"`
 	TransferFailureReason            null.String       `boil:"transfer_failure_reason" json:"transfer_failure_reason,omitempty" toml:"transfer_failure_reason" yaml:"transfer_failure_reason,omitempty"`
+	AftermarketTokenID               types.NullDecimal `boil:"aftermarket_token_id" json:"aftermarket_token_id,omitempty" toml:"aftermarket_token_id" yaml:"aftermarket_token_id,omitempty"`
 
 	R *rewardR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L rewardL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -65,6 +66,7 @@ var RewardColumns = struct {
 	TransferMetaTransactionRequestID string
 	TransferSuccessful               string
 	TransferFailureReason            string
+	AftermarketTokenID               string
 }{
 	IssuanceWeekID:                   "issuance_week_id",
 	UserDeviceID:                     "user_device_id",
@@ -83,6 +85,7 @@ var RewardColumns = struct {
 	TransferMetaTransactionRequestID: "transfer_meta_transaction_request_id",
 	TransferSuccessful:               "transfer_successful",
 	TransferFailureReason:            "transfer_failure_reason",
+	AftermarketTokenID:               "aftermarket_token_id",
 }
 
 var RewardTableColumns = struct {
@@ -103,6 +106,7 @@ var RewardTableColumns = struct {
 	TransferMetaTransactionRequestID string
 	TransferSuccessful               string
 	TransferFailureReason            string
+	AftermarketTokenID               string
 }{
 	IssuanceWeekID:                   "rewards.issuance_week_id",
 	UserDeviceID:                     "rewards.user_device_id",
@@ -121,6 +125,7 @@ var RewardTableColumns = struct {
 	TransferMetaTransactionRequestID: "rewards.transfer_meta_transaction_request_id",
 	TransferSuccessful:               "rewards.transfer_successful",
 	TransferFailureReason:            "rewards.transfer_failure_reason",
+	AftermarketTokenID:               "rewards.aftermarket_token_id",
 }
 
 // Generated where
@@ -199,6 +204,7 @@ var RewardWhere = struct {
 	TransferMetaTransactionRequestID whereHelpernull_String
 	TransferSuccessful               whereHelpernull_Bool
 	TransferFailureReason            whereHelpernull_String
+	AftermarketTokenID               whereHelpertypes_NullDecimal
 }{
 	IssuanceWeekID:                   whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
 	UserDeviceID:                     whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
@@ -217,6 +223,7 @@ var RewardWhere = struct {
 	TransferMetaTransactionRequestID: whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_meta_transaction_request_id\""},
 	TransferSuccessful:               whereHelpernull_Bool{field: "\"rewards_api\".\"rewards\".\"transfer_successful\""},
 	TransferFailureReason:            whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_failure_reason\""},
+	AftermarketTokenID:               whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"aftermarket_token_id\""},
 }
 
 // RewardRels is where relationship names are stored.
@@ -257,9 +264,9 @@ func (r *rewardR) GetTransferMetaTransactionRequest() *MetaTransactionRequest {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id"}
 	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )

@@ -299,6 +299,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 					device.Integrations = filtered
 				}
+				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
 			}
 
 			thisWeek.UserDeviceTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId))
