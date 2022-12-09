@@ -70,7 +70,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
 		}
 		defer definitionsConn.Close()
-		
+
 		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
@@ -122,31 +122,29 @@ func main() {
 		go startGRPCServer(&settings, pdb.DBS, &logger)
 
 		// Start metatransaction listener
-		if settings.Environment != "prod" {
-			kclient, err := createKafkaClient(&settings)
-			if err != nil {
-				logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
-			}
-
-			consumer, err := sarama.NewConsumerGroupFromClient(settings.ConsumerGroup, kclient)
-			if err != nil {
-				logger.Fatal().Err(err).Msg("Failed to initialize consumer group.")
-			}
-			defer consumer.Close()
-
-			// need to pass logger here
-			statusProc, err := services.NewStatusProcessor(pdb.DBS, &logger)
-			if err != nil {
-				logger.Fatal().Err(err).Msg("Failed to create transaction status processor.")
-			}
-
-			go func() {
-				err := services.Consume(ctx, consumer, &settings, statusProc)
-				if err != nil {
-					logger.Fatal().Err(err).Send()
-				}
-			}()
+		kclient, err := createKafkaClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
 		}
+
+		consumer, err := sarama.NewConsumerGroupFromClient(settings.ConsumerGroup, kclient)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to initialize consumer group.")
+		}
+		defer consumer.Close()
+
+		// need to pass logger here
+		statusProc, err := services.NewStatusProcessor(pdb.DBS, &logger)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create transaction status processor.")
+		}
+
+		go func() {
+			err := services.Consume(ctx, consumer, &settings, statusProc)
+			if err != nil {
+				logger.Fatal().Err(err).Send()
+			}
+		}()
 
 		logger.Info().Msgf("Starting HTTP server on port %s.", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {
@@ -189,20 +187,18 @@ func main() {
 
 		var transferService services.Transfer
 
-		if settings.Environment != "prod" {
-			kclient, err := createKafkaClient(&settings)
-			if err != nil {
-				logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
-			}
-
-			producer, err := sarama.NewSyncProducerFromClient(kclient)
-			if err != nil {
-				logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
-			}
-
-			addr := common.HexToAddress(settings.IssuanceContractAddress)
-			transferService = services.NewTokenTransferService(&settings, producer, addr, pdb.DBS)
+		kclient, err := createKafkaClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
 		}
+
+		producer, err := sarama.NewSyncProducerFromClient(kclient)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
+		}
+
+		addr := common.HexToAddress(settings.IssuanceContractAddress)
+		transferService = services.NewTokenTransferService(&settings, producer, addr, pdb.DBS)
 
 		task := services.RewardsTask{
 			Settings:        &settings,

@@ -265,47 +265,45 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			UserID:         ud.UserId,
 		}
 
-		if t.Settings.Environment != "prod" {
-			if ud.TokenId == nil {
-				t.Logger.Info().Str("userDeviceId", ud.Id).Str("userId", ud.UserId).Msg("Device not minted.")
-				continue
-			}
-
-			if ud.OptedInAt == nil {
-				t.Logger.Info().Str("userDeviceId", ud.Id).Str("userId", ud.UserId).Msg("User has not opted in for this device.")
-				continue
-			}
-
-			if len(ud.OwnerAddress) != 20 {
-				t.Logger.Error().Str("userId", ud.UserId).Bytes("address", ud.OwnerAddress).Msg("User has minted a car but has no owner address?")
-				continue
-			}
-
-			if ContainsString(device.Integrations, integCalc.AutoPiID) {
-				if ud.AftermarketDeviceTokenId == nil {
-					t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi activity but not paired on-chain.")
-
-					filtered := []string{}
-
-					for _, integ := range device.Integrations {
-						if integ != integCalc.AutoPiID {
-							filtered = append(filtered, integ)
-						}
-					}
-
-					if len(filtered) == 0 {
-						continue
-					}
-
-					device.Integrations = filtered
-				} else {
-					thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
-				}
-			}
-
-			thisWeek.UserDeviceTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId))
-			thisWeek.UserEthereumAddress = null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex())
+		if ud.TokenId == nil {
+			t.Logger.Info().Str("userDeviceId", ud.Id).Str("userId", ud.UserId).Msg("Device not minted.")
+			continue
 		}
+
+		if ud.OptedInAt == nil {
+			t.Logger.Info().Str("userDeviceId", ud.Id).Str("userId", ud.UserId).Msg("User has not opted in for this device.")
+			continue
+		}
+
+		if len(ud.OwnerAddress) != 20 {
+			t.Logger.Error().Str("userId", ud.UserId).Bytes("address", ud.OwnerAddress).Msg("User has minted a car but has no owner address?")
+			continue
+		}
+
+		if ContainsString(device.Integrations, integCalc.AutoPiID) {
+			if ud.AftermarketDeviceTokenId == nil {
+				t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi activity but not paired on-chain.")
+
+				filtered := []string{}
+
+				for _, integ := range device.Integrations {
+					if integ != integCalc.AutoPiID {
+						filtered = append(filtered, integ)
+					}
+				}
+
+				if len(filtered) == 0 {
+					continue
+				}
+
+				device.Integrations = filtered
+			} else {
+				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
+			}
+		}
+
+		thisWeek.UserDeviceTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId))
+		thisWeek.UserEthereumAddress = null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex())
 
 		// Streak rewards.
 		streakInput := StreakInput{
@@ -354,17 +352,15 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 	}
 
-	if t.Settings.Environment != "prod" {
-		st := storage.NewDB(t.DB)
-		err = st.AssignTokens(ctx, issuanceWeek, baseWeeklyTokens)
-		if err != nil {
-			return fmt.Errorf("failed to convert points to tokens: %w", err)
-		}
+	st := storage.NewDB(t.DB)
+	err = st.AssignTokens(ctx, issuanceWeek, baseWeeklyTokens)
+	if err != nil {
+		return fmt.Errorf("failed to convert points to tokens: %w", err)
+	}
 
-		err = t.TransferService.TransferUserTokens(ctx, issuanceWeek)
-		if err != nil {
-			return fmt.Errorf("failed to submit transfers: %w", err)
-		}
+	err = t.TransferService.TransferUserTokens(ctx, issuanceWeek)
+	if err != nil {
+		return fmt.Errorf("failed to submit transfers: %w", err)
 	}
 
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished
