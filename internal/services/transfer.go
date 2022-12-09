@@ -74,7 +74,7 @@ func (c *Client) TransferUserTokens(ctx context.Context, week int) error {
 func (c *Client) transfer(ctx context.Context, week int) error {
 	batchSize := c.batchSize
 	responseSize := batchSize
-
+	allTknsAllocated := big.NewInt(0)
 	// If responseSize < pageSize then there must be no more pages of unsubmitted rewards.
 	for batchSize == responseSize {
 		reqID := ksuid.New().String()
@@ -110,6 +110,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		}
 
 		c.Logger.Info().Str("batchID", reqID).Int("batchSize", responseSize)
+		tkns := big.NewInt(0)
 		for i, row := range transfer {
 			userAddr[i] = common.HexToAddress(row.UserEthereumAddress.String)
 			tknValues[i] = row.Tokens.Int(nil)
@@ -121,8 +122,10 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			if err != nil {
 				return err
 			}
+
+			tkns.Add(tkns, row.Tokens.Int(nil))
 		}
-		c.Logger.Info().Msgf("beginning batch transfer %v", reqID)
+		c.Logger.Info().Str("tokensAllocated", tkns.String()).Msgf("beginning batch transfer %v", reqID)
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
@@ -132,8 +135,9 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		if err != nil {
 			return err
 		}
+		allTknsAllocated.Add(allTknsAllocated, tkns)
 	}
-
+	c.Logger.Info().Int("issuanceWeek", week).Str("weeklyTokensAllocated", allTknsAllocated.String()).Msg("completed user reward transfer")
 	return nil
 }
 
