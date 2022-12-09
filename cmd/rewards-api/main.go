@@ -13,6 +13,7 @@ import (
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
@@ -23,6 +24,7 @@ import (
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/burdiyan/kafkautil"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/rs/zerolog"
@@ -73,6 +75,17 @@ func main() {
 
 		dataClient := services.NewDeviceDataClient(&settings)
 
+		ethClient, err := ethclient.Dial(settings.EthereumRPCURL)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Ethereum client.")
+		}
+
+		tokenAddr := common.HexToAddress(settings.TokenAddress)
+		token, err := contracts.NewToken(tokenAddr, ethClient)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to instantiate token.")
+		}
+
 		rewardsController := controllers.RewardsController{
 			DB:                pdb.DBS,
 			Logger:            &logger,
@@ -80,6 +93,7 @@ func main() {
 			DevicesClient:     deviceClient,
 			DataClient:        dataClient,
 			Settings:          &settings,
+			Token:             token,
 		}
 
 		// secured paths

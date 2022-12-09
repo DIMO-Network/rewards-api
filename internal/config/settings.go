@@ -31,6 +31,8 @@ type Settings struct {
 	ConsumerGroup                  string `yaml:"CONSUMER_GROUP"`
 	TransferBatchSize              int    `yaml:"TRANSFER_BATCH_SIZE"`
 	FirstAutomatedWeek             int    `yaml:"FIRST_AUTOMATED_WEEK"`
+	EthereumRPCURL                 string `yaml:"ETHEREUM_RPC_URL"`
+	TokenAddress                   string `yaml:"TOKEN_ADDRESS"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

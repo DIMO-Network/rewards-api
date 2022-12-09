@@ -6,10 +6,13 @@ import (
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
+	pb_users "github.com/DIMO-Network/shared/api/users"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
@@ -23,7 +26,9 @@ type RewardsController struct {
 	DataClient        services.DeviceDataClient
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
+	UsersClient       pb_users.UserServiceClient
 	Settings          *config.Settings
+	Token             *contracts.Token
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -47,6 +52,22 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	now := time.Now()
 	weekNum := services.GetWeekNum(now)
 	weekStart := services.NumToWeekStart(weekNum)
+
+	user, err := r.UsersClient.GetUser(c.Context(), &pb_users.GetUserRequest{Id: userID})
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "User unknown.")
+	}
+
+	var addrBalance *big.Int
+
+	if addr := user.EthereumAddress; addr != nil {
+		ab, err := r.Token.BalanceOf(nil, common.HexToAddress(*addr))
+		if err != nil {
+			return err
+		}
+
+		addrBalance = ab
+	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
 		UserId: userID,
@@ -187,8 +208,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(UserResponse{
-		Points: userPts,
-		Tokens: userTokens,
+		Points:        userPts,
+		Tokens:        userTokens,
+		WalletBalance: addrBalance,
 		ThisWeek: UserResponseThisWeek{
 			Start: weekStart,
 			End:   services.NumToWeekEnd(weekNum),
@@ -218,6 +240,9 @@ type UserResponse struct {
 	// Tokens is the number of tokens the user has earned, across all devices and issuance
 	// weeks.
 	Tokens *big.Int `json:"tokens" example:"1105000000000000000000000" swaggertype:"number"`
+	// WalletBalance is the number of tokens held in the users's wallet, if he has a wallet
+	// attached to the present account.
+	WalletBalance *big.Int `json:"walletBalance" example:"1105000000000000000000000" swaggertype:"number"`
 	// Devices is a list of the user's devices, together with some information about their
 	// connectivity.
 	Devices []*UserResponseDevice `json:"devices"`
