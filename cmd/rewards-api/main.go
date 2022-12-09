@@ -69,9 +69,16 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
 		}
 		defer definitionsConn.Close()
+		
+		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
+		}
+		defer usersConn.Close()
 
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
+		usersClient := pb_users.NewUserServiceClient(usersConn)
 
 		dataClient := services.NewDeviceDataClient(&settings)
 
@@ -94,6 +101,7 @@ func main() {
 			DataClient:        dataClient,
 			Settings:          &settings,
 			Token:             token,
+			UsersClient:       usersClient,
 		}
 
 		// secured paths
