@@ -14,6 +14,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/segmentio/ksuid"
@@ -53,6 +54,7 @@ type Client struct {
 	db              func() *database.DBReaderWriter
 	ContractAddress common.Address
 	batchSize       int
+	Logger          *zerolog.Logger
 }
 
 type transferData struct {
@@ -107,6 +109,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			return err
 		}
 
+		c.Logger.Info().Str("batchID", reqID).Int("batchSize", responseSize)
 		for i, row := range transfer {
 			userAddr[i] = common.HexToAddress(row.UserEthereumAddress.String)
 			tknValues[i] = row.Tokens.Int(nil)
@@ -119,12 +122,12 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 				return err
 			}
 		}
-
+		c.Logger.Info().Msgf("beginning batch transfer %v", reqID)
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
 		}
-
+		c.Logger.Info().Msgf("completed batch transfer %v", reqID)
 		err = tx.Commit()
 		if err != nil {
 			return err
