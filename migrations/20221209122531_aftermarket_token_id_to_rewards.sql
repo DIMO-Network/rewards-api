@@ -3,7 +3,7 @@
 SET search_path TO rewards_api, public;
 
 ALTER TABLE rewards
-    ADD COLUMN aftermarket_token_id  NUMERIC(25);
+    ADD COLUMN aftermarket_token_id  NUMERIC(78);
 -- +goose StatementEnd
 
 -- +goose Down
