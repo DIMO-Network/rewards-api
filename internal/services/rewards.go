@@ -358,6 +358,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		return fmt.Errorf("failed to convert points to tokens: %w", err)
 	}
 
+	t.Logger.Info().Int("issuanceWeek", issuanceWeek).Str("baseWeeklyTokens", baseWeeklyTokens.String()).Msg("initiating user reward transfer")
 	err = t.TransferService.TransferUserTokens(ctx, issuanceWeek)
 	if err != nil {
 		return fmt.Errorf("failed to submit transfers: %w", err)
