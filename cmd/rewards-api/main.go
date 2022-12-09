@@ -20,6 +20,7 @@ import (
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
+	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/Shopify/sarama"
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/burdiyan/kafkautil"
