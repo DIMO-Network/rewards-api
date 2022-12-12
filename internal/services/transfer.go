@@ -111,7 +111,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			return err
 		}
 
-		c.Logger.Info().Str("batchID", reqID).Int("batchSize", responseSize)
+		c.Logger.Info().Str("batchID", reqID).Int("batchSize", responseSize).Msg("beginning user reward transfers")
 		tkns := big.NewInt(0)
 		for i, row := range transfer {
 			userAddr[i] = common.HexToAddress(row.UserEthereumAddress.String)
@@ -139,7 +139,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		}
 		allTknsAllocated.Add(allTknsAllocated, tkns)
 	}
-	c.Logger.Info().Int("issuanceWeek", week).Str("weeklyTokensAllocated", allTknsAllocated.String()).Msg("completed user reward transfer")
+	c.Logger.Info().Int("issuanceWeek", week).Str("weeklyTokensAllocated", allTknsAllocated.String()).Msg("completed all user reward transfers")
 	return nil
 }
 
