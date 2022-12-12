@@ -127,12 +127,12 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 
 			tkns.Add(tkns, row.Tokens.Int(nil))
 		}
-		c.Logger.Info().Str("tokensAllocated", tkns.String()).Msgf("beginning batch transfer %v", reqID)
+		c.Logger.Info().Str("tokensAllocated", tkns.String()).Str("requestID", reqID).Msg("beginning batch transfer")
 		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
 		}
-		c.Logger.Info().Msgf("completed batch transfer %v", reqID)
+		c.Logger.Info().Str("requestID", reqID).Msg("completed batch transfer")
 		err = tx.Commit()
 		if err != nil {
 			return err
