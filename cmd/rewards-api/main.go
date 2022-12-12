@@ -198,7 +198,7 @@ func main() {
 		}
 
 		addr := common.HexToAddress(settings.IssuanceContractAddress)
-		transferService = services.NewTokenTransferService(&settings, producer, addr, pdb.DBS)
+		transferService = services.NewTokenTransferService(&settings, producer, addr, pdb.DBS, &logger)
 
 		task := services.RewardsTask{
 			Settings:        &settings,

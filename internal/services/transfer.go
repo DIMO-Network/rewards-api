@@ -34,7 +34,8 @@ func NewTokenTransferService(
 	producer sarama.SyncProducer,
 	contractAddress common.Address,
 	// settings config.Settings, producer sarama.SyncProducer, reqTopic string, contract Contract,
-	db func() *database.DBReaderWriter) Transfer {
+	db func() *database.DBReaderWriter,
+	logger *zerolog.Logger) Transfer {
 
 	return &Client{
 		ContractAddress: contractAddress,
@@ -43,6 +44,7 @@ func NewTokenTransferService(
 		StatusTopic:     settings.MetaTransactionStatusTopic,
 		db:              db,
 		batchSize:       settings.TransferBatchSize,
+		Logger:          logger,
 	}
 }
 
