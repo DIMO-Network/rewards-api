@@ -101,8 +101,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			return opaqueInternalError
 		}
 
-		dlog.Info().Msgf("lastActive %s seen %s thisWeek %s", lastActive, seen, weekNum)
-
 		outInts := []UserResponseIntegration{}
 
 		otherChecklist := device.TokenId != nil && device.OptedInAt != nil
@@ -234,7 +232,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.JSON(UserResponse{
+	out := UserResponse{
 		Points:        userPts,
 		Tokens:        userTokens,
 		WalletBalance: addrBalance,
@@ -243,7 +241,11 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			End:   services.NumToWeekEnd(weekNum),
 		},
 		Devices: outLi,
-	})
+	}
+
+	logger.Info().Interface("response", out).Msg("User rewards response.")
+
+	return c.JSON(out)
 }
 
 func getLevelResp(level int) *UserResponseLevel {
