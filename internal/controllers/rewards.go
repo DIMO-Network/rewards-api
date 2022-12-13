@@ -101,59 +101,82 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			return opaqueInternalError
 		}
 
-		dlog.Info().Msgf("lastActive %s seen %s thisWeek %s", lastActive, seen, weekNum)
-
 		outInts := []UserResponseIntegration{}
 
+		otherChecklist := device.TokenId != nil && device.OptedInAt != nil
+
+		eligibleThisWeek := false
+
 		if seen {
 			maybeLastActive = &lastActive
-		}
+			if !lastActive.Before(weekStart) {
+				ints, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
+				if err != nil {
+					return opaqueInternalError
+				}
 
-		var eligibleThisWeek = false
-		if seen {
-			maybeLastActive = &lastActive
-			if device.TokenId != nil && device.OptedInAt != nil {
-				if !lastActive.Before(weekStart) {
-					ints, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
-					if err != nil {
-						return opaqueInternalError
+				if services.ContainsString(ints, intMap["AutoPi"]) {
+					uriAP := UserResponseIntegration{
+						ID:                   intMap["AutoPi"],
+						Vendor:               "AutoPi",
+						OnChainPairingStatus: "Unpaired",
+						DataThisWeek:         true,
 					}
 
-					dlog.Info().Interface("ints", ints).Msg("activity pull")
-
-					if services.ContainsString(ints, intMap["AutoPi"]) {
-						if device.AftermarketDeviceTokenId != nil {
+					if device.AftermarketDeviceTokenId != nil {
+						if otherChecklist {
+							uriAP.Points = 6000
 							eligibleThisWeek = true
-							outInts = append(outInts, UserResponseIntegration{
-								ID:     intMap["AutoPi"],
-								Vendor: "AutoPi",
-								Points: 6000,
-							})
 						}
-
-						if services.ContainsString(ints, intMap["SmartCar"]) {
-							eligibleThisWeek = true
-							outInts = append(outInts, UserResponseIntegration{
-								ID:     intMap["SmartCar"],
-								Vendor: "SmartCar",
-								Points: 1000,
-							})
-						}
-					} else if services.ContainsString(ints, intMap["Tesla"]) {
-						eligibleThisWeek = true
-						outInts = append(outInts, UserResponseIntegration{
-							ID:     intMap["Tesla"],
-							Vendor: "Tesla",
-							Points: 4000,
-						})
-					} else if services.ContainsString(ints, intMap["SmartCar"]) {
-						eligibleThisWeek = true
-						outInts = append(outInts, UserResponseIntegration{
-							ID:     intMap["SmartCar"],
-							Vendor: "SmartCar",
-							Points: 1000,
-						})
+						uriAP.OnChainPairingStatus = "Paired"
 					}
+
+					outInts = append(outInts, uriAP)
+
+					if services.ContainsString(ints, intMap["SmartCar"]) {
+						uriSC := UserResponseIntegration{
+							ID:                   intMap["SmartCar"],
+							Vendor:               "SmartCar",
+							OnChainPairingStatus: "NotApplicable",
+							DataThisWeek:         true,
+						}
+
+						if otherChecklist {
+							uriSC.Points = 1000
+							eligibleThisWeek = true
+						}
+
+						outInts = append(outInts, uriSC)
+					}
+				} else if services.ContainsString(ints, intMap["Tesla"]) {
+					uriTesla := UserResponseIntegration{
+						ID:                   intMap["Tesla"],
+						Vendor:               "Tesla",
+						OnChainPairingStatus: "NotApplicable",
+						DataThisWeek:         true,
+					}
+
+					if otherChecklist {
+						uriTesla.Points = 4000
+						eligibleThisWeek = true
+					}
+
+					outInts = append(outInts, uriTesla)
+				} else if services.ContainsString(ints, intMap["SmartCar"]) {
+					eligibleThisWeek = true
+					uriSC := UserResponseIntegration{
+						ID:                   intMap["SmartCar"],
+						Vendor:               "SmartCar",
+						OnChainPairingStatus: "NotApplicable",
+						DataThisWeek:         true,
+					}
+
+					if otherChecklist {
+						uriSC.Points = 1000
+						eligibleThisWeek = true
+					}
+
+					outInts = append(outInts, uriSC)
 				}
 			}
 		}
@@ -204,10 +227,12 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			ConnectionStreak:     connectionStreak,
 			DisconnectionStreak:  disconnectionStreak,
 			Level:                *getLevelResp(lvl),
+			Minted:               device.TokenId != nil,
+			OptedIn:              device.OptedInAt != nil,
 		}
 	}
 
-	return c.JSON(UserResponse{
+	out := UserResponse{
 		Points:        userPts,
 		Tokens:        userTokens,
 		WalletBalance: addrBalance,
@@ -216,7 +241,11 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			End:   services.NumToWeekEnd(weekNum),
 		},
 		Devices: outLi,
-	})
+	}
+
+	logger.Info().Interface("response", out).Msg("User rewards response.")
+
+	return c.JSON(out)
 }
 
 func getLevelResp(level int) *UserResponseLevel {
@@ -273,6 +302,10 @@ type UserResponseDevice struct {
 	DisconnectionStreak int `json:"disconnectionStreak,omitempty" example:"0"`
 	// Level is the level 1-4 of the device. This is fully determined by ConnectionStreak.
 	Level UserResponseLevel `json:"level"`
+	// Minted is true if the device has been minted on-chain.
+	Minted bool `json:"minted"`
+	// OptedIn is true if the user has agreed to the terms of service.
+	OptedIn bool `json:"optedIn"`
 }
 
 type UserResponseThisWeek struct {
@@ -298,10 +331,13 @@ type UserResponseIntegration struct {
 	ID string `json:"id" example:"27egBSLazAT7njT2VBjcISPIpiU"`
 	// Vendor is the name of the integration vendor. At present, this uniquely determines the
 	// integration.
-	Vendor string `json:"vendor" example:"SmartCar"`
+	Vendor       string `json:"vendor" example:"SmartCar"`
+	DataThisWeek bool
 	// Points is the number of points a user earns for being connected with this integration
 	// for a week.
 	Points int `json:"points" example:"1000"`
+	// OnChainPairingStatus is the on-chain pairing status of the integration.
+	OnChainPairingStatus string `json:"onChainPairingStatus" enums:"Paired,Unpaired,NotApplicable" example:"Paired"`
 }
 
 // GetUserRewardsHistory godoc

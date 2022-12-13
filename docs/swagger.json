@@ -108,6 +108,11 @@
                     "description": "Tokens is the number of tokens the user has earned, across all devices and issuance\nweeks.",
                     "type": "number",
                     "example": 1.105e+24
+                },
+                "walletBalance": {
+                    "description": "WalletBalance is the number of tokens held in the users's wallet, if he has a wallet\nattached to the present account.",
+                    "type": "number",
+                    "example": 1.105e+24
                 }
             }
         },
@@ -154,6 +159,14 @@
                         }
                     ]
                 },
+                "minted": {
+                    "description": "Minted is true if the device has been minted on-chain.",
+                    "type": "boolean"
+                },
+                "optedIn": {
+                    "description": "OptedIn is true if the user has agreed to the terms of service.",
+                    "type": "boolean"
+                },
                 "points": {
                     "description": "Points is the total number of points that the device has earned across all weeks.",
                     "type": "integer",
@@ -169,10 +182,23 @@
         "controllers.UserResponseIntegration": {
             "type": "object",
             "properties": {
+                "dataThisWeek": {
+                    "type": "boolean"
+                },
                 "id": {
                     "description": "ID is the integration ID.",
                     "type": "string",
                     "example": "27egBSLazAT7njT2VBjcISPIpiU"
+                },
+                "onChainPairingStatus": {
+                    "description": "OnChainPairingStatus is the on-chain pairing status of the integration.",
+                    "type": "string",
+                    "enum": [
+                        "Paired",
+                        "Unpaired",
+                        "NotApplicable"
+                    ],
+                    "example": "Paired"
                 },
                 "points": {
                     "description": "Points is the number of points a user earns for being connected with this integration\nfor a week.",
