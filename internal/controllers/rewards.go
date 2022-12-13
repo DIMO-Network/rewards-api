@@ -332,7 +332,7 @@ type UserResponseIntegration struct {
 	// Vendor is the name of the integration vendor. At present, this uniquely determines the
 	// integration.
 	Vendor       string `json:"vendor" example:"SmartCar"`
-	DataThisWeek bool
+	DataThisWeek bool   `json:"dataThisWeek"`
 	// Points is the number of points a user earns for being connected with this integration
 	// for a week.
 	Points int `json:"points" example:"1000"`
