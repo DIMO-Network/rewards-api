@@ -50,6 +50,12 @@ definitions:
           weeks.
         example: 1.105e+24
         type: number
+      walletBalance:
+        description: |-
+          WalletBalance is the number of tokens held in the users's wallet, if he has a wallet
+          attached to the present account.
+        example: 1.105e+24
+        type: number
     type: object
   controllers.UserResponseDevice:
     properties:
@@ -91,6 +97,12 @@ definitions:
         - $ref: '#/definitions/controllers.UserResponseLevel'
         description: Level is the level 1-4 of the device. This is fully determined
           by ConnectionStreak.
+      minted:
+        description: Minted is true if the device has been minted on-chain.
+        type: boolean
+      optedIn:
+        description: OptedIn is true if the user has agreed to the terms of service.
+        type: boolean
       points:
         description: Points is the total number of points that the device has earned
           across all weeks.
@@ -104,9 +116,19 @@ definitions:
     type: object
   controllers.UserResponseIntegration:
     properties:
+      dataThisWeek:
+        type: boolean
       id:
         description: ID is the integration ID.
         example: 27egBSLazAT7njT2VBjcISPIpiU
+        type: string
+      onChainPairingStatus:
+        description: OnChainPairingStatus is the on-chain pairing status of the integration.
+        enum:
+        - Paired
+        - Unpaired
+        - NotApplicable
+        example: Paired
         type: string
       points:
         description: |-
