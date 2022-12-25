@@ -90,6 +90,9 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			models.RewardWhere.Tokens.GT(types.NewNullDecimal(decimal.New(0, 0))),
 			models.RewardWhere.IssuanceWeekID.EQ(week),
 			models.RewardWhere.TransferMetaTransactionRequestID.IsNull(),
+			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x481e8DB1dd18fd02caA8A83Ef7A73cF207b83930")),
+			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x3596Da3ab608d4fD63F4Bc9F4631A6838d435474")),
+			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x21762721Fe155F29D2EdbBB2a88688a032c41c58")),
 			qm.Limit(batchSize),
 		).All(ctx, c.db().Reader)
 		if err != nil {
