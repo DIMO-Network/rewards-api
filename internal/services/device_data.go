@@ -136,8 +136,6 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 	}
 	defer res.Body.Close()
 
-	log.Print("code", res.StatusCode)
-
 	if code := res.StatusCode; code != http.StatusOK {
 		return nil, fmt.Errorf("status code %d", code)
 	}
