@@ -6,9 +6,11 @@ package models
 var TableNames = struct {
 	IssuanceWeeks           string
 	MetaTransactionRequests string
+	Overrides               string
 	Rewards                 string
 }{
 	IssuanceWeeks:           "issuance_weeks",
 	MetaTransactionRequests: "meta_transaction_requests",
+	Overrides:               "overrides",
 	Rewards:                 "rewards",
 }

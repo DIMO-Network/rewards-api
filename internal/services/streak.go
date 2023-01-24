@@ -61,3 +61,11 @@ func ComputeStreak(i StreakInput) StreakOutput {
 		Points:              0,
 	}
 }
+
+func FakeStreak(connectionStreak int) StreakOutput {
+	return StreakOutput{
+		DisconnectionStreak: 0,
+		ConnectionStreak:    connectionStreak,
+		Points:              GetLevel(connectionStreak).Points,
+	}
+}
