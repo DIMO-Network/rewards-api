@@ -8,7 +8,7 @@ jobs:
   build_test:
     # The type of runner that the job will run on
     name: buildpushdev
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
@@ -29,6 +29,7 @@ jobs:
           context: .
           file: ./resources/docker/Dockerfile
           push: true
+          platforms: linux/amd64
           tags: dimozone/rewards-api:${{ steps.slug.outputs.sha7 }}, dimozone/rewards-api:latest
 
       - name: Update Image Version in the related HelmChart values.yaml
