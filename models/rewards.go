@@ -35,7 +35,6 @@ type Reward struct {
 	IntegrationPoints                int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
 	CreatedAt                        time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt                        time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	Override                         bool              `boil:"override" json:"override" toml:"override" yaml:"override"`
 	Tokens                           types.NullDecimal `boil:"tokens" json:"tokens,omitempty" toml:"tokens" yaml:"tokens,omitempty"`
 	UserEthereumAddress              null.String       `boil:"user_ethereum_address" json:"user_ethereum_address,omitempty" toml:"user_ethereum_address" yaml:"user_ethereum_address,omitempty"`
 	UserDeviceTokenID                types.NullDecimal `boil:"user_device_token_id" json:"user_device_token_id,omitempty" toml:"user_device_token_id" yaml:"user_device_token_id,omitempty"`
@@ -59,7 +58,6 @@ var RewardColumns = struct {
 	IntegrationPoints                string
 	CreatedAt                        string
 	UpdatedAt                        string
-	Override                         string
 	Tokens                           string
 	UserEthereumAddress              string
 	UserDeviceTokenID                string
@@ -78,7 +76,6 @@ var RewardColumns = struct {
 	IntegrationPoints:                "integration_points",
 	CreatedAt:                        "created_at",
 	UpdatedAt:                        "updated_at",
-	Override:                         "override",
 	Tokens:                           "tokens",
 	UserEthereumAddress:              "user_ethereum_address",
 	UserDeviceTokenID:                "user_device_token_id",
@@ -99,7 +96,6 @@ var RewardTableColumns = struct {
 	IntegrationPoints                string
 	CreatedAt                        string
 	UpdatedAt                        string
-	Override                         string
 	Tokens                           string
 	UserEthereumAddress              string
 	UserDeviceTokenID                string
@@ -118,7 +114,6 @@ var RewardTableColumns = struct {
 	IntegrationPoints:                "rewards.integration_points",
 	CreatedAt:                        "rewards.created_at",
 	UpdatedAt:                        "rewards.updated_at",
-	Override:                         "rewards.override",
 	Tokens:                           "rewards.tokens",
 	UserEthereumAddress:              "rewards.user_ethereum_address",
 	UserDeviceTokenID:                "rewards.user_device_token_id",
@@ -150,15 +145,6 @@ func (w whereHelpertypes_StringArray) GT(x types.StringArray) qm.QueryMod {
 func (w whereHelpertypes_StringArray) GTE(x types.StringArray) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
-
-type whereHelperbool struct{ field string }
-
-func (w whereHelperbool) EQ(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperbool) NEQ(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperbool) LT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
 type whereHelpertypes_NullDecimal struct{ field string }
 
@@ -197,7 +183,6 @@ var RewardWhere = struct {
 	IntegrationPoints                whereHelperint
 	CreatedAt                        whereHelpertime_Time
 	UpdatedAt                        whereHelpertime_Time
-	Override                         whereHelperbool
 	Tokens                           whereHelpertypes_NullDecimal
 	UserEthereumAddress              whereHelpernull_String
 	UserDeviceTokenID                whereHelpertypes_NullDecimal
@@ -216,7 +201,6 @@ var RewardWhere = struct {
 	IntegrationPoints:                whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
 	CreatedAt:                        whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
 	UpdatedAt:                        whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
-	Override:                         whereHelperbool{field: "\"rewards_api\".\"rewards\".\"override\""},
 	Tokens:                           whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"tokens\""},
 	UserEthereumAddress:              whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"user_ethereum_address\""},
 	UserDeviceTokenID:                whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"user_device_token_id\""},
@@ -264,9 +248,9 @@ func (r *rewardR) GetTransferMetaTransactionRequest() *MetaTransactionRequest {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id"}
 	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "override", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )
