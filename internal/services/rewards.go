@@ -11,7 +11,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
-	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -127,11 +126,14 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
-	if _, err := models.Rewards(
-		models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
-		models.RewardWhere.Override.EQ(false),
-	).DeleteAll(ctx, t.DB().Writer); err != nil {
+	// There shouldn't be anything there. This used to be used when we'd do historical overrides.
+	delCount, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.DB().Writer)
+	if err != nil {
 		return err
+	}
+
+	if delCount != 0 {
+		t.Logger.Warn().Int("issuanceWeek", issuanceWeek).Int64("deleted", delCount).Msg("Deleted some existing rows.")
 	}
 
 	week := models.IssuanceWeek{
@@ -143,6 +145,16 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	if err := week.Upsert(ctx, t.DB().Writer.DB, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
 		return err
+	}
+
+	overrides, err := models.Overrides(models.OverrideWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
+	if err != nil {
+		return err
+	}
+
+	deviceToOverride := make(map[string]int)
+	for _, ov := range overrides {
+		deviceToOverride[ov.UserDeviceID] = ov.ConnectionStreak
 	}
 
 	// These devices have each sent some signal during the issuance week.
@@ -187,69 +199,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
 
-	overrides, err := models.Rewards(
-		models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
-		models.RewardWhere.Override.EQ(true),
-	).All(ctx, t.DB().Reader.DB)
-	if err != nil {
-		return err
-	}
-
-	devicesOverriddenThisWeek := shared.NewStringSet()
-
-	for _, override := range overrides {
-		if len(override.IntegrationIds) == 0 {
-			t.Logger.Warn().Str("userDeviceId", override.UserDeviceID).Msg("Override had no integrations.")
-			continue
-		}
-		devicesOverriddenThisWeek.Add(override.UserDeviceID)
-
-		ud, err := deviceClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: override.UserDeviceID})
-		if err != nil {
-			if s, ok := status.FromError(err); ok {
-				if s.Code() == codes.NotFound {
-					t.Logger.Info().Str("userDeviceId", override.UserDeviceID).Msg("Override present for deleted device.")
-					continue
-				} else {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
-		override.UserID = ud.UserId
-
-		streakInput := StreakInput{
-			ConnectedThisWeek:           true,
-			ExistingConnectionStreak:    0,
-			ExistingDisconnectionStreak: 0,
-		}
-
-		if lastWeek, ok := lastWeekByDevice[override.UserDeviceID]; ok {
-			if lastWeek.UserID != ud.UserId {
-				t.Logger.Warn().Str("userDeviceId", ud.Id).Msgf("Device changed ownership from %s to %s, resetting streaks.", lastWeek.UserID, ud.UserId)
-			} else {
-				streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
-				streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
-			}
-			delete(lastWeekByDevice, override.UserDeviceID)
-		}
-
-		streak := ComputeStreak(streakInput)
-		setStreakFields(override, streak)
-
-		override.IntegrationPoints = integCalc.Calculate(override.IntegrationIds)
-
-		if _, err := override.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
-			return err
-		}
-	}
-
 	for _, device := range devices {
-		if devicesOverriddenThisWeek.Contains(device.ID) {
-			continue
-		}
-
 		ud, err := deviceClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: device.ID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
@@ -292,6 +242,8 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 					}
 				}
 
+				// If the only active connection was an AutoPi, and this was not paired on chain,
+				// it doesn't count.
 				if len(filtered) == 0 {
 					continue
 				}
@@ -305,23 +257,31 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		thisWeek.UserDeviceTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId))
 		thisWeek.UserEthereumAddress = null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex())
 
-		// Streak rewards.
-		streakInput := StreakInput{
-			ConnectedThisWeek:           true,
-			ExistingConnectionStreak:    0,
-			ExistingDisconnectionStreak: 0,
-		}
-		if lastWeek, ok := lastWeekByDevice[device.ID]; ok {
-			if lastWeek.UserID != ud.UserId {
-				t.Logger.Warn().Str("userDeviceId", ud.Id).Msgf("Device changed ownership from %s to %s, resetting streaks.", lastWeek.UserID, ud.UserId)
-			} else {
-				streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
-				streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
+		var streak StreakOutput
+
+		if connStreak, ok := deviceToOverride[device.ID]; ok {
+			streak = FakeStreak(connStreak)
+			delete(deviceToOverride, device.ID)
+		} else {
+			// Streak rewards.
+			streakInput := StreakInput{
+				ConnectedThisWeek:           true,
+				ExistingConnectionStreak:    0,
+				ExistingDisconnectionStreak: 0,
 			}
-			delete(lastWeekByDevice, device.ID)
+			if lastWeek, ok := lastWeekByDevice[device.ID]; ok {
+				if lastWeek.UserID != ud.UserId {
+					t.Logger.Warn().Str("userDeviceId", ud.Id).Msgf("Device changed ownership from %s to %s, resetting streaks.", lastWeek.UserID, ud.UserId)
+				} else {
+					streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
+					streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
+				}
+				delete(lastWeekByDevice, device.ID)
+			}
+
+			streak = ComputeStreak(streakInput)
 		}
 
-		streak := ComputeStreak(streakInput)
 		setStreakFields(thisWeek, streak)
 
 		// Integration or "connected method" rewards.
@@ -350,6 +310,10 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
 		}
+	}
+
+	if len(deviceToOverride) != 0 {
+		t.Logger.Warn().Interface("overrides", deviceToOverride).Msg("Unused overrides.")
 	}
 
 	st := storage.NewDB(t.DB)
