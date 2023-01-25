@@ -63,6 +63,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	if addr := user.EthereumAddress; addr != nil {
 		ab, err := r.Token.BalanceOf(nil, common.HexToAddress(*addr))
 		if err != nil {
+			logger.Err(err).Str("address", *addr).Msg("Failed to retrieve token balance.")
 			return err
 		}
 
