@@ -67,6 +67,10 @@ func (s *rewardsService) GetAverageTokens(ctx context.Context, _ *emptypb.Empty)
 
 	err = queries.Raw("SELECT sum(tokens)::int/ count(distinct user_device_id) as average_tokens FROM rewards WHERE issuance_week_id = $1",
 		mw[len(mw)-1].MaxWeek).Bind(ctx, s.dbs().Reader, avrg)
+	if err != nil {
+		s.logger.Err(err).Msg("Failed to get average tokens allocated for current week.")
+		return nil, status.Error(codes.Internal, "Internal error.")
+	}
 
 	out := &pb.AverageTokensResponse{
 		AverageTokens: avrg.AverageTokens,
