@@ -68,6 +68,7 @@ func (s *rewardsService) GetAverageTokens(ctx context.Context, _ *emptypb.Empty)
 		return nil, status.Error(codes.Internal, "Internal error.")
 	}
 
+	// sum tokens allocated in the current week and divide by devices; then divide by ethers value to convert from gwei
 	err = queries.Raw("SELECT ((sum(tokens)/ count(distinct user_device_id)) / $1::numeric)::int as average_tokens FROM rewards WHERE issuance_week_id = $2",
 		ether.String(), mw[len(mw)-1].MaxWeek).Bind(ctx, s.dbs().Reader, &avrg)
 	if err != nil {
