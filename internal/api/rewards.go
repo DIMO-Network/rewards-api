@@ -7,6 +7,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	pb "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/rs/zerolog"
+	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,7 +31,7 @@ type totalResp struct {
 	TotalPoints int64 `boil:"total_points"`
 }
 
-type totelTokens struct {
+type averageTokens struct {
 	AverageTokens int64 `boil:"average_tokens"`
 }
 
@@ -55,30 +56,20 @@ func (s *rewardsService) GetTotalPoints(ctx context.Context, _ *emptypb.Empty) (
 	return out, nil
 }
 
-func (s *rewardsService) GetAverageTokens(ctx context.Context, _ *emptypb.Empty) (*pb.GetTotalPointsResponse, error) {
-	tt := new(totelTokens)
-	mw := new(maxWeek)
-	weekQuery := models.NewQuery(
-		qm.Select("max("+models.RewardColumns.IssuanceWeekID+") as max_week"),
-		qm.From(models.TableNames.Rewards),
-	)
-	if err := weekQuery.Bind(ctx, s.dbs().Reader, mw); err != nil {
-		s.logger.Err(err).Msg("Failed to get total points.")
+func (s *rewardsService) GetAverageTokens(ctx context.Context, _ *emptypb.Empty) (*pb.AverageTokensResponse, error) {
+	avrg := new(averageTokens)
+	mw := make([]maxWeek, 0)
+	err := models.NewQuery(qm.Select("max(issuance_week_id) as max_week"), qm.From(models.TableNames.Rewards)).Bind(ctx, s.dbs().Reader, &mw)
+	if err != nil {
+		s.logger.Err(err).Msg("Failed to get max week for average tokens allocated.")
 		return nil, status.Error(codes.Internal, "Internal error.")
 	}
 
-	tokenQuery := models.NewQuery(
-		qm.Select("sum("+models.RewardColumns.Tokens+") / count(distinct("+models.RewardColumns.UserDeviceTokenID+")) as total_tokens"),
-		qm.From(models.TableNames.Rewards),
-		qm.Where(models.RewardColumns.IssuanceWeekID+" = ", mw.MaxWeek),
-	)
-	if err := tokenQuery.Bind(ctx, s.dbs().Reader, tt); err != nil {
-		s.logger.Err(err).Msg("Failed to get total tokens.")
-		return nil, status.Error(codes.Internal, "Internal error.")
-	}
+	err = queries.Raw("SELECT sum(tokens)::int/ count(distinct user_device_id) as average_tokens FROM rewards WHERE issuance_week_id = $1",
+		mw[len(mw)-1].MaxWeek).Bind(ctx, s.dbs().Reader, avrg)
 
-	out := &pb.GetTotalPointsResponse{
-		TotalPoints: tt.AverageTokens,
+	out := &pb.AverageTokensResponse{
+		AverageTokens: avrg.AverageTokens,
 	}
 	return out, nil
 }

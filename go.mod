@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/DIMO-Network/device-definitions-api v0.6.1
-	github.com/DIMO-Network/shared v0.6.6
+	github.com/DIMO-Network/shared v0.7.4
 	github.com/Shopify/sarama v1.37.2
 	github.com/aquasecurity/esquery v0.2.0
 	github.com/arsmn/fiber-swagger/v2 v2.31.1
@@ -64,15 +64,15 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/klauspost/compress v1.15.11 // indirect
+	github.com/klauspost/compress v1.15.14 // indirect
 	github.com/lovoo/goka v1.1.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/rjeczalik/notify v0.9.1 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/swaggo/files v0.0.0-20220728132757-551d4a08d97a // indirect
@@ -80,7 +80,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.41.0 // indirect
+	github.com/valyala/fasthttp v1.43.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/volatiletech/randomize v0.0.1 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
@@ -92,14 +92,14 @@ require (
 
 require (
 	github.com/fatih/structs v1.1.0 // indirect
-	github.com/gofiber/fiber/v2 v2.40.1
+	github.com/gofiber/fiber/v2 v2.41.0
 	github.com/gofiber/jwt/v3 v3.3.4
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/volatiletech/inflect v0.0.1 // indirect
 	golang.org/x/net v0.0.0-20220927171203-f486391704dc // indirect
-	golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41 // indirect
+	golang.org/x/sys v0.4.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto v0.0.0-20220916172020-2692e8806bfa // indirect
