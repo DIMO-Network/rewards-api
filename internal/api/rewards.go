@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -13,6 +14,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 
 func NewRewardsService(dbs func() *database.DBReaderWriter, logger *zerolog.Logger) pb.RewardsServiceServer {
 	return &rewardsService{
@@ -57,7 +60,7 @@ func (s *rewardsService) GetTotalPoints(ctx context.Context, _ *emptypb.Empty) (
 }
 
 func (s *rewardsService) GetAverageTokens(ctx context.Context, _ *emptypb.Empty) (*pb.AverageTokensResponse, error) {
-	avrg := new(averageTokens)
+	var avrg averageTokens
 	mw := make([]maxWeek, 0)
 	err := models.NewQuery(qm.Select("max(issuance_week_id) as max_week"), qm.From(models.TableNames.Rewards)).Bind(ctx, s.dbs().Reader, &mw)
 	if err != nil {
@@ -65,8 +68,8 @@ func (s *rewardsService) GetAverageTokens(ctx context.Context, _ *emptypb.Empty)
 		return nil, status.Error(codes.Internal, "Internal error.")
 	}
 
-	err = queries.Raw("SELECT sum(tokens)::int/ count(distinct user_device_id) as average_tokens FROM rewards WHERE issuance_week_id = $1",
-		mw[len(mw)-1].MaxWeek).Bind(ctx, s.dbs().Reader, avrg)
+	err = queries.Raw("SELECT ((sum(tokens)/ count(distinct user_device_id)) / $1::numeric)::int as average_tokens FROM rewards WHERE issuance_week_id = $2",
+		ether.String(), mw[len(mw)-1].MaxWeek).Bind(ctx, s.dbs().Reader, &avrg)
 	if err != nil {
 		s.logger.Err(err).Msg("Failed to get average tokens allocated for current week.")
 		return nil, status.Error(codes.Internal, "Internal error.")
