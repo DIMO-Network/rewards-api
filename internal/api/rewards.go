@@ -100,8 +100,11 @@ func (s *rewardsService) GetDeviceRewards(ctx context.Context, req *pb.GetDevice
 	}
 
 	for _, r := range rs {
-		tokEth, _ := r.Tokens.Float64()
-		tokEth /= 1e18
+		var tokEth float64
+		if !r.Tokens.IsZero() {
+			tokEth, _ = r.Tokens.Float64()
+			tokEth /= 1e18
+		}
 
 		resp.Tokens += tokEth
 
