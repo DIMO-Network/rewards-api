@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/DIMO-Network/rewards-api/internal/database"
+	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/rs/zerolog"
@@ -80,4 +81,39 @@ func (s *rewardsService) GetAverageTokens(ctx context.Context, _ *emptypb.Empty)
 		AverageTokens: avrg.AverageTokens,
 	}
 	return out, nil
+}
+
+func (s *rewardsService) GetDeviceRewards(ctx context.Context, req *pb.GetDeviceRewardsRequest) (*pb.GetDeviceRewardsResponse, error) {
+	rs, err := models.Rewards(
+		models.RewardWhere.UserDeviceID.EQ(req.Id),
+		qm.OrderBy(models.RewardColumns.IssuanceWeekID+" ASC"),
+	).All(ctx, s.dbs().Reader)
+	if err != nil {
+		s.logger.Err(err).Str("userDeviceId", req.Id).Msg("Failed to get rewards for device.")
+		return nil, status.Error(codes.Internal, "Internal error.")
+	}
+
+	resp := pb.GetDeviceRewardsResponse{
+		Id:     req.Id,
+		Tokens: 0,
+		Weeks:  []*pb.DeviceRewardsWeek{},
+	}
+
+	for _, r := range rs {
+		tokEth, _ := r.Tokens.Float64()
+		tokEth /= 1e18
+
+		resp.Tokens += tokEth
+
+		row := pb.DeviceRewardsWeek{
+			EndDate:             services.NumToWeekEnd(r.IssuanceWeekID).UTC().Format("2006-01-02"),
+			Tokens:              tokEth,
+			ConnectionStreak:    int32(r.ConnectionStreak),
+			DisconnectionStreak: int32(r.DisconnectionStreak),
+			IntegrationIds:      r.IntegrationIds,
+		}
+		resp.Weeks = append(resp.Weeks, &row)
+	}
+
+	return &resp, nil
 }
