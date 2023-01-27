@@ -60,9 +60,20 @@ var activityFieldExists = []esquery.Mappable{
 	esquery.Exists("data.soc"),
 	esquery.Exists("data.latitude"),
 	esquery.Exists("data.oil"),
+	esquery.Exists("data.range"),
+	esquery.Exists("data.speed"),
+	esquery.Exists("data.batteryVoltage"),
+	esquery.Exists("data.coolantTemp"),
+	esquery.Exists("data.engineLoad"),
+	esquery.Exists("data.barometricPressure"),
+	esquery.Exists("data.intakeTemp"),
+	esquery.Exists("data.runTime"),
+	esquery.Exists("data.ambientTemp"),
 	esquery.Exists("data.fuelPercentRemaining"),
 	esquery.Exists("data.tires.frontLeft"),
 	esquery.Exists("data.charging"),
+	esquery.Exists("data.engineSpeed"),
+	esquery.Exists("data.throttlePosition"),
 }
 
 func (c *elasticDeviceDataClient) GetLastActivity(userDeviceID string) (lastActivity time.Time, seen bool, err error) {
