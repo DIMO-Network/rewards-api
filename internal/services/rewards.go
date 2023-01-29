@@ -257,6 +257,9 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		thisWeek.UserDeviceTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId))
 		thisWeek.UserEthereumAddress = null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex())
 
+		// Anything left in this map is disconnected.
+		delete(lastWeekByDevice, device.ID)
+
 		var streak StreakOutput
 
 		if connStreak, ok := deviceToOverride[device.ID]; ok {
@@ -276,7 +279,6 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 					streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
 					streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
 				}
-				delete(lastWeekByDevice, device.ID)
 			}
 
 			streak = ComputeStreak(streakInput)
