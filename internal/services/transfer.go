@@ -96,6 +96,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x21762721Fe155F29D2EdbBB2a88688a032c41c58")),
 			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0xBE421ef2988794F8061A62FE8A45BA29e08458C6")),
 			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x620a84B6D68a33017109c6cBECa233442b89c237")),
+			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x7088A745eED70B7348678577095eA332d4f9A3Dd")),
 			qm.Limit(batchSize),
 		).All(ctx, c.db().Reader)
 		if err != nil {
