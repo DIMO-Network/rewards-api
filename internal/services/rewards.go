@@ -255,7 +255,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 
 		thisWeek.UserDeviceTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId))
-		thisWeek.UserEthereumAddress = null.StringFrom(common.BytesToAddress(ud.OwnerAddress).
+		thisWeek.UserEthereumAddress = null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex())
 
 		var streak StreakOutput
 
@@ -281,8 +281,6 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 			streak = ComputeStreak(streakInput)
 		}
-
-Hex())
 
 		// Anything left in this map is considered disconnected.
 		delete(lastWeekByDevice, device.ID)
