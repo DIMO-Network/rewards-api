@@ -263,7 +263,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		var streak StreakOutput
 
 		if connStreak, ok := deviceToOverride[device.ID]; ok {
-			t.logger.Info().Str("userDeviceId", device.ID).Str("connectionStreak", connStreak).Msg("Override for active device.") 
+			t.Logger.Info().Str("userDeviceId", device.ID).Int("connectionStreak", connStreak).Msg("Override for active device.") 
 			streak = FakeStreak(connStreak)
 			delete(deviceToOverride, device.ID)
 		} else {
