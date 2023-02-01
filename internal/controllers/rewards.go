@@ -17,6 +17,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -116,7 +117,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					return opaqueInternalError
 				}
 
-				if services.ContainsString(ints, intMap["AutoPi"]) {
+				if slices.Contains(ints, intMap["AutoPi"]) {
 					uriAP := UserResponseIntegration{
 						ID:                   intMap["AutoPi"],
 						Vendor:               "AutoPi",
@@ -134,7 +135,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 					outInts = append(outInts, uriAP)
 
-					if services.ContainsString(ints, intMap["SmartCar"]) {
+					if slices.Contains(ints, intMap["SmartCar"]) {
 						uriSC := UserResponseIntegration{
 							ID:                   intMap["SmartCar"],
 							Vendor:               "SmartCar",
@@ -149,7 +150,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 						outInts = append(outInts, uriSC)
 					}
-				} else if services.ContainsString(ints, intMap["Tesla"]) {
+				} else if slices.Contains(ints, intMap["Tesla"]) {
 					uriTesla := UserResponseIntegration{
 						ID:                   intMap["Tesla"],
 						Vendor:               "Tesla",
@@ -163,7 +164,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					}
 
 					outInts = append(outInts, uriTesla)
-				} else if services.ContainsString(ints, intMap["SmartCar"]) {
+				} else if slices.Contains(ints, intMap["SmartCar"]) {
 					eligibleThisWeek = true
 					uriSC := UserResponseIntegration{
 						ID:                   intMap["SmartCar"],

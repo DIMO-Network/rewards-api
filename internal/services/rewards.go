@@ -15,6 +15,7 @@ import (
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"
+	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -66,34 +67,19 @@ type RewardsTask struct {
 	TransferService Transfer
 }
 
-type ConnectionMethod struct {
-	DevicesAPIVendor string
-	DBConstant       string
-	Points           int
-}
-
-func ContainsString(v []string, x string) bool {
-	for _, y := range v {
-		if y == x {
-			return true
-		}
-	}
-	return false
-}
-
 type integrationPointsCalculator struct {
 	AutoPiID, TeslaID, SmartcarID string
 }
 
 func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
-	if ContainsString(integrationIDs, i.AutoPiID) {
-		if ContainsString(integrationIDs, i.SmartcarID) {
+	if slices.Contains(integrationIDs, i.AutoPiID) {
+		if slices.Contains(integrationIDs, i.SmartcarID) {
 			return 7000
 		}
 		return 6000
-	} else if ContainsString(integrationIDs, i.TeslaID) {
+	} else if slices.Contains(integrationIDs, i.TeslaID) {
 		return 4000
-	} else if ContainsString(integrationIDs, i.SmartcarID) {
+	} else if slices.Contains(integrationIDs, i.SmartcarID) {
 		return 1000
 	}
 	return 0
@@ -169,6 +155,8 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 	defer devicesConn.Close()
 
+	deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
+
 	definitionsConn, err := grpc.Dial(t.Settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
@@ -176,18 +164,13 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	defer definitionsConn.Close()
 
 	definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
+
 	integs, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
 
 	integCalc := t.createIntegrationPointsCalculator(integs)
-	vendorToIntegration := make(map[string]string)
-	for _, i := range integs.Integrations {
-		vendorToIntegration[i.Vendor] = i.Id
-	}
-
-	deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB().Reader)
 	if err != nil {
@@ -230,7 +213,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			continue
 		}
 
-		if ContainsString(device.Integrations, integCalc.AutoPiID) {
+		if slices.Contains(device.Integrations, integCalc.AutoPiID) {
 			if ud.AftermarketDeviceTokenId == nil {
 				t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi activity but not paired on-chain.")
 
