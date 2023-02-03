@@ -8,9 +8,9 @@ import (
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
-	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
+	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,7 +33,7 @@ func NewTokenTransferService(
 	producer sarama.SyncProducer,
 	contractAddress common.Address,
 	// settings config.Settings, producer sarama.SyncProducer, reqTopic string, contract Contract,
-	db func() *database.DBReaderWriter) Transfer {
+	db db.Store) Transfer {
 
 	return &Client{
 		ContractAddress: contractAddress,
@@ -50,7 +50,7 @@ type Client struct {
 	Consumer        sarama.ConsumerGroup
 	RequestTopic    string
 	StatusTopic     string
-	db              func() *database.DBReaderWriter
+	db              db.Store
 	ContractAddress common.Address
 	batchSize       int
 }
@@ -81,7 +81,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			Status: models.MetaTransactionRequestStatusUnsubmitted,
 		}
 
-		err := metaTxRequest.Insert(ctx, c.db().Writer, boil.Infer())
+		err := metaTxRequest.Insert(ctx, c.db.DBS().Writer, boil.Infer())
 		if err != nil {
 			return err
 		}
@@ -100,7 +100,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x3f58336034598429De2A68c60Fe4187999557763")),
 			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x537050A8044CD6472654DcCBa443037ec4685970")),
 			qm.Limit(batchSize),
-		).All(ctx, c.db().Reader)
+		).All(ctx, c.db.DBS().Reader)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 		tknValues := make([]*big.Int, responseSize)
 		vehicleIds := make([]*big.Int, responseSize)
 
-		tx, err := c.db().Writer.BeginTx(ctx, nil)
+		tx, err := c.db.DBS().Writer.BeginTx(ctx, nil)
 		if err != nil {
 			return err
 		}

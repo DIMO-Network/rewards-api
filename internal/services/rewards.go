@@ -8,10 +8,10 @@ import (
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
-	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
+	"github.com/DIMO-Network/shared/db"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"
@@ -61,7 +61,7 @@ type RewardsTask struct {
 	Settings        *config.Settings
 	Logger          *zerolog.Logger
 	DataService     DeviceDataClient
-	DB              func() *database.DBReaderWriter
+	DB              db.Store
 	TransferService Transfer
 	DevicesClient   pb_devices.UserDeviceServiceClient
 	DefsClient      pb_defs.DeviceDefinitionServiceClient
@@ -116,7 +116,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
 	// There shouldn't be anything there. This used to be used when we'd do historical overrides.
-	delCount, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.DB().Writer)
+	delCount, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.DB.DBS().Writer)
 	if err != nil {
 		return err
 	}
@@ -132,11 +132,11 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		EndsAt:    weekEnd,
 	}
 
-	if err := week.Upsert(ctx, t.DB().Writer.DB, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
+	if err := week.Upsert(ctx, t.DB.DBS().Writer, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
 		return err
 	}
 
-	overrides, err := models.Overrides(models.OverrideWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB().Reader)
+	overrides, err := models.Overrides(models.OverrideWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB.DBS().Reader)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	integCalc := t.createIntegrationPointsCalculator(integs)
 
-	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB().Reader)
+	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB.DBS().Reader)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		// This is a no-op if the device doesn't have a record from last week.
 		delete(lastWeekByDevice, deviceActivity.ID)
 
-		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
+		if err := thisWeek.Insert(ctx, t.DB.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
 	}
@@ -275,7 +275,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 		streak := ComputeStreak(streakInput)
 		setStreakFields(thisWeek, streak)
-		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
+		if err := thisWeek.Insert(ctx, t.DB.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
 	}
@@ -296,7 +296,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished
-	if _, err := week.Update(ctx, t.DB().Writer, boil.Infer()); err != nil {
+	if _, err := week.Update(ctx, t.DB.DBS().Writer, boil.Infer()); err != nil {
 		return err
 	}
 

@@ -15,12 +15,12 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
-	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	pb_users "github.com/DIMO-Network/shared/api/users"
+	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/burdiyan/kafkautil"
@@ -49,7 +49,7 @@ func main() {
 	}
 
 	if len(os.Args) == 1 {
-		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
+		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
 		app := fiber.New(fiber.Config{
 			DisableStartupMessage: true,
 			ErrorHandler:          ErrorHandler,
@@ -95,7 +95,7 @@ func main() {
 		}
 
 		rewardsController := controllers.RewardsController{
-			DB:                pdb.DBS,
+			DB:                pdb,
 			Logger:            &logger,
 			DefinitionsClient: definitionsClient,
 			DevicesClient:     deviceClient,
@@ -119,7 +119,7 @@ func main() {
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 
-		go startGRPCServer(&settings, pdb.DBS, &logger)
+		go startGRPCServer(&settings, pdb, &logger)
 
 		// Start metatransaction listener
 		kclient, err := createKafkaClient(&settings)
@@ -134,7 +134,7 @@ func main() {
 		defer consumer.Close()
 
 		// need to pass logger here
-		statusProc, err := services.NewStatusProcessor(pdb.DBS, &logger)
+		statusProc, err := services.NewStatusProcessor(pdb, &logger)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create transaction status processor.")
 		}
@@ -162,7 +162,7 @@ func main() {
 				command = command + " " + os.Args[3]
 			}
 		}
-		migrateDatabase(logger, &settings, command, "rewards_api")
+		migrateDatabase(logger, &settings, command)
 	case "calculate":
 		var week int
 		if len(os.Args) == 2 {
@@ -175,7 +175,7 @@ func main() {
 				logger.Fatal().Err(err).Msg("Could not parse week number.")
 			}
 		}
-		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
+		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
 		totalTime := 0
 		for !pdb.IsReady() {
 			if totalTime > 30 {
@@ -198,7 +198,7 @@ func main() {
 		}
 
 		addr := common.HexToAddress(settings.IssuanceContractAddress)
-		transferService = services.NewTokenTransferService(&settings, producer, addr, pdb.DBS)
+		transferService = services.NewTokenTransferService(&settings, producer, addr, pdb)
 
 		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
@@ -219,7 +219,7 @@ func main() {
 		task := services.RewardsTask{
 			Settings:        &settings,
 			DataService:     services.NewDeviceDataClient(&settings),
-			DB:              pdb.DBS,
+			DB:              pdb,
 			Logger:          &logger,
 			TransferService: transferService,
 			DevicesClient:   deviceClient,
@@ -233,7 +233,7 @@ func main() {
 	}
 }
 
-func startGRPCServer(settings *config.Settings, dbs func() *database.DBReaderWriter, logger *zerolog.Logger) {
+func startGRPCServer(settings *config.Settings, dbs db.Store, logger *zerolog.Logger) {
 	lis, err := net.Listen("tcp", ":"+settings.GRPCPort)
 	if err != nil {
 		logger.Fatal().Err(err).Msgf("Couldn't listen on gRPC port %s", settings.GRPCPort)

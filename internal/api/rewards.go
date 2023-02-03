@@ -4,10 +4,10 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb "github.com/DIMO-Network/shared/api/rewards"
+	"github.com/DIMO-Network/shared/db"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -18,7 +18,7 @@ import (
 
 var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 
-func NewRewardsService(dbs func() *database.DBReaderWriter, logger *zerolog.Logger) pb.RewardsServiceServer {
+func NewRewardsService(dbs db.Store, logger *zerolog.Logger) pb.RewardsServiceServer {
 	return &rewardsService{
 		dbs:    dbs,
 		logger: logger,
@@ -27,7 +27,7 @@ func NewRewardsService(dbs func() *database.DBReaderWriter, logger *zerolog.Logg
 
 type rewardsService struct {
 	pb.UnimplementedRewardsServiceServer
-	dbs    func() *database.DBReaderWriter
+	dbs    db.Store
 	logger *zerolog.Logger
 }
 
@@ -49,7 +49,7 @@ func (s *rewardsService) GetTotalPoints(ctx context.Context, _ *emptypb.Empty) (
 		qm.Select("sum("+models.RewardColumns.StreakPoints+" + "+models.RewardColumns.IntegrationPoints+") as total_points"),
 		qm.From(models.TableNames.Rewards),
 	)
-	if err := query.Bind(ctx, s.dbs().Reader, tp); err != nil {
+	if err := query.Bind(ctx, s.dbs.DBS().Reader, tp); err != nil {
 		s.logger.Err(err).Msg("Failed to get total points.")
 		return nil, status.Error(codes.Internal, "Internal error.")
 	}
@@ -63,7 +63,7 @@ func (s *rewardsService) GetTotalPoints(ctx context.Context, _ *emptypb.Empty) (
 func (s *rewardsService) GetAverageTokens(ctx context.Context, _ *emptypb.Empty) (*pb.AverageTokensResponse, error) {
 	var avrg averageTokens
 	mw := make([]maxWeek, 0)
-	err := models.NewQuery(qm.Select("max(issuance_week_id) as max_week"), qm.From(models.TableNames.Rewards)).Bind(ctx, s.dbs().Reader, &mw)
+	err := models.NewQuery(qm.Select("max(issuance_week_id) as max_week"), qm.From(models.TableNames.Rewards)).Bind(ctx, s.dbs.DBS().Reader, &mw)
 	if err != nil {
 		s.logger.Err(err).Msg("Failed to get max week for average tokens allocated.")
 		return nil, status.Error(codes.Internal, "Internal error.")
@@ -71,7 +71,7 @@ func (s *rewardsService) GetAverageTokens(ctx context.Context, _ *emptypb.Empty)
 
 	// sum tokens allocated in the current week and divide by devices; then divide by ethers value to convert from gwei
 	err = queries.Raw("SELECT ((sum(tokens)/ count(distinct user_device_id)) / $1::numeric)::int as average_tokens FROM rewards WHERE issuance_week_id = $2",
-		ether.String(), mw[len(mw)-1].MaxWeek).Bind(ctx, s.dbs().Reader, &avrg)
+		ether.String(), mw[len(mw)-1].MaxWeek).Bind(ctx, s.dbs.DBS().Reader, &avrg)
 	if err != nil {
 		s.logger.Err(err).Msg("Failed to get average tokens allocated for current week.")
 		return nil, status.Error(codes.Internal, "Internal error.")
@@ -87,7 +87,7 @@ func (s *rewardsService) GetDeviceRewards(ctx context.Context, req *pb.GetDevice
 	rs, err := models.Rewards(
 		models.RewardWhere.UserDeviceID.EQ(req.Id),
 		qm.OrderBy(models.RewardColumns.IssuanceWeekID+" ASC"),
-	).All(ctx, s.dbs().Reader)
+	).All(ctx, s.dbs.DBS().Reader)
 	if err != nil {
 		s.logger.Err(err).Str("userDeviceId", req.Id).Msg("Failed to get rewards for device.")
 		return nil, status.Error(codes.Internal, "Internal error.")

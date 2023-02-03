@@ -1,8 +1,13 @@
 package services
 
 import (
+	"context"
 	"testing"
 	"time"
+
+	"github.com/docker/go-connections/nat"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestGetWeekNumForCron(t *testing.T) {
@@ -15,4 +20,27 @@ func TestGetWeekNumForCron(t *testing.T) {
 	if GetWeekNumForCron(ti) != 1 {
 		t.Errorf("Failed")
 	}
+}
+
+func TestCalc(t *testing.T) {
+	ctx := context.Background()
+
+	port := "5432/tcp"
+	req := testcontainers.ContainerRequest{
+		Image:        "postgres:12.11-alpine",
+		ExposedPorts: []string{port},
+		Env: map[string]string{
+			"POSTGRES_PASSWORD": "postgres",
+		},
+		WaitingFor: wait.ForListeningPort(nat.Port(port)),
+	}
+	_, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// connStr :=
 }
