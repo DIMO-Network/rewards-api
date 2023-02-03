@@ -68,10 +68,13 @@ type RewardsTask struct {
 }
 
 type integrationPointsCalculator struct {
-	AutoPiID, TeslaID, SmartcarID string
+	AutoPiID   string
+	TeslaID    string
+	SmartcarID string
 }
 
 func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
+	// Only blessed combination.
 	if slices.Contains(integrationIDs, i.AutoPiID) {
 		if slices.Contains(integrationIDs, i.SmartcarID) {
 			return 7000
@@ -86,7 +89,7 @@ func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
 }
 
 func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb_defs.GetIntegrationResponse) *integrationPointsCalculator {
-	calc := new(integrationPointsCalculator)
+	var calc integrationPointsCalculator
 
 	for _, integration := range resp.Integrations {
 		switch integration.Vendor {
@@ -101,7 +104,7 @@ func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb_defs.GetIntegra
 		}
 	}
 
-	return calc
+	return &calc
 }
 
 func (t *RewardsTask) Calculate(issuanceWeek int) error {
@@ -138,7 +141,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		return err
 	}
 
-	deviceToOverride := make(map[string]int)
+	deviceToOverride := map[string]int{}
 	for _, ov := range overrides {
 		deviceToOverride[ov.UserDeviceID] = ov.ConnectionStreak
 	}
@@ -167,27 +170,31 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	}
 
 	for _, deviceActivity := range deviceActivityRecords {
+		logger := t.Logger.With().Str("userDeviceId", deviceActivity.ID).Logger()
+
 		ud, err := t.DevicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: deviceActivity.ID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				t.Logger.Info().Str("userDeviceId", deviceActivity.ID).Msg("Device was active during the week but was later deleted.")
+				logger.Info().Msg("Device was active during the week but was later deleted.")
 				continue
 			}
 			return err
 		}
 
+		logger = logger.With().Str("userId", ud.UserId).Logger()
+
 		if ud.TokenId == nil {
-			t.Logger.Info().Str("userDeviceId", ud.Id).Str("userId", ud.UserId).Msg("Device not minted.")
+			logger.Info().Msg("Device not minted.")
 			continue
 		}
 
 		if ud.OptedInAt == nil {
-			t.Logger.Info().Str("userDeviceId", ud.Id).Str("userId", ud.UserId).Msg("User has not opted in for this device.")
+			logger.Info().Msg("User has not opted in for this device.")
 			continue
 		}
 
 		if len(ud.OwnerAddress) != 20 {
-			t.Logger.Error().Str("userId", ud.UserId).Bytes("address", ud.OwnerAddress).Msg("User has minted a car but has no owner address?")
+			logger.Info().Msg("User has minted a car but has no owner address?")
 			continue
 		}
 
@@ -204,11 +211,11 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		if ind := slices.Index(validIntegrations, integCalc.AutoPiID); ind != -1 {
 			if ud.AftermarketDeviceTokenId == nil {
 				if len(validIntegrations) == 1 {
-					t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi connected but not paired-onchain; no other active integrations.")
+					logger.Info().Msg("AutoPi connected but not paired-onchain; no other active integrations.")
 					continue
 				} else {
 					validIntegrations = slices.Delete(validIntegrations, ind, ind+1)
-					t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi connected but not paired on-chain; there are other integrations.")
+					logger.Info().Msg("AutoPi connected but not paired on-chain; there are other integrations.")
 				}
 			} else {
 				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
@@ -222,7 +229,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		var streak StreakOutput
 
 		if connStreak, ok := deviceToOverride[deviceActivity.ID]; ok {
-			t.Logger.Info().Str("userDeviceId", deviceActivity.ID).Int("connectionStreak", connStreak).Msg("Override for active device.")
+			logger.Info().Int("connectionStreak", connStreak).Msg("Override for active device.")
 			streak = FakeStreak(connStreak)
 			delete(deviceToOverride, deviceActivity.ID)
 		} else {
