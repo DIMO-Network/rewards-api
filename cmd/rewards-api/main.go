@@ -200,12 +200,30 @@ func main() {
 		addr := common.HexToAddress(settings.IssuanceContractAddress)
 		transferService = services.NewTokenTransferService(&settings, producer, addr, pdb.DBS)
 
+		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create devices-api connection.")
+		}
+		defer devicesConn.Close()
+
+		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
+
+		definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create device-definitions-api connection.")
+		}
+		defer definitionsConn.Close()
+
+		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
+
 		task := services.RewardsTask{
 			Settings:        &settings,
 			DataService:     services.NewDeviceDataClient(&settings),
 			DB:              pdb.DBS,
 			Logger:          &logger,
 			TransferService: transferService,
+			DevicesClient:   deviceClient,
+			DefsClient:      definitionsClient,
 		}
 		if err := task.Calculate(week); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")

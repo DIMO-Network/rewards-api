@@ -20,9 +20,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -65,6 +63,8 @@ type RewardsTask struct {
 	DataService     DeviceDataClient
 	DB              func() *database.DBReaderWriter
 	TransferService Transfer
+	DevicesClient   pb_devices.UserDeviceServiceClient
+	DefsClient      pb_defs.DeviceDefinitionServiceClient
 }
 
 type integrationPointsCalculator struct {
@@ -107,8 +107,8 @@ func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb_defs.GetIntegra
 func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	ctx := context.Background()
 
-	weekStart := startTime.Add(time.Duration(issuanceWeek) * weekDuration)
-	weekEnd := startTime.Add(time.Duration(issuanceWeek+1) * weekDuration)
+	weekStart := NumToWeekStart(issuanceWeek)
+	weekEnd := NumToWeekEnd(issuanceWeek)
 
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
@@ -143,29 +143,13 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		deviceToOverride[ov.UserDeviceID] = ov.ConnectionStreak
 	}
 
-	// These devices have each sent some signal during the issuance week.
-	devices, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
+	// These describe the active integrations for each device active this week.
+	deviceActivityRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
 		return err
 	}
 
-	devicesConn, err := grpc.Dial(t.Settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	defer devicesConn.Close()
-
-	deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
-
-	definitionsConn, err := grpc.Dial(t.Settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	defer definitionsConn.Close()
-
-	definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
-
-	integs, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
+	integs, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -182,20 +166,14 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
 
-	for _, device := range devices {
-		ud, err := deviceClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: device.ID})
+	for _, deviceActivity := range deviceActivityRecords {
+		ud, err := t.DevicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: deviceActivity.ID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				t.Logger.Info().Str("userDeviceId", device.ID).Msg("Device was active during the week but was later deleted.")
+				t.Logger.Info().Str("userDeviceId", deviceActivity.ID).Msg("Device was active during the week but was later deleted.")
 				continue
 			}
 			return err
-		}
-
-		thisWeek := &models.Reward{
-			UserDeviceID:   device.ID,
-			IssuanceWeekID: issuanceWeek,
-			UserID:         ud.UserId,
 		}
 
 		if ud.TokenId == nil {
@@ -213,39 +191,40 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 			continue
 		}
 
-		if slices.Contains(device.Integrations, integCalc.AutoPiID) {
+		thisWeek := &models.Reward{
+			UserDeviceID:        deviceActivity.ID,
+			IssuanceWeekID:      issuanceWeek,
+			UserID:              ud.UserId,
+			UserDeviceTokenID:   types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
+			UserEthereumAddress: null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex()),
+		}
+
+		validIntegrations := deviceActivity.Integrations // Guaranteed to be non-empty at this point.
+
+		if ind := slices.Index(validIntegrations, integCalc.AutoPiID); ind != -1 {
 			if ud.AftermarketDeviceTokenId == nil {
-				t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi activity but not paired on-chain.")
-
-				filtered := []string{}
-
-				for _, integ := range device.Integrations {
-					if integ != integCalc.AutoPiID {
-						filtered = append(filtered, integ)
-					}
-				}
-
-				// If the only active connection was an AutoPi, and this was not paired on chain,
-				// it doesn't count.
-				if len(filtered) == 0 {
+				if len(validIntegrations) == 1 {
+					t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi connected but not paired-onchain; no other active integrations.")
 					continue
+				} else {
+					validIntegrations = slices.Delete(validIntegrations, ind, ind+1)
+					t.Logger.Info().Str("userDeviceId", ud.Id).Msg("AutoPi connected but not paired on-chain; there are other integrations.")
 				}
-
-				device.Integrations = filtered
 			} else {
 				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
 			}
 		}
 
-		thisWeek.UserDeviceTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId))
-		thisWeek.UserEthereumAddress = null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex())
+		// At this point we are certain that the owner should receive tokens.
+		thisWeek.IntegrationIds = validIntegrations
+		thisWeek.IntegrationPoints = integCalc.Calculate(validIntegrations)
 
 		var streak StreakOutput
 
-		if connStreak, ok := deviceToOverride[device.ID]; ok {
-			t.Logger.Info().Str("userDeviceId", device.ID).Int("connectionStreak", connStreak).Msg("Override for active device.") 
+		if connStreak, ok := deviceToOverride[deviceActivity.ID]; ok {
+			t.Logger.Info().Str("userDeviceId", deviceActivity.ID).Int("connectionStreak", connStreak).Msg("Override for active device.")
 			streak = FakeStreak(connStreak)
-			delete(deviceToOverride, device.ID)
+			delete(deviceToOverride, deviceActivity.ID)
 		} else {
 			// Streak rewards.
 			streakInput := StreakInput{
@@ -253,7 +232,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 				ExistingConnectionStreak:    0,
 				ExistingDisconnectionStreak: 0,
 			}
-			if lastWeek, ok := lastWeekByDevice[device.ID]; ok {
+			if lastWeek, ok := lastWeekByDevice[deviceActivity.ID]; ok {
 				if lastWeek.UserID != ud.UserId {
 					t.Logger.Warn().Str("userDeviceId", ud.Id).Msgf("Device changed ownership from %s to %s, resetting streaks.", lastWeek.UserID, ud.UserId)
 				} else {
@@ -264,15 +243,11 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 			streak = ComputeStreak(streakInput)
 		}
-
-		// Anything left in this map is considered disconnected.
-		delete(lastWeekByDevice, device.ID)
-
 		setStreakFields(thisWeek, streak)
 
-		// Integration or "connected method" rewards.
-		thisWeek.IntegrationIds = device.Integrations
-		thisWeek.IntegrationPoints = integCalc.Calculate(device.Integrations)
+		// Anything left in this map is considered disconnected.
+		// This is a no-op if the device doesn't have a record from last week.
+		delete(lastWeekByDevice, deviceActivity.ID)
 
 		if err := thisWeek.Insert(ctx, t.DB().Writer, boil.Infer()); err != nil {
 			return err
