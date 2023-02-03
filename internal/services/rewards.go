@@ -292,7 +292,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		t.Logger.Warn().Interface("overrides", deviceToOverride).Msg("Unused overrides.")
 	}
 
-	st := storage.NewDB(t.DB)
+	st := storage.DBStorage{DBS: t.DB}
 	err = st.AssignTokens(ctx, issuanceWeek, baseWeeklyTokens)
 	if err != nil {
 		return fmt.Errorf("failed to convert points to tokens: %w", err)

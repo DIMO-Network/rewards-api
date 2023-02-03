@@ -7,33 +7,24 @@ import (
 	"github.com/DIMO-Network/shared/db"
 )
 
-type Storage interface {
-	AssignTokens(ctx context.Context, issuanceWeek int, totalTokens *big.Int) error
+type DBStorage struct {
+	DBS db.Store
 }
 
-func NewDB(base db.Store) Storage {
-	return &dbStorage{db: base}
-}
+// $1 is the week, $2 is the value to be disbursed.
+const assignTokensQuery = `
+UPDATE
+	rewards_api.rewards
+SET
+	tokens =
+		div(
+			(streak_points + integration_points) * $2::numeric,
+			(SELECT sum(streak_points + integration_points) FROM rewards_api.rewards WHERE issuance_week_id = $1)
+		)
+WHERE
+	issuance_week_id = $1;`
 
-type dbStorage struct {
-	db db.Store
-}
-
-func (s *dbStorage) AssignTokens(ctx context.Context, issuanceWeek int, totalTokens *big.Int) error {
-	q := `
-		UPDATE rewards_api.rewards
-		SET tokens =
-			div(
-				(streak_points + integration_points) * $2::numeric,
-				(SELECT sum(streak_points + integration_points) FROM rewards_api.rewards WHERE issuance_week_id = $1)
-			)
-		WHERE issuance_week_id = $1;`
-
-	_, err := s.db.DBS().Writer.ExecContext(ctx, q, issuanceWeek, totalTokens.String())
+func (s *DBStorage) AssignTokens(ctx context.Context, issuanceWeek int, totalTokens *big.Int) error {
+	_, err := s.DBS.DBS().Writer.ExecContext(ctx, assignTokensQuery, issuanceWeek, totalTokens.String())
 	return err
-}
-
-type Reward struct {
-	UserDeviceID string
-	Tokens       *big.Int
 }

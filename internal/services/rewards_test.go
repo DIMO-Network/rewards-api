@@ -155,6 +155,16 @@ func TestStreak(t *testing.T) {
 
 	for _, scen := range scens {
 		t.Run(scen.Name, func(t *testing.T) {
+			_, err = models.Rewards().DeleteAll(ctx, conn.DBS().Writer)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = models.IssuanceWeeks().DeleteAll(ctx, conn.DBS().Writer)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			lastWk := models.IssuanceWeek{ID: 0, JobStatus: models.IssuanceWeeksJobStatusFinished}
 			err = lastWk.Insert(ctx, conn.DBS().Writer, boil.Infer())
 			if err != nil {
@@ -216,16 +226,6 @@ func TestStreak(t *testing.T) {
 				if v2.StreakPoints != v1.StreakPoints {
 					t.Errorf("Device %s should have %d streak points but had %d", k, v1.StreakPoints, v2.StreakPoints)
 				}
-			}
-
-			_, err = models.Rewards().DeleteAll(ctx, conn.DBS().Writer)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			_, err = models.IssuanceWeeks().DeleteAll(ctx, conn.DBS().Writer)
-			if err != nil {
-				t.Fatal(err)
 			}
 		})
 
