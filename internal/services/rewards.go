@@ -7,7 +7,6 @@ import (
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
-	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
@@ -20,6 +19,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -58,13 +58,24 @@ func NumToWeekEnd(n int) time.Time {
 }
 
 type RewardsTask struct {
-	Settings        *config.Settings
 	Logger          *zerolog.Logger
-	DataService     DeviceDataClient
+	DataService     DeviceActivityClient
 	DB              db.Store
 	TransferService Transfer
-	DevicesClient   pb_devices.UserDeviceServiceClient
-	DefsClient      pb_defs.DeviceDefinitionServiceClient
+	DevicesClient   DevicesClient
+	DefsClient      IntegrationsGetter
+}
+
+type DeviceActivityClient interface {
+	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
+}
+
+type IntegrationsGetter interface {
+	GetIntegrations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error)
+}
+
+type DevicesClient interface {
+	GetUserDevice(ctx context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error)
 }
 
 type integrationPointsCalculator struct {
@@ -240,12 +251,9 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 				ExistingDisconnectionStreak: 0,
 			}
 			if lastWeek, ok := lastWeekByDevice[deviceActivity.ID]; ok {
-				if lastWeek.UserID != ud.UserId {
-					t.Logger.Warn().Str("userDeviceId", ud.Id).Msgf("Device changed ownership from %s to %s, resetting streaks.", lastWeek.UserID, ud.UserId)
-				} else {
-					streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
-					streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
-				}
+				streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
+				streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
+
 			}
 
 			streak = ComputeStreak(streakInput)

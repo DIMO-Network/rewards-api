@@ -15,6 +15,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
+	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
@@ -162,7 +163,7 @@ func main() {
 				command = command + " " + os.Args[3]
 			}
 		}
-		migrateDatabase(logger, &settings, command)
+		database.MigrateDatabase(logger, &settings.DB, command, "migrations")
 	case "calculate":
 		var week int
 		if len(os.Args) == 2 {
@@ -217,7 +218,6 @@ func main() {
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 
 		task := services.RewardsTask{
-			Settings:        &settings,
 			DataService:     services.NewDeviceDataClient(&settings),
 			DB:              pdb,
 			Logger:          &logger,
