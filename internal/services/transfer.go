@@ -91,14 +91,8 @@ func (c *Client) transfer(ctx context.Context, week int) error {
 			models.RewardWhere.IssuanceWeekID.EQ(week),
 			models.RewardWhere.TransferMetaTransactionRequestID.IsNull(),
 			// Temporary blacklist, see PLA-765.
-			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x481e8DB1dd18fd02caA8A83Ef7A73cF207b83930")),
-			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x3596Da3ab608d4fD63F4Bc9F4631A6838d435474")),
-			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x21762721Fe155F29D2EdbBB2a88688a032c41c58")),
-			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0xBE421ef2988794F8061A62FE8A45BA29e08458C6")),
-			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x620a84B6D68a33017109c6cBECa233442b89c237")),
-			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x7088A745eED70B7348678577095eA332d4f9A3Dd")),
-			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x3f58336034598429De2A68c60Fe4187999557763")),
-			models.RewardWhere.UserEthereumAddress.NEQ(null.StringFrom("0x537050A8044CD6472654DcCBa443037ec4685970")),
+			qm.LeftOuterJoin("rewards_api."+models.TableNames.Blacklist+" ON "+models.BlacklistTableColumns.UserEthereumAddress+" = "+models.RewardTableColumns.UserEthereumAddress),
+			qm.Where(models.BlacklistTableColumns.UserEthereumAddress+" IS NULL"),
 			qm.Limit(batchSize),
 		).All(ctx, c.db().Reader)
 		if err != nil {
