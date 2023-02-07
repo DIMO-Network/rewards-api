@@ -210,6 +210,38 @@ func main() {
 		if err := task.Calculate(week); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
 		}
+	case "event-processor":
+
+		kclient, err := createKafkaClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
+		}
+
+		consumer, err := sarama.NewConsumerGroupFromClient(settings.ConsumerGroup, kclient)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka consumer.")
+		}
+
+		pdb := database.NewDbConnectionFromSettings(ctx, &settings)
+		totalTime := 0
+		for !pdb.IsReady() {
+			if totalTime > 30 {
+				logger.Fatal().Msg("could not connect to postgres after 30 seconds")
+			}
+			time.Sleep(time.Second)
+			totalTime++
+		}
+
+		msgHandler, err := services.NewEventConsumer(pdb.DBS, &logger)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create new event consumer.")
+		}
+
+		err = consumer.Consume(context.Background(), []string{settings.ContractEventTopic}, msgHandler)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("error while processing messages")
+		}
+
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
@@ -254,3 +286,34 @@ func createKafkaClient(settings *config.Settings) (sarama.Client, error) {
 
 	return sarama.NewClient(strings.Split(settings.KafkaBrokers, ","), kconf)
 }
+
+// func createKafkaClient(logger zerolog.Logger, settings *config.Settings, pdb db.Store) {
+// 	clusterConfig := sarama.NewConfig()
+// 	clusterConfig.Version = sarama.V2_8_1_0
+// 	clusterConfig.Consumer.Offsets.Initial = sarama.OffsetNewest
+
+// 	cfg := &kafka.Config{
+// 		ClusterConfig:   clusterConfig,
+// 		BrokerAddresses: strings.Split(settings.KafkaBrokers, ","),
+// 		Topic:           settings.TaskStatusTopic,
+// 		GroupID:         "user-devices",
+// 		MaxInFlight:     int64(5),
+// 	}
+// 	consumer, err := kafka.NewConsumer(cfg, &logger)
+// 	if err != nil {
+// 		logger.Fatal().Err(err).Msg("Could not start credential update consumer")
+// 	}
+// 	cio := customerio.NewTrackClient(
+// 		settings.CIOSiteID,
+// 		settings.CIOApiKey,
+// 		customerio.WithRegion(customerio.RegionUS),
+// 	)
+
+// 	nhtsaSvc := services.NewNHTSAService()
+// 	ddSvc := services.NewDeviceDefinitionService(pdb.DBS, &logger, nhtsaSvc, settings)
+
+// 	taskStatusService := services.NewTaskStatusListener(pdb.DBS, &logger, cio, ddSvc)
+// 	consumer.Start(context.Background(), taskStatusService.ProcessTaskUpdates)
+
+// 	logger.Info().Msg("Task status consumer started")
+// }

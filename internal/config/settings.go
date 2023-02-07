@@ -28,6 +28,7 @@ type Settings struct {
 	KafkaBrokers                   string `yaml:"KAFKA_BROKERS"`
 	MetaTransactionSendTopic       string `yaml:"META_TRANSACTION_SEND_TOPIC"`
 	MetaTransactionStatusTopic     string `yaml:"META_TRANSACTION_STATUS_TOPIC"`
+	ContractEventTopic             string `yaml:"CONTRACT_EVENT_TOPIC"`
 	IssuanceContractAddress        string `yaml:"ISSUANCE_CONTRACT_ADDRESS"`
 	ConsumerGroup                  string `yaml:"CONSUMER_GROUP"`
 	TransferBatchSize              int    `yaml:"TRANSFER_BATCH_SIZE"`
