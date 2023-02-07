@@ -11,6 +11,7 @@ import (
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
 )
@@ -65,14 +66,14 @@ func (c *eventConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim 
 			event := event{}
 			err := json.Unmarshal(message.Value, &event)
 			if err != nil {
-				return err
+				c.log.Err(err).Msg("error unmarshaling event")
 			}
 
 			switch event.Data.EventName {
 			case TransferEvent:
 				err = c.processTransferEvent(&event)
 				if err != nil {
-					return err
+					c.log.Err(err).Msg("error processing transfer event")
 				}
 			}
 
@@ -101,6 +102,7 @@ func (ec *eventConsumer) processTransferEvent(e *event) error {
 		UserAddressTo:   common.FromHex(args.To),
 		Amount:          amount,
 		CreatedAt:       e.Time,
+		TXType:          null.StringFrom(e.Data.EventName),
 	}
 
 	err = transfer.Insert(context.Background(), ec.Db().Writer, boil.Infer())

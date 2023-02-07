@@ -118,6 +118,7 @@ func main() {
 		v1 := app.Group("/v1", jwtAuth)
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
+		v1.Get("/user/history/transactions", rewardsController.GetTransactionHistory)
 
 		go startGRPCServer(&settings, pdb.DBS, &logger)
 
@@ -286,34 +287,3 @@ func createKafkaClient(settings *config.Settings) (sarama.Client, error) {
 
 	return sarama.NewClient(strings.Split(settings.KafkaBrokers, ","), kconf)
 }
-
-// func createKafkaClient(logger zerolog.Logger, settings *config.Settings, pdb db.Store) {
-// 	clusterConfig := sarama.NewConfig()
-// 	clusterConfig.Version = sarama.V2_8_1_0
-// 	clusterConfig.Consumer.Offsets.Initial = sarama.OffsetNewest
-
-// 	cfg := &kafka.Config{
-// 		ClusterConfig:   clusterConfig,
-// 		BrokerAddresses: strings.Split(settings.KafkaBrokers, ","),
-// 		Topic:           settings.TaskStatusTopic,
-// 		GroupID:         "user-devices",
-// 		MaxInFlight:     int64(5),
-// 	}
-// 	consumer, err := kafka.NewConsumer(cfg, &logger)
-// 	if err != nil {
-// 		logger.Fatal().Err(err).Msg("Could not start credential update consumer")
-// 	}
-// 	cio := customerio.NewTrackClient(
-// 		settings.CIOSiteID,
-// 		settings.CIOApiKey,
-// 		customerio.WithRegion(customerio.RegionUS),
-// 	)
-
-// 	nhtsaSvc := services.NewNHTSAService()
-// 	ddSvc := services.NewDeviceDefinitionService(pdb.DBS, &logger, nhtsaSvc, settings)
-
-// 	taskStatusService := services.NewTaskStatusListener(pdb.DBS, &logger, cio, ddSvc)
-// 	consumer.Start(context.Background(), taskStatusService.ProcessTaskUpdates)
-
-// 	logger.Info().Msg("Task status consumer started")
-// }

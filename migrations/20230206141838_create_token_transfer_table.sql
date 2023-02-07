@@ -10,6 +10,7 @@ CREATE TABLE token_transfers(
     user_address_to bytea NOT NULL
         CONSTRAINT token_transfers_user_address_from_check CHECK (length(user_address_to) = 20),
     amount numeric(78, 0) NOT NULL,
+    tx_type varchar,
     created_at           timestamptz not null default current_timestamp,
     updated_at           timestamptz not null default current_timestamp,
 

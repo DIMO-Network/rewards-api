@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -28,6 +29,7 @@ type TokenTransfer struct {
 	UserAddressFrom []byte        `boil:"user_address_from" json:"user_address_from" toml:"user_address_from" yaml:"user_address_from"`
 	UserAddressTo   []byte        `boil:"user_address_to" json:"user_address_to" toml:"user_address_to" yaml:"user_address_to"`
 	Amount          types.Decimal `boil:"amount" json:"amount" toml:"amount" yaml:"amount"`
+	TXType          null.String   `boil:"tx_type" json:"tx_type,omitempty" toml:"tx_type" yaml:"tx_type,omitempty"`
 	CreatedAt       time.Time     `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt       time.Time     `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
@@ -40,6 +42,7 @@ var TokenTransferColumns = struct {
 	UserAddressFrom string
 	UserAddressTo   string
 	Amount          string
+	TXType          string
 	CreatedAt       string
 	UpdatedAt       string
 }{
@@ -47,6 +50,7 @@ var TokenTransferColumns = struct {
 	UserAddressFrom: "user_address_from",
 	UserAddressTo:   "user_address_to",
 	Amount:          "amount",
+	TXType:          "tx_type",
 	CreatedAt:       "created_at",
 	UpdatedAt:       "updated_at",
 }
@@ -56,6 +60,7 @@ var TokenTransferTableColumns = struct {
 	UserAddressFrom string
 	UserAddressTo   string
 	Amount          string
+	TXType          string
 	CreatedAt       string
 	UpdatedAt       string
 }{
@@ -63,6 +68,7 @@ var TokenTransferTableColumns = struct {
 	UserAddressFrom: "token_transfers.user_address_from",
 	UserAddressTo:   "token_transfers.user_address_to",
 	Amount:          "token_transfers.amount",
+	TXType:          "token_transfers.tx_type",
 	CreatedAt:       "token_transfers.created_at",
 	UpdatedAt:       "token_transfers.updated_at",
 }
@@ -104,6 +110,7 @@ var TokenTransferWhere = struct {
 	UserAddressFrom whereHelper__byte
 	UserAddressTo   whereHelper__byte
 	Amount          whereHelpertypes_Decimal
+	TXType          whereHelpernull_String
 	CreatedAt       whereHelpertime_Time
 	UpdatedAt       whereHelpertime_Time
 }{
@@ -111,6 +118,7 @@ var TokenTransferWhere = struct {
 	UserAddressFrom: whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"user_address_from\""},
 	UserAddressTo:   whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"user_address_to\""},
 	Amount:          whereHelpertypes_Decimal{field: "\"rewards_api\".\"token_transfers\".\"amount\""},
+	TXType:          whereHelpernull_String{field: "\"rewards_api\".\"token_transfers\".\"tx_type\""},
 	CreatedAt:       whereHelpertime_Time{field: "\"rewards_api\".\"token_transfers\".\"created_at\""},
 	UpdatedAt:       whereHelpertime_Time{field: "\"rewards_api\".\"token_transfers\".\"updated_at\""},
 }
@@ -132,9 +140,9 @@ func (*tokenTransferR) NewStruct() *tokenTransferR {
 type tokenTransferL struct{}
 
 var (
-	tokenTransferAllColumns            = []string{"contract_address", "user_address_from", "user_address_to", "amount", "created_at", "updated_at"}
+	tokenTransferAllColumns            = []string{"contract_address", "user_address_from", "user_address_to", "amount", "tx_type", "created_at", "updated_at"}
 	tokenTransferColumnsWithoutDefault = []string{"contract_address", "user_address_from", "user_address_to", "amount"}
-	tokenTransferColumnsWithDefault    = []string{"created_at", "updated_at"}
+	tokenTransferColumnsWithDefault    = []string{"tx_type", "created_at", "updated_at"}
 	tokenTransferPrimaryKeyColumns     = []string{"contract_address", "user_address_from", "user_address_to", "amount", "created_at"}
 	tokenTransferGeneratedColumns      = []string{}
 )
