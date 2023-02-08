@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
+	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,7 +31,7 @@ type event struct {
 }
 
 type eventConsumer struct {
-	Db  func() *database.DBReaderWriter
+	Db  db.Store
 	log *zerolog.Logger
 }
 
@@ -50,7 +50,7 @@ type transferEventData struct {
 	From  string  `json:"from"`
 }
 
-func NewEventConsumer(db func() *database.DBReaderWriter, logger *zerolog.Logger) (*eventConsumer, error) {
+func NewEventConsumer(db db.Store, logger *zerolog.Logger) (*eventConsumer, error) {
 	return &eventConsumer{Db: db, log: logger}, nil
 }
 
@@ -105,7 +105,7 @@ func (ec *eventConsumer) processTransferEvent(e *event) error {
 		TXType:          null.StringFrom(e.Data.EventName),
 	}
 
-	err = transfer.Insert(context.Background(), ec.Db().Writer, boil.Infer())
+	err = transfer.Insert(context.Background(), ec.Db.DBS().Writer, boil.Infer())
 	if err != nil {
 		ec.log.Error().Err(err).Msg("Failed to insert token transfer record.")
 		return err

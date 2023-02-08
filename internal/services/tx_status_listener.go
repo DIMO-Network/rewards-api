@@ -8,9 +8,9 @@ import (
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
-	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
+	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -59,7 +59,7 @@ func Consume(ctx context.Context, group sarama.ConsumerGroup, settings *config.S
 	}
 }
 
-func NewStatusProcessor(pdb func() *database.DBReaderWriter, logger *zerolog.Logger) (*TransferStatusProcessor, error) {
+func NewStatusProcessor(pdb db.Store, logger *zerolog.Logger) (*TransferStatusProcessor, error) {
 	abi, err := contracts.RewardMetaData.GetAbi()
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func NewStatusProcessor(pdb func() *database.DBReaderWriter, logger *zerolog.Log
 
 type TransferStatusProcessor struct {
 	ABI                    *abi.ABI
-	DB                     func() *database.DBReaderWriter
+	DB                     db.Store
 	Logger                 *zerolog.Logger
 	DidntQualifyEvent      abi.Event
 	TokensTransferredEvent abi.Event
@@ -93,14 +93,14 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		Interface("eventData", event.Data).
 		Msg("Processing transaction status.")
 
-	tx, err := s.DB().Writer.BeginTx(context.Background(), nil)
+	tx, err := s.DB.DBS().Writer.BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
 
 	defer tx.Rollback() //nolint
 
-	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB().Reader, event.Data.RequestID)
+	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB.DBS().Reader, event.Data.RequestID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil

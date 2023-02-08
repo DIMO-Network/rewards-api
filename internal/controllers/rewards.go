@@ -7,11 +7,11 @@ import (
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
-	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	pb_users "github.com/DIMO-Network/shared/api/users"
+	"github.com/DIMO-Network/shared/db"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -22,7 +22,7 @@ import (
 )
 
 type RewardsController struct {
-	DB                func() *database.DBReaderWriter
+	DB                db.Store
 	Logger            *zerolog.Logger
 	DataClient        services.DeviceDataClient
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
@@ -187,7 +187,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			models.RewardWhere.UserDeviceID.EQ(device.Id),
 			models.RewardWhere.UserID.EQ(userID),
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" desc"),
-		).All(c.Context(), r.DB().Reader)
+		).All(c.Context(), r.DB.DBS().Reader.DB)
 		if err != nil {
 			dlog.Err(err).Msg("Failed to retrieve previously earned rewards.")
 			return opaqueInternalError
@@ -368,7 +368,7 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		models.RewardWhere.UserID.EQ(userID),
 		models.RewardWhere.UserDeviceID.IN(deviceIDs),
 		qm.OrderBy(models.RewardColumns.IssuanceWeekID+" asc"),
-	).All(c.Context(), r.DB().Reader)
+	).All(c.Context(), r.DB.DBS().Reader)
 	if err != nil {
 		logger.Err(err).Msg("Database failure retrieving rewards.")
 		return opaqueInternalError

@@ -31,7 +31,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	incoming, err := models.TokenTransfers(
 		models.TokenTransferWhere.UserAddressTo.EQ([]byte(*user.EthereumAddress)),
 		qm.OrderBy(models.TokenTransferColumns.CreatedAt+" asc"),
-	).All(c.Context(), r.DB().Reader)
+	).All(c.Context(), r.DB.DBS().Reader)
 	if err != nil {
 		logger.Err(err).Msg("Database failure retrieving incoming transactions.")
 		return opaqueInternalError
@@ -40,7 +40,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	outgoing, err := models.TokenTransfers(
 		models.TokenTransferWhere.UserAddressTo.EQ([]byte(*user.EthereumAddress)),
 		qm.OrderBy(models.TokenTransferColumns.CreatedAt+" asc"),
-	).All(c.Context(), r.DB().Reader)
+	).All(c.Context(), r.DB.DBS().Reader)
 	if err != nil {
 		logger.Err(err).Msg("Database failure retrieving outgoing transactions.")
 		return opaqueInternalError
