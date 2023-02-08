@@ -230,7 +230,6 @@ func main() {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
 		}
 	case "event-processor":
-
 		kclient, err := createKafkaClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
@@ -242,14 +241,7 @@ func main() {
 		}
 
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
-		totalTime := 0
-		for !pdb.IsReady() {
-			if totalTime > 30 {
-				logger.Fatal().Msg("could not connect to postgres after 30 seconds")
-			}
-			time.Sleep(time.Second)
-			totalTime++
-		}
+		pdb.WaitForDB(logger)
 
 		msgHandler, err := services.NewEventConsumer(pdb, &logger)
 		if err != nil {
@@ -260,7 +252,6 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("error while processing messages")
 		}
-
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
