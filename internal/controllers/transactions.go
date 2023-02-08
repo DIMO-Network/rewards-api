@@ -6,6 +6,7 @@ import (
 
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_users "github.com/DIMO-Network/shared/api/users"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
@@ -56,10 +57,10 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 		if !ok {
 			logger.Err(errors.New("unable to read tx amount")).Msg("error reading tx amount")
 		}
+
 		txHistory.IncomingTransaction[n].Amount = big.NewInt(amnt)
-		// AE TODO: addresses aren't being read out correctly
-		txHistory.IncomingTransaction[n].FromAddress = string(tx.UserAddressFrom)
-		txHistory.IncomingTransaction[n].ToAddress = string(tx.UserAddressTo)
+		txHistory.IncomingTransaction[n].FromAddress = common.BytesToAddress(tx.UserAddressFrom)
+		txHistory.IncomingTransaction[n].ToAddress = common.BytesToAddress(tx.UserAddressTo)
 	}
 
 	txHistory.OutgoingTransactions = make([]OutgoingTransactionResponse, len(outgoing))
@@ -69,9 +70,8 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 			logger.Err(errors.New("unable to read tx amount")).Msg("error reading tx amount")
 		}
 		txHistory.OutgoingTransactions[n].Amount = big.NewInt(amnt)
-		// AE TODO: addresses aren't being read out correctly
-		txHistory.OutgoingTransactions[n].FromAddress = string(tx.UserAddressFrom)
-		txHistory.OutgoingTransactions[n].ToAddress = string(tx.UserAddressTo)
+		txHistory.OutgoingTransactions[n].FromAddress = common.BytesToAddress(tx.UserAddressFrom)
+		txHistory.OutgoingTransactions[n].ToAddress = common.BytesToAddress(tx.UserAddressTo)
 	}
 
 	return c.JSON(txHistory)
@@ -83,15 +83,15 @@ type TransactionHistory struct {
 }
 
 type OutgoingTransactionResponse struct {
-	Time        string   `json:"time"`
-	ToAddress   string   `json:"to"`
-	FromAddress string   `json:"from"`
-	Amount      *big.Int `json:"amount"`
+	Time        string         `json:"time"`
+	ToAddress   common.Address `json:"to"`
+	FromAddress common.Address `json:"from"`
+	Amount      *big.Int       `json:"amount"`
 }
 
 type IncomingTransactionResponse struct {
-	Time        string   `json:"time"`
-	ToAddress   string   `json:"to"`
-	FromAddress string   `json:"from"`
-	Amount      *big.Int `json:"amount"`
+	Time        string         `json:"time"`
+	ToAddress   common.Address `json:"to"`
+	FromAddress common.Address `json:"from"`
+	Amount      *big.Int       `json:"amount"`
 }
