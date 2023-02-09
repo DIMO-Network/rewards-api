@@ -243,15 +243,18 @@ func main() {
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
 		pdb.WaitForDB(logger)
 
-		msgHandler, err := services.NewEventConsumer(pdb, &logger)
+		msgHandler, err := services.NewEventConsumer(pdb, &logger, &settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create new event consumer.")
 		}
 
-		err = consumer.Consume(context.Background(), []string{settings.ContractEventTopic}, msgHandler)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("error while processing messages")
+		for {
+			err = consumer.Consume(context.Background(), []string{settings.ContractEventTopic}, msgHandler)
+			if err != nil {
+				logger.Fatal().Err(err).Msg("error while processing messages")
+			}
 		}
+
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
