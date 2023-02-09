@@ -19,7 +19,7 @@ const (
 	TransferEvent = "Transfer"
 )
 
-type kafkaEventStreamConsumer struct {
+type ContractEventStreamConsumer struct {
 	Db  db.Store
 	log *zerolog.Logger
 }
@@ -40,15 +40,15 @@ type transferEventData struct {
 	From  string   `json:"from"`
 }
 
-func NewEventConsumer(db db.Store, logger *zerolog.Logger) (*kafkaEventStreamConsumer, error) {
-	return &kafkaEventStreamConsumer{Db: db, log: logger}, nil
+func NewEventConsumer(db db.Store, logger *zerolog.Logger) (*ContractEventStreamConsumer, error) {
+	return &ContractEventStreamConsumer{Db: db, log: logger}, nil
 }
 
-func (c *kafkaEventStreamConsumer) Setup(sarama.ConsumerGroupSession) error { return nil }
+func (c *ContractEventStreamConsumer) Setup(sarama.ConsumerGroupSession) error { return nil }
 
-func (c *kafkaEventStreamConsumer) Cleanup(sarama.ConsumerGroupSession) error { return nil }
+func (c *ContractEventStreamConsumer) Cleanup(sarama.ConsumerGroupSession) error { return nil }
 
-func (c *kafkaEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for {
 		select {
 		case message := <-claim.Messages():
@@ -75,7 +75,7 @@ func (c *kafkaEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupSess
 	}
 }
 
-func (ec *kafkaEventStreamConsumer) processTransferEvent(e *shared.CloudEvent[contractEventData]) error {
+func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent[contractEventData]) error {
 
 	args := transferEventData{}
 	err := json.Unmarshal(e.Data.Arguments, &args)
