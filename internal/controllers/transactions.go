@@ -29,8 +29,8 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	}
 
 	incoming, err := models.TokenTransfers(
-		models.TokenTransferWhere.UserAddressTo.EQ([]byte(*user.EthereumAddress)),
-		qm.OrderBy(models.TokenTransferColumns.CreatedAt+" asc"),
+		models.TokenTransferWhere.AddressTo.EQ(*user.EthereumAddress),
+		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp+" asc"),
 	).All(c.Context(), r.DB.DBS().Reader)
 	if err != nil {
 		logger.Err(err).Msg("Database failure retrieving incoming transactions.")
@@ -38,8 +38,8 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	}
 
 	outgoing, err := models.TokenTransfers(
-		models.TokenTransferWhere.UserAddressTo.EQ([]byte(*user.EthereumAddress)),
-		qm.OrderBy(models.TokenTransferColumns.CreatedAt+" asc"),
+		models.TokenTransferWhere.AddressTo.EQ(*user.EthereumAddress),
+		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp+" asc"),
 	).All(c.Context(), r.DB.DBS().Reader)
 	if err != nil {
 		logger.Err(err).Msg("Database failure retrieving outgoing transactions.")
@@ -59,8 +59,8 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 		}
 
 		txHistory.IncomingTransaction[n].Amount = big.NewInt(amnt)
-		txHistory.IncomingTransaction[n].FromAddress = common.BytesToAddress(tx.UserAddressFrom)
-		txHistory.IncomingTransaction[n].ToAddress = common.BytesToAddress(tx.UserAddressTo)
+		txHistory.IncomingTransaction[n].FromAddress = common.HexToAddress(tx.AddressFrom)
+		txHistory.IncomingTransaction[n].ToAddress = common.HexToAddress(tx.AddressTo)
 	}
 
 	txHistory.OutgoingTransactions = make([]OutgoingTransactionResponse, len(outgoing))
@@ -70,8 +70,8 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 			logger.Err(errors.New("unable to read tx amount")).Msg("error reading tx amount")
 		}
 		txHistory.OutgoingTransactions[n].Amount = big.NewInt(amnt)
-		txHistory.OutgoingTransactions[n].FromAddress = common.BytesToAddress(tx.UserAddressFrom)
-		txHistory.OutgoingTransactions[n].ToAddress = common.BytesToAddress(tx.UserAddressTo)
+		txHistory.OutgoingTransactions[n].FromAddress = common.HexToAddress(tx.AddressFrom)
+		txHistory.OutgoingTransactions[n].ToAddress = common.HexToAddress(tx.AddressTo)
 	}
 
 	return c.JSON(txHistory)

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -25,12 +24,12 @@ import (
 
 // TokenTransfer is an object representing the database table.
 type TokenTransfer struct {
-	ContractAddress []byte        `boil:"contract_address" json:"contract_address" toml:"contract_address" yaml:"contract_address"`
-	UserAddressFrom []byte        `boil:"user_address_from" json:"user_address_from" toml:"user_address_from" yaml:"user_address_from"`
-	UserAddressTo   []byte        `boil:"user_address_to" json:"user_address_to" toml:"user_address_to" yaml:"user_address_to"`
+	AddressFrom     string        `boil:"address_from" json:"address_from" toml:"address_from" yaml:"address_from"`
+	AddressTo       string        `boil:"address_to" json:"address_to" toml:"address_to" yaml:"address_to"`
 	Amount          types.Decimal `boil:"amount" json:"amount" toml:"amount" yaml:"amount"`
-	TXType          null.String   `boil:"tx_type" json:"tx_type,omitempty" toml:"tx_type" yaml:"tx_type,omitempty"`
-	CreatedAt       time.Time     `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	TransactionHash []byte        `boil:"transaction_hash" json:"transaction_hash" toml:"transaction_hash" yaml:"transaction_hash"`
+	LogIndex        int           `boil:"log_index" json:"log_index" toml:"log_index" yaml:"log_index"`
+	BlockTimestamp  time.Time     `boil:"block_timestamp" json:"block_timestamp" toml:"block_timestamp" yaml:"block_timestamp"`
 	UpdatedAt       time.Time     `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *tokenTransferR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -38,51 +37,42 @@ type TokenTransfer struct {
 }
 
 var TokenTransferColumns = struct {
-	ContractAddress string
-	UserAddressFrom string
-	UserAddressTo   string
+	AddressFrom     string
+	AddressTo       string
 	Amount          string
-	TXType          string
-	CreatedAt       string
+	TransactionHash string
+	LogIndex        string
+	BlockTimestamp  string
 	UpdatedAt       string
 }{
-	ContractAddress: "contract_address",
-	UserAddressFrom: "user_address_from",
-	UserAddressTo:   "user_address_to",
+	AddressFrom:     "address_from",
+	AddressTo:       "address_to",
 	Amount:          "amount",
-	TXType:          "tx_type",
-	CreatedAt:       "created_at",
+	TransactionHash: "transaction_hash",
+	LogIndex:        "log_index",
+	BlockTimestamp:  "block_timestamp",
 	UpdatedAt:       "updated_at",
 }
 
 var TokenTransferTableColumns = struct {
-	ContractAddress string
-	UserAddressFrom string
-	UserAddressTo   string
+	AddressFrom     string
+	AddressTo       string
 	Amount          string
-	TXType          string
-	CreatedAt       string
+	TransactionHash string
+	LogIndex        string
+	BlockTimestamp  string
 	UpdatedAt       string
 }{
-	ContractAddress: "token_transfers.contract_address",
-	UserAddressFrom: "token_transfers.user_address_from",
-	UserAddressTo:   "token_transfers.user_address_to",
+	AddressFrom:     "token_transfers.address_from",
+	AddressTo:       "token_transfers.address_to",
 	Amount:          "token_transfers.amount",
-	TXType:          "token_transfers.tx_type",
-	CreatedAt:       "token_transfers.created_at",
+	TransactionHash: "token_transfers.transaction_hash",
+	LogIndex:        "token_transfers.log_index",
+	BlockTimestamp:  "token_transfers.block_timestamp",
 	UpdatedAt:       "token_transfers.updated_at",
 }
 
 // Generated where
-
-type whereHelper__byte struct{ field string }
-
-func (w whereHelper__byte) EQ(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelper__byte) NEQ(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelper__byte) LT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelper__byte) LTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
 type whereHelpertypes_Decimal struct{ field string }
 
@@ -105,21 +95,30 @@ func (w whereHelpertypes_Decimal) GTE(x types.Decimal) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
+type whereHelper__byte struct{ field string }
+
+func (w whereHelper__byte) EQ(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelper__byte) NEQ(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelper__byte) LT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelper__byte) LTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+
 var TokenTransferWhere = struct {
-	ContractAddress whereHelper__byte
-	UserAddressFrom whereHelper__byte
-	UserAddressTo   whereHelper__byte
+	AddressFrom     whereHelperstring
+	AddressTo       whereHelperstring
 	Amount          whereHelpertypes_Decimal
-	TXType          whereHelpernull_String
-	CreatedAt       whereHelpertime_Time
+	TransactionHash whereHelper__byte
+	LogIndex        whereHelperint
+	BlockTimestamp  whereHelpertime_Time
 	UpdatedAt       whereHelpertime_Time
 }{
-	ContractAddress: whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"contract_address\""},
-	UserAddressFrom: whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"user_address_from\""},
-	UserAddressTo:   whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"user_address_to\""},
+	AddressFrom:     whereHelperstring{field: "\"rewards_api\".\"token_transfers\".\"address_from\""},
+	AddressTo:       whereHelperstring{field: "\"rewards_api\".\"token_transfers\".\"address_to\""},
 	Amount:          whereHelpertypes_Decimal{field: "\"rewards_api\".\"token_transfers\".\"amount\""},
-	TXType:          whereHelpernull_String{field: "\"rewards_api\".\"token_transfers\".\"tx_type\""},
-	CreatedAt:       whereHelpertime_Time{field: "\"rewards_api\".\"token_transfers\".\"created_at\""},
+	TransactionHash: whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"transaction_hash\""},
+	LogIndex:        whereHelperint{field: "\"rewards_api\".\"token_transfers\".\"log_index\""},
+	BlockTimestamp:  whereHelpertime_Time{field: "\"rewards_api\".\"token_transfers\".\"block_timestamp\""},
 	UpdatedAt:       whereHelpertime_Time{field: "\"rewards_api\".\"token_transfers\".\"updated_at\""},
 }
 
@@ -140,10 +139,10 @@ func (*tokenTransferR) NewStruct() *tokenTransferR {
 type tokenTransferL struct{}
 
 var (
-	tokenTransferAllColumns            = []string{"contract_address", "user_address_from", "user_address_to", "amount", "tx_type", "created_at", "updated_at"}
-	tokenTransferColumnsWithoutDefault = []string{"contract_address", "user_address_from", "user_address_to", "amount"}
-	tokenTransferColumnsWithDefault    = []string{"tx_type", "created_at", "updated_at"}
-	tokenTransferPrimaryKeyColumns     = []string{"contract_address", "user_address_from", "user_address_to", "amount", "created_at"}
+	tokenTransferAllColumns            = []string{"address_from", "address_to", "amount", "transaction_hash", "log_index", "block_timestamp", "updated_at"}
+	tokenTransferColumnsWithoutDefault = []string{"address_from", "address_to", "amount", "transaction_hash", "log_index", "block_timestamp"}
+	tokenTransferColumnsWithDefault    = []string{"updated_at"}
+	tokenTransferPrimaryKeyColumns     = []string{"transaction_hash", "log_index", "block_timestamp"}
 	tokenTransferGeneratedColumns      = []string{}
 )
 
@@ -438,7 +437,7 @@ func TokenTransfers(mods ...qm.QueryMod) tokenTransferQuery {
 
 // FindTokenTransfer retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, contractAddress []byte, userAddressFrom []byte, userAddressTo []byte, amount types.Decimal, createdAt time.Time, selectCols ...string) (*TokenTransfer, error) {
+func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, blockTimestamp time.Time, selectCols ...string) (*TokenTransfer, error) {
 	tokenTransferObj := &TokenTransfer{}
 
 	sel := "*"
@@ -446,10 +445,10 @@ func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, contractA
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"rewards_api\".\"token_transfers\" where \"contract_address\"=$1 AND \"user_address_from\"=$2 AND \"user_address_to\"=$3 AND \"amount\"=$4 AND \"created_at\"=$5", sel,
+		"select %s from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"block_timestamp\"=$3", sel,
 	)
 
-	q := queries.Raw(query, contractAddress, userAddressFrom, userAddressTo, amount, createdAt)
+	q := queries.Raw(query, transactionHash, logIndex, blockTimestamp)
 
 	err := q.Bind(ctx, exec, tokenTransferObj)
 	if err != nil {
@@ -477,9 +476,6 @@ func (o *TokenTransfer) Insert(ctx context.Context, exec boil.ContextExecutor, c
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if o.CreatedAt.IsZero() {
-			o.CreatedAt = currTime
-		}
 		if o.UpdatedAt.IsZero() {
 			o.UpdatedAt = currTime
 		}
@@ -698,9 +694,6 @@ func (o *TokenTransfer) Upsert(ctx context.Context, exec boil.ContextExecutor, u
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if o.CreatedAt.IsZero() {
-			o.CreatedAt = currTime
-		}
 		o.UpdatedAt = currTime
 	}
 
@@ -825,7 +818,7 @@ func (o *TokenTransfer) Delete(ctx context.Context, exec boil.ContextExecutor) (
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), tokenTransferPrimaryKeyMapping)
-	sql := "DELETE FROM \"rewards_api\".\"token_transfers\" WHERE \"contract_address\"=$1 AND \"user_address_from\"=$2 AND \"user_address_to\"=$3 AND \"amount\"=$4 AND \"created_at\"=$5"
+	sql := "DELETE FROM \"rewards_api\".\"token_transfers\" WHERE \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"block_timestamp\"=$3"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -922,7 +915,7 @@ func (o TokenTransferSlice) DeleteAll(ctx context.Context, exec boil.ContextExec
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *TokenTransfer) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindTokenTransfer(ctx, exec, o.ContractAddress, o.UserAddressFrom, o.UserAddressTo, o.Amount, o.CreatedAt)
+	ret, err := FindTokenTransfer(ctx, exec, o.TransactionHash, o.LogIndex, o.BlockTimestamp)
 	if err != nil {
 		return err
 	}
@@ -961,16 +954,16 @@ func (o *TokenTransferSlice) ReloadAll(ctx context.Context, exec boil.ContextExe
 }
 
 // TokenTransferExists checks if the TokenTransfer row exists.
-func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, contractAddress []byte, userAddressFrom []byte, userAddressTo []byte, amount types.Decimal, createdAt time.Time) (bool, error) {
+func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, blockTimestamp time.Time) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"rewards_api\".\"token_transfers\" where \"contract_address\"=$1 AND \"user_address_from\"=$2 AND \"user_address_to\"=$3 AND \"amount\"=$4 AND \"created_at\"=$5 limit 1)"
+	sql := "select exists(select 1 from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"block_timestamp\"=$3 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, contractAddress, userAddressFrom, userAddressTo, amount, createdAt)
+		fmt.Fprintln(writer, transactionHash, logIndex, blockTimestamp)
 	}
-	row := exec.QueryRowContext(ctx, sql, contractAddress, userAddressFrom, userAddressTo, amount, createdAt)
+	row := exec.QueryRowContext(ctx, sql, transactionHash, logIndex, blockTimestamp)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -982,5 +975,5 @@ func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, contrac
 
 // Exists checks if the TokenTransfer row exists.
 func (o *TokenTransfer) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return TokenTransferExists(ctx, exec, o.ContractAddress, o.UserAddressFrom, o.UserAddressTo, o.Amount, o.CreatedAt)
+	return TokenTransferExists(ctx, exec, o.TransactionHash, o.LogIndex, o.BlockTimestamp)
 }
