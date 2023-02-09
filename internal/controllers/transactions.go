@@ -1,14 +1,12 @@
 package controllers
 
 import (
-	"errors"
-	"math/big"
-
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 // GetTransactionHistory godoc
@@ -29,7 +27,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	}
 
 	incoming, err := models.TokenTransfers(
-		models.TokenTransferWhere.AddressTo.EQ(*user.EthereumAddress),
+		models.TokenTransferWhere.AddressTo.EQ([]byte(*user.EthereumAddress)),
 		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp+" asc"),
 	).All(c.Context(), r.DB.DBS().Reader)
 	if err != nil {
@@ -38,7 +36,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	}
 
 	outgoing, err := models.TokenTransfers(
-		models.TokenTransferWhere.AddressTo.EQ(*user.EthereumAddress),
+		models.TokenTransferWhere.AddressTo.EQ([]byte(*user.EthereumAddress)),
 		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp+" asc"),
 	).All(c.Context(), r.DB.DBS().Reader)
 	if err != nil {
@@ -53,26 +51,17 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 
 	txHistory.IncomingTransaction = make([]IncomingTransactionResponse, len(incoming))
 	for n, tx := range incoming {
-		amnt, ok := tx.Amount.Int64()
-		if !ok {
-			logger.Err(errors.New("unable to read tx amount")).Msg("error reading tx amount")
-		}
-
-		txHistory.IncomingTransaction[n].Amount = big.NewInt(amnt)
-		txHistory.IncomingTransaction[n].FromAddress = common.HexToAddress(tx.AddressFrom)
-		txHistory.IncomingTransaction[n].ToAddress = common.HexToAddress(tx.AddressTo)
+		txHistory.IncomingTransaction[n].Amount = tx.Amount
+		txHistory.IncomingTransaction[n].FromAddress = common.BytesToAddress(tx.AddressFrom)
+		txHistory.IncomingTransaction[n].ToAddress = common.BytesToAddress(tx.AddressTo)
 		txHistory.IncomingTransaction[n].Time = tx.BlockTimestamp.String()
 	}
 
 	txHistory.OutgoingTransactions = make([]OutgoingTransactionResponse, len(outgoing))
 	for n, tx := range outgoing {
-		amnt, ok := tx.Amount.Int64()
-		if !ok {
-			logger.Err(errors.New("unable to read tx amount")).Msg("error reading tx amount")
-		}
-		txHistory.OutgoingTransactions[n].Amount = big.NewInt(amnt)
-		txHistory.OutgoingTransactions[n].FromAddress = common.HexToAddress(tx.AddressFrom)
-		txHistory.OutgoingTransactions[n].ToAddress = common.HexToAddress(tx.AddressTo)
+		txHistory.OutgoingTransactions[n].Amount = tx.Amount
+		txHistory.OutgoingTransactions[n].FromAddress = common.BytesToAddress(tx.AddressFrom)
+		txHistory.OutgoingTransactions[n].ToAddress = common.BytesToAddress(tx.AddressTo)
 		txHistory.IncomingTransaction[n].Time = tx.BlockTimestamp.String()
 	}
 
@@ -88,12 +77,12 @@ type OutgoingTransactionResponse struct {
 	Time        string         `json:"time"`
 	ToAddress   common.Address `json:"to"`
 	FromAddress common.Address `json:"from"`
-	Amount      *big.Int       `json:"amount"`
+	Amount      types.Decimal  `json:"amount"`
 }
 
 type IncomingTransactionResponse struct {
 	Time        string         `json:"time"`
 	ToAddress   common.Address `json:"to"`
 	FromAddress common.Address `json:"from"`
-	Amount      *big.Int       `json:"amount"`
+	Amount      types.Decimal  `json:"amount"`
 }
