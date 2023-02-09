@@ -24,8 +24,8 @@ import (
 
 // TokenTransfer is an object representing the database table.
 type TokenTransfer struct {
-	AddressFrom     string        `boil:"address_from" json:"address_from" toml:"address_from" yaml:"address_from"`
-	AddressTo       string        `boil:"address_to" json:"address_to" toml:"address_to" yaml:"address_to"`
+	AddressFrom     []byte        `boil:"address_from" json:"address_from" toml:"address_from" yaml:"address_from"`
+	AddressTo       []byte        `boil:"address_to" json:"address_to" toml:"address_to" yaml:"address_to"`
 	Amount          types.Decimal `boil:"amount" json:"amount" toml:"amount" yaml:"amount"`
 	TransactionHash []byte        `boil:"transaction_hash" json:"transaction_hash" toml:"transaction_hash" yaml:"transaction_hash"`
 	LogIndex        int           `boil:"log_index" json:"log_index" toml:"log_index" yaml:"log_index"`
@@ -74,6 +74,15 @@ var TokenTransferTableColumns = struct {
 
 // Generated where
 
+type whereHelper__byte struct{ field string }
+
+func (w whereHelper__byte) EQ(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelper__byte) NEQ(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelper__byte) LT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelper__byte) LTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+
 type whereHelpertypes_Decimal struct{ field string }
 
 func (w whereHelpertypes_Decimal) EQ(x types.Decimal) qm.QueryMod {
@@ -95,26 +104,17 @@ func (w whereHelpertypes_Decimal) GTE(x types.Decimal) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-type whereHelper__byte struct{ field string }
-
-func (w whereHelper__byte) EQ(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelper__byte) NEQ(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelper__byte) LT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelper__byte) LTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-
 var TokenTransferWhere = struct {
-	AddressFrom     whereHelperstring
-	AddressTo       whereHelperstring
+	AddressFrom     whereHelper__byte
+	AddressTo       whereHelper__byte
 	Amount          whereHelpertypes_Decimal
 	TransactionHash whereHelper__byte
 	LogIndex        whereHelperint
 	BlockTimestamp  whereHelpertime_Time
 	UpdatedAt       whereHelpertime_Time
 }{
-	AddressFrom:     whereHelperstring{field: "\"rewards_api\".\"token_transfers\".\"address_from\""},
-	AddressTo:       whereHelperstring{field: "\"rewards_api\".\"token_transfers\".\"address_to\""},
+	AddressFrom:     whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"address_from\""},
+	AddressTo:       whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"address_to\""},
 	Amount:          whereHelpertypes_Decimal{field: "\"rewards_api\".\"token_transfers\".\"amount\""},
 	TransactionHash: whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"transaction_hash\""},
 	LogIndex:        whereHelperint{field: "\"rewards_api\".\"token_transfers\".\"log_index\""},
@@ -142,7 +142,7 @@ var (
 	tokenTransferAllColumns            = []string{"address_from", "address_to", "amount", "transaction_hash", "log_index", "block_timestamp", "updated_at"}
 	tokenTransferColumnsWithoutDefault = []string{"address_from", "address_to", "amount", "transaction_hash", "log_index", "block_timestamp"}
 	tokenTransferColumnsWithDefault    = []string{"updated_at"}
-	tokenTransferPrimaryKeyColumns     = []string{"transaction_hash", "log_index", "block_timestamp"}
+	tokenTransferPrimaryKeyColumns     = []string{"transaction_hash", "log_index"}
 	tokenTransferGeneratedColumns      = []string{}
 )
 
@@ -437,7 +437,7 @@ func TokenTransfers(mods ...qm.QueryMod) tokenTransferQuery {
 
 // FindTokenTransfer retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, blockTimestamp time.Time, selectCols ...string) (*TokenTransfer, error) {
+func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, selectCols ...string) (*TokenTransfer, error) {
 	tokenTransferObj := &TokenTransfer{}
 
 	sel := "*"
@@ -445,10 +445,10 @@ func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, transacti
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"block_timestamp\"=$3", sel,
+		"select %s from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2", sel,
 	)
 
-	q := queries.Raw(query, transactionHash, logIndex, blockTimestamp)
+	q := queries.Raw(query, transactionHash, logIndex)
 
 	err := q.Bind(ctx, exec, tokenTransferObj)
 	if err != nil {
@@ -818,7 +818,7 @@ func (o *TokenTransfer) Delete(ctx context.Context, exec boil.ContextExecutor) (
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), tokenTransferPrimaryKeyMapping)
-	sql := "DELETE FROM \"rewards_api\".\"token_transfers\" WHERE \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"block_timestamp\"=$3"
+	sql := "DELETE FROM \"rewards_api\".\"token_transfers\" WHERE \"transaction_hash\"=$1 AND \"log_index\"=$2"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -915,7 +915,7 @@ func (o TokenTransferSlice) DeleteAll(ctx context.Context, exec boil.ContextExec
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *TokenTransfer) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindTokenTransfer(ctx, exec, o.TransactionHash, o.LogIndex, o.BlockTimestamp)
+	ret, err := FindTokenTransfer(ctx, exec, o.TransactionHash, o.LogIndex)
 	if err != nil {
 		return err
 	}
@@ -954,16 +954,16 @@ func (o *TokenTransferSlice) ReloadAll(ctx context.Context, exec boil.ContextExe
 }
 
 // TokenTransferExists checks if the TokenTransfer row exists.
-func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, blockTimestamp time.Time) (bool, error) {
+func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"block_timestamp\"=$3 limit 1)"
+	sql := "select exists(select 1 from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, transactionHash, logIndex, blockTimestamp)
+		fmt.Fprintln(writer, transactionHash, logIndex)
 	}
-	row := exec.QueryRowContext(ctx, sql, transactionHash, logIndex, blockTimestamp)
+	row := exec.QueryRowContext(ctx, sql, transactionHash, logIndex)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -975,5 +975,5 @@ func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, transac
 
 // Exists checks if the TokenTransfer row exists.
 func (o *TokenTransfer) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return TokenTransferExists(ctx, exec, o.TransactionHash, o.LogIndex, o.BlockTimestamp)
+	return TokenTransferExists(ctx, exec, o.TransactionHash, o.LogIndex)
 }
