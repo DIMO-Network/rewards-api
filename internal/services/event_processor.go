@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/db"
@@ -16,12 +17,14 @@ import (
 )
 
 const (
-	TransferEvent = "Transfer"
+	TransferEvent  = "Transfer"
+	BlockProcessed = "zone.dimo.blockchain.block.processed"
 )
 
 type ContractEventStreamConsumer struct {
-	Db  db.Store
-	log *zerolog.Logger
+	Db            db.Store
+	log           *zerolog.Logger
+	TokenContract string
 }
 
 type contractEventData struct {
@@ -40,8 +43,8 @@ type transferEventData struct {
 	From  string   `json:"from"`
 }
 
-func NewEventConsumer(db db.Store, logger *zerolog.Logger) (*ContractEventStreamConsumer, error) {
-	return &ContractEventStreamConsumer{Db: db, log: logger}, nil
+func NewEventConsumer(db db.Store, logger *zerolog.Logger, settings *config.Settings) (*ContractEventStreamConsumer, error) {
+	return &ContractEventStreamConsumer{Db: db, log: logger, TokenContract: settings.TokenAddress}, nil
 }
 
 func (c *ContractEventStreamConsumer) Setup(sarama.ConsumerGroupSession) error { return nil }
@@ -57,14 +60,23 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 			err := json.Unmarshal(message.Value, &event)
 			if err != nil {
 				c.log.Err(err).Msg("error unmarshaling event")
+				session.MarkMessage(message, "")
 				continue
 			}
 
-			switch event.Data.EventName {
-			case TransferEvent:
-				err = c.processTransferEvent(&event)
-				if err != nil {
-					c.log.Err(err).Msg("error processing transfer event")
+			if event.Type == BlockProcessed {
+				session.MarkMessage(message, "")
+				continue
+			}
+
+			switch event.Data.Contract {
+			case c.TokenContract:
+				switch event.Data.EventName {
+				case TransferEvent:
+					err = c.processTransferEvent(&event)
+					if err != nil {
+						c.log.Err(err).Str("contract", event.Data.Contract).Str("txHash", event.Data.TransactionHash).Int("logIndex", int(event.Data.Index)).Msg("error storing transfer event")
+					}
 				}
 			}
 
@@ -79,19 +91,25 @@ func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent
 
 	args := transferEventData{}
 	err := json.Unmarshal(e.Data.Arguments, &args)
+	if err != nil {
+		ec.log.Error().Err(err).Msg("failed to unpack event arguments")
+		return err
+	}
 
 	transfer := models.TokenTransfer{
-		AddressFrom:     args.From,
-		AddressTo:       args.To,
+		AddressFrom:     []byte(args.From),
+		AddressTo:       []byte(args.To),
 		Amount:          types.NewDecimal(new(decimal.Big).SetBigMantScale(args.Value, 0)),
 		TransactionHash: []byte(e.Subject),
 		LogIndex:        int(e.Data.Index),
 		BlockTimestamp:  e.Time,
 	}
 
-	err = transfer.Insert(context.Background(), ec.Db.DBS().Writer, boil.Infer())
+	err = transfer.Upsert(context.Background(), ec.Db.DBS().Writer, true,
+		[]string{models.TokenTransferColumns.TransactionHash, models.TokenTransferColumns.LogIndex},
+		boil.Infer(), boil.Infer())
 	if err != nil {
-		ec.log.Error().Err(err).Msg("Failed to insert token transfer record.")
+		ec.log.Error().Err(err).Msg("failed to insert token transfer record.")
 		return err
 	}
 
