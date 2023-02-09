@@ -61,6 +61,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 		txHistory.IncomingTransaction[n].Amount = big.NewInt(amnt)
 		txHistory.IncomingTransaction[n].FromAddress = common.HexToAddress(tx.AddressFrom)
 		txHistory.IncomingTransaction[n].ToAddress = common.HexToAddress(tx.AddressTo)
+		txHistory.IncomingTransaction[n].Time = tx.BlockTimestamp.String()
 	}
 
 	txHistory.OutgoingTransactions = make([]OutgoingTransactionResponse, len(outgoing))
@@ -72,6 +73,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 		txHistory.OutgoingTransactions[n].Amount = big.NewInt(amnt)
 		txHistory.OutgoingTransactions[n].FromAddress = common.HexToAddress(tx.AddressFrom)
 		txHistory.OutgoingTransactions[n].ToAddress = common.HexToAddress(tx.AddressTo)
+		txHistory.IncomingTransaction[n].Time = tx.BlockTimestamp.String()
 	}
 
 	return c.JSON(txHistory)
