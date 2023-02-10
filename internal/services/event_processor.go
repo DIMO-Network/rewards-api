@@ -11,6 +11,7 @@ import (
 	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
 	"github.com/ericlagergren/decimal"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
@@ -38,9 +39,9 @@ type contractEventData struct {
 }
 
 type transferEventData struct {
-	Value *big.Int `json:"value"`
-	To    string   `json:"to"`
-	From  string   `json:"from"`
+	Value *big.Int       `json:"value"`
+	To    common.Address `json:"to"`
+	From  common.Address `json:"from"`
 }
 
 func NewEventConsumer(db db.Store, logger *zerolog.Logger, settings *config.Settings) (*ContractEventStreamConsumer, error) {
@@ -97,8 +98,8 @@ func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent
 	}
 
 	transfer := models.TokenTransfer{
-		AddressFrom:     []byte(args.From),
-		AddressTo:       []byte(args.To),
+		AddressFrom:     args.From[:],
+		AddressTo:       args.To[:],
 		Amount:          types.NewDecimal(new(decimal.Big).SetBigMantScale(args.Value, 0)),
 		TransactionHash: []byte(e.Subject),
 		LogIndex:        int(e.Data.Index),
