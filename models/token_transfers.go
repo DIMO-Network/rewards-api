@@ -31,6 +31,7 @@ type TokenTransfer struct {
 	LogIndex        int           `boil:"log_index" json:"log_index" toml:"log_index" yaml:"log_index"`
 	BlockTimestamp  time.Time     `boil:"block_timestamp" json:"block_timestamp" toml:"block_timestamp" yaml:"block_timestamp"`
 	UpdatedAt       time.Time     `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	ChainID         string        `boil:"chain_id" json:"chain_id" toml:"chain_id" yaml:"chain_id"`
 
 	R *tokenTransferR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L tokenTransferL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -44,6 +45,7 @@ var TokenTransferColumns = struct {
 	LogIndex        string
 	BlockTimestamp  string
 	UpdatedAt       string
+	ChainID         string
 }{
 	AddressFrom:     "address_from",
 	AddressTo:       "address_to",
@@ -52,6 +54,7 @@ var TokenTransferColumns = struct {
 	LogIndex:        "log_index",
 	BlockTimestamp:  "block_timestamp",
 	UpdatedAt:       "updated_at",
+	ChainID:         "chain_id",
 }
 
 var TokenTransferTableColumns = struct {
@@ -62,6 +65,7 @@ var TokenTransferTableColumns = struct {
 	LogIndex        string
 	BlockTimestamp  string
 	UpdatedAt       string
+	ChainID         string
 }{
 	AddressFrom:     "token_transfers.address_from",
 	AddressTo:       "token_transfers.address_to",
@@ -70,6 +74,7 @@ var TokenTransferTableColumns = struct {
 	LogIndex:        "token_transfers.log_index",
 	BlockTimestamp:  "token_transfers.block_timestamp",
 	UpdatedAt:       "token_transfers.updated_at",
+	ChainID:         "token_transfers.chain_id",
 }
 
 // Generated where
@@ -112,6 +117,7 @@ var TokenTransferWhere = struct {
 	LogIndex        whereHelperint
 	BlockTimestamp  whereHelpertime_Time
 	UpdatedAt       whereHelpertime_Time
+	ChainID         whereHelperstring
 }{
 	AddressFrom:     whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"address_from\""},
 	AddressTo:       whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"address_to\""},
@@ -120,6 +126,7 @@ var TokenTransferWhere = struct {
 	LogIndex:        whereHelperint{field: "\"rewards_api\".\"token_transfers\".\"log_index\""},
 	BlockTimestamp:  whereHelpertime_Time{field: "\"rewards_api\".\"token_transfers\".\"block_timestamp\""},
 	UpdatedAt:       whereHelpertime_Time{field: "\"rewards_api\".\"token_transfers\".\"updated_at\""},
+	ChainID:         whereHelperstring{field: "\"rewards_api\".\"token_transfers\".\"chain_id\""},
 }
 
 // TokenTransferRels is where relationship names are stored.
@@ -139,10 +146,10 @@ func (*tokenTransferR) NewStruct() *tokenTransferR {
 type tokenTransferL struct{}
 
 var (
-	tokenTransferAllColumns            = []string{"address_from", "address_to", "amount", "transaction_hash", "log_index", "block_timestamp", "updated_at"}
-	tokenTransferColumnsWithoutDefault = []string{"address_from", "address_to", "amount", "transaction_hash", "log_index", "block_timestamp"}
+	tokenTransferAllColumns            = []string{"address_from", "address_to", "amount", "transaction_hash", "log_index", "block_timestamp", "updated_at", "chain_id"}
+	tokenTransferColumnsWithoutDefault = []string{"address_from", "address_to", "amount", "transaction_hash", "log_index", "block_timestamp", "chain_id"}
 	tokenTransferColumnsWithDefault    = []string{"updated_at"}
-	tokenTransferPrimaryKeyColumns     = []string{"transaction_hash", "log_index"}
+	tokenTransferPrimaryKeyColumns     = []string{"transaction_hash", "log_index", "chain_id"}
 	tokenTransferGeneratedColumns      = []string{}
 )
 
@@ -437,7 +444,7 @@ func TokenTransfers(mods ...qm.QueryMod) tokenTransferQuery {
 
 // FindTokenTransfer retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, selectCols ...string) (*TokenTransfer, error) {
+func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, chainID string, selectCols ...string) (*TokenTransfer, error) {
 	tokenTransferObj := &TokenTransfer{}
 
 	sel := "*"
@@ -445,10 +452,10 @@ func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, transacti
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2", sel,
+		"select %s from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"chain_id\"=$3", sel,
 	)
 
-	q := queries.Raw(query, transactionHash, logIndex)
+	q := queries.Raw(query, transactionHash, logIndex, chainID)
 
 	err := q.Bind(ctx, exec, tokenTransferObj)
 	if err != nil {
@@ -818,7 +825,7 @@ func (o *TokenTransfer) Delete(ctx context.Context, exec boil.ContextExecutor) (
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), tokenTransferPrimaryKeyMapping)
-	sql := "DELETE FROM \"rewards_api\".\"token_transfers\" WHERE \"transaction_hash\"=$1 AND \"log_index\"=$2"
+	sql := "DELETE FROM \"rewards_api\".\"token_transfers\" WHERE \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"chain_id\"=$3"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -915,7 +922,7 @@ func (o TokenTransferSlice) DeleteAll(ctx context.Context, exec boil.ContextExec
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *TokenTransfer) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindTokenTransfer(ctx, exec, o.TransactionHash, o.LogIndex)
+	ret, err := FindTokenTransfer(ctx, exec, o.TransactionHash, o.LogIndex, o.ChainID)
 	if err != nil {
 		return err
 	}
@@ -954,16 +961,16 @@ func (o *TokenTransferSlice) ReloadAll(ctx context.Context, exec boil.ContextExe
 }
 
 // TokenTransferExists checks if the TokenTransfer row exists.
-func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int) (bool, error) {
+func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, chainID string) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2 limit 1)"
+	sql := "select exists(select 1 from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"chain_id\"=$3 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, transactionHash, logIndex)
+		fmt.Fprintln(writer, transactionHash, logIndex, chainID)
 	}
-	row := exec.QueryRowContext(ctx, sql, transactionHash, logIndex)
+	row := exec.QueryRowContext(ctx, sql, transactionHash, logIndex, chainID)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -975,5 +982,5 @@ func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, transac
 
 // Exists checks if the TokenTransfer row exists.
 func (o *TokenTransfer) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return TokenTransferExists(ctx, exec, o.TransactionHash, o.LogIndex)
+	return TokenTransferExists(ctx, exec, o.TransactionHash, o.LogIndex, o.ChainID)
 }
