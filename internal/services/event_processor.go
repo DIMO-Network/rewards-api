@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"math/big"
+	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
 	"github.com/ericlagergren/decimal"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -18,24 +21,31 @@ import (
 )
 
 const (
-	TransferEvent  = "Transfer"
 	BlockProcessed = "zone.dimo.blockchain.block.processed"
 )
 
 type ContractEventStreamConsumer struct {
-	Db            db.Store
-	log           *zerolog.Logger
-	TokenContract string
+	Db                 db.Store
+	log                *zerolog.Logger
+	TokenAddress       string
+	TokenTransferEvent abi.Event
 }
 
 type contractEventData struct {
 	Contract        string          `json:"contract,omitempty"`
 	TransactionHash string          `json:"transactionHash,omitempty"`
 	Arguments       json.RawMessage `json:"arguments,omitempty"`
+	Block           block           `json:"block"`
 	Index           uint            `json:"index,omitempty"`
 	BlockCompleted  bool            `json:"blockCompleted,omitempty"`
 	EventSignature  string          `json:"eventSignature,omitempty"`
 	EventName       string          `json:"eventName,omitempty"`
+}
+
+type block struct {
+	Number int64
+	Hash   string
+	Time   time.Time
 }
 
 type transferEventData struct {
@@ -45,7 +55,15 @@ type transferEventData struct {
 }
 
 func NewEventConsumer(db db.Store, logger *zerolog.Logger, settings *config.Settings) (*ContractEventStreamConsumer, error) {
-	return &ContractEventStreamConsumer{Db: db, log: logger, TokenContract: settings.TokenAddress}, nil
+	abi, err := contracts.TokenMetaData.GetAbi()
+	if err != nil {
+		return &ContractEventStreamConsumer{}, err
+	}
+
+	return &ContractEventStreamConsumer{Db: db,
+		log:                logger,
+		TokenAddress:       settings.TokenAddress,
+		TokenTransferEvent: abi.Events["Transfer"]}, nil
 }
 
 func (c *ContractEventStreamConsumer) Setup(sarama.ConsumerGroupSession) error { return nil }
@@ -71,9 +89,9 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 			}
 
 			switch event.Data.Contract {
-			case c.TokenContract:
+			case c.TokenAddress:
 				switch event.Data.EventName {
-				case TransferEvent:
+				case c.TokenTransferEvent.Name:
 					err = c.processTransferEvent(&event)
 					if err != nil {
 						c.log.Err(err).Str("contract", event.Data.Contract).Str("txHash", event.Data.TransactionHash).Int("logIndex", int(event.Data.Index)).Msg("error storing transfer event")
@@ -104,10 +122,11 @@ func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent
 		TransactionHash: []byte(e.Subject),
 		LogIndex:        int(e.Data.Index),
 		BlockTimestamp:  e.Time,
+		ChainID:         e.Source,
 	}
 
 	err = transfer.Upsert(context.Background(), ec.Db.DBS().Writer, true,
-		[]string{models.TokenTransferColumns.TransactionHash, models.TokenTransferColumns.LogIndex},
+		[]string{models.TokenTransferColumns.TransactionHash, models.TokenTransferColumns.LogIndex, models.TokenTransferColumns.ChainID},
 		boil.Infer(), boil.Infer())
 	if err != nil {
 		ec.log.Error().Err(err).Msg("failed to insert token transfer record.")
