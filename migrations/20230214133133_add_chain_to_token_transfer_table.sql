@@ -6,8 +6,7 @@ ALTER TABLE token_transfers
     ADD chain_id VARCHAR;
 
 UPDATE token_transfers 
--- should we set the default value to polygon since we've only been polling that so far?
-SET chain_id = '---'
+SET chain_id = 'chain/137'
 WHERE chain_id IS NULL;
 
 ALTER TABLE token_transfers
@@ -18,6 +17,8 @@ ALTER TABLE token_transfers
 
 ALTER TABLE token_transfers
     ADD PRIMARY KEY (transaction_hash, log_index, chain_id);
+
+-- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
