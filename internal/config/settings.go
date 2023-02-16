@@ -30,5 +30,6 @@ type Settings struct {
 	FirstAutomatedWeek             int         `yaml:"FIRST_AUTOMATED_WEEK"`
 	EthereumRPCURL                 string      `yaml:"ETHEREUM_RPC_URL"`
 	TokenAddress                   string      `yaml:"TOKEN_ADDRESS"`
+	TokenAddressEth                string      `yaml:"TOKEN_ADDRESS_ETHEREUM"`
 	ContractEventTopic             string      `yaml:"CONTRACT_EVENT_TOPIC"`
 }

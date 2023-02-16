@@ -25,10 +25,12 @@ const (
 )
 
 type ContractEventStreamConsumer struct {
-	Db                 db.Store
-	log                *zerolog.Logger
-	TokenAddress       string
-	TokenTransferEvent abi.Event
+	Db                        db.Store
+	log                       *zerolog.Logger
+	TokenAddressPolygon       string
+	TokenAddressEth           string
+	TokenTransferEventPolygon abi.Event
+	TokenTransferEventEth     abi.Event
 }
 
 type contractEventData struct {
@@ -55,15 +57,22 @@ type transferEventData struct {
 }
 
 func NewEventConsumer(db db.Store, logger *zerolog.Logger, settings *config.Settings) (*ContractEventStreamConsumer, error) {
-	abi, err := contracts.TokenMetaData.GetAbi()
+	polyTokenABI, err := contracts.TokenMetaData.GetAbi()
+	if err != nil {
+		return &ContractEventStreamConsumer{}, err
+	}
+
+	ethTokenABI, err := contracts.TokenEthMetaData.GetAbi()
 	if err != nil {
 		return &ContractEventStreamConsumer{}, err
 	}
 
 	return &ContractEventStreamConsumer{Db: db,
-		log:                logger,
-		TokenAddress:       settings.TokenAddress,
-		TokenTransferEvent: abi.Events["Transfer"]}, nil
+		log:                       logger,
+		TokenAddressPolygon:       settings.TokenAddress,
+		TokenAddressEth:           settings.TokenAddressEth,
+		TokenTransferEventPolygon: polyTokenABI.Events["Transfer"],
+		TokenTransferEventEth:     ethTokenABI.Events["Transfer"]}, nil
 }
 
 func (c *ContractEventStreamConsumer) Setup(sarama.ConsumerGroupSession) error { return nil }
@@ -89,9 +98,17 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 			}
 
 			switch event.Data.Contract {
-			case c.TokenAddress:
+			case c.TokenAddressPolygon:
 				switch event.Data.EventName {
-				case c.TokenTransferEvent.Name:
+				case c.TokenTransferEventPolygon.Name:
+					err = c.processTransferEvent(&event)
+					if err != nil {
+						c.log.Err(err).Str("contract", event.Data.Contract).Str("txHash", event.Data.TransactionHash).Int("logIndex", int(event.Data.Index)).Msg("error storing transfer event")
+					}
+				}
+			case c.TokenAddressEth:
+				switch event.Data.EventName {
+				case c.TokenTransferEventEth.Name:
 					err = c.processTransferEvent(&event)
 					if err != nil {
 						c.log.Err(err).Str("contract", event.Data.Contract).Str("txHash", event.Data.TransactionHash).Int("logIndex", int(event.Data.Index)).Msg("error storing transfer event")
