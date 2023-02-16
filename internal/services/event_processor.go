@@ -115,7 +115,7 @@ func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent
 		AddressFrom:     args.From.Bytes(),
 		AddressTo:       args.To.Bytes(),
 		Amount:          types.NewDecimal(new(decimal.Big).SetBigMantScale(args.Value, 0)),
-		TransactionHash: e.Data.Contract.Bytes(),
+		TransactionHash: e.Data.TransactionHash.Bytes(),
 		LogIndex:        e.Data.Index,
 		BlockTimestamp:  e.Data.Block.Time,
 		ChainID:         chainID,
