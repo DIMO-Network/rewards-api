@@ -119,6 +119,7 @@ func main() {
 		v1 := app.Group("/v1", jwtAuth)
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
+		v1.Get("/user/history/transactions", rewardsController.GetTransactionHistory)
 
 		go startGRPCServer(&settings, pdb, &logger)
 
@@ -147,6 +148,33 @@ func main() {
 			}
 		}()
 
+		kclient2, err := createKafkaClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
+		}
+
+		consumer2, err := sarama.NewConsumerGroupFromClient(settings.ConsumerGroup, kclient2)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka consumer.")
+		}
+
+		msgHandler, err := services.NewEventConsumer(pdb, &logger, &settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create new event consumer.")
+		}
+
+		go func() {
+			for {
+				err = consumer2.Consume(ctx, []string{settings.ContractEventTopic}, msgHandler)
+				if err != nil {
+					logger.Err(err).Msg("error while processing messages")
+					if ctx.Err() != nil {
+						return
+					}
+				}
+			}
+		}()
+
 		logger.Info().Msgf("Starting HTTP server on port %s.", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {
 			logger.Fatal().Err(err).Msgf("Fiber server failed.")
@@ -163,7 +191,10 @@ func main() {
 				command = command + " " + os.Args[3]
 			}
 		}
-		database.MigrateDatabase(logger, &settings.DB, command, "migrations")
+		logger.Info().Msg("XDD")
+		if err := database.MigrateDatabase(logger, &settings.DB, command, "migrations"); err != nil {
+			logger.Fatal().Err(err).Msg("Failed to run migration.")
+		}
 	case "calculate":
 		var week int
 		if len(os.Args) == 2 {
