@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/rewards-api
   pullPolicy: IfNotPresent
-  tag: 8d64ee5
+  tag: b2e8e98
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
@@ -48,6 +48,7 @@ env:
   TRANSFER_BATCH_SIZE: 2
   FIRST_AUTOMATED_WEEK: 44
   TOKEN_ADDRESS: '0x80ee7ec4493a1d7975ab900f94db25ba7c688201'
+  CONTRACT_EVENT_TOPIC: topic.contract.event
 service:
   type: ClusterIP
   ports:
