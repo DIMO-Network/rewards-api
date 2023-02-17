@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
@@ -25,12 +24,10 @@ const (
 )
 
 type ContractEventStreamConsumer struct {
-	Db                        db.Store
-	log                       *zerolog.Logger
-	TokenAddressPolygon       string
-	TokenAddressEth           string
-	TokenTransferEventPolygon abi.Event
-	TokenTransferEventEth     abi.Event
+	Db                 db.Store
+	log                *zerolog.Logger
+	TokenAddress       string
+	TokenTransferEvent abi.Event
 }
 
 type contractEventData struct {
@@ -56,23 +53,21 @@ type transferEventData struct {
 	From  common.Address `json:"from"`
 }
 
-func NewEventConsumer(db db.Store, logger *zerolog.Logger, settings *config.Settings) (*ContractEventStreamConsumer, error) {
-	polyTokenABI, err := contracts.TokenMetaData.GetAbi()
-	if err != nil {
-		return &ContractEventStreamConsumer{}, err
-	}
+type Config struct {
+	TokenAddress string `yaml:"token_address"`
+	ChainID      string `yaml:"chain_id"`
+}
 
-	ethTokenABI, err := contracts.TokenEthMetaData.GetAbi()
+func NewEventConsumer(db db.Store, logger *zerolog.Logger, conf *Config) (*ContractEventStreamConsumer, error) {
+	abi, err := contracts.TokenMetaData.GetAbi()
 	if err != nil {
 		return &ContractEventStreamConsumer{}, err
 	}
 
 	return &ContractEventStreamConsumer{Db: db,
-		log:                       logger,
-		TokenAddressPolygon:       settings.TokenAddress,
-		TokenAddressEth:           settings.TokenAddressEth,
-		TokenTransferEventPolygon: polyTokenABI.Events["Transfer"],
-		TokenTransferEventEth:     ethTokenABI.Events["Transfer"]}, nil
+		log:                logger,
+		TokenAddress:       conf.TokenAddress,
+		TokenTransferEvent: abi.Events["Transfer"]}, nil
 }
 
 func (c *ContractEventStreamConsumer) Setup(sarama.ConsumerGroupSession) error { return nil }
@@ -98,17 +93,9 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 			}
 
 			switch event.Data.Contract {
-			case c.TokenAddressPolygon:
+			case c.TokenAddress:
 				switch event.Data.EventName {
-				case c.TokenTransferEventPolygon.Name:
-					err = c.processTransferEvent(&event)
-					if err != nil {
-						c.log.Err(err).Str("contract", event.Data.Contract).Str("txHash", event.Data.TransactionHash).Int("logIndex", int(event.Data.Index)).Msg("error storing transfer event")
-					}
-				}
-			case c.TokenAddressEth:
-				switch event.Data.EventName {
-				case c.TokenTransferEventEth.Name:
+				case c.TokenTransferEvent.Name:
 					err = c.processTransferEvent(&event)
 					if err != nil {
 						c.log.Err(err).Str("contract", event.Data.Contract).Str("txHash", event.Data.TransactionHash).Int("logIndex", int(event.Data.Index)).Msg("error storing transfer event")

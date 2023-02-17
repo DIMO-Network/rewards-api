@@ -32,6 +32,7 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"gopkg.in/yaml.v2"
 )
 
 // @title                       DIMO Rewards API
@@ -230,6 +231,18 @@ func main() {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
 		}
 	case "event-processor":
+
+		var conf services.Config
+		cb, err := os.ReadFile("config.yaml")
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to read config file.")
+		}
+
+		err = yaml.Unmarshal(cb, &conf)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to unmarshal config")
+		}
+
 		kclient, err := createKafkaClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
@@ -243,7 +256,7 @@ func main() {
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
 		pdb.WaitForDB(logger)
 
-		msgHandler, err := services.NewEventConsumer(pdb, &logger, &settings)
+		msgHandler, err := services.NewEventConsumer(pdb, &logger, &conf)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create new event consumer.")
 		}
