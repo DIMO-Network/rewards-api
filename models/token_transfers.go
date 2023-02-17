@@ -31,7 +31,7 @@ type TokenTransfer struct {
 	LogIndex        int           `boil:"log_index" json:"log_index" toml:"log_index" yaml:"log_index"`
 	BlockTimestamp  time.Time     `boil:"block_timestamp" json:"block_timestamp" toml:"block_timestamp" yaml:"block_timestamp"`
 	UpdatedAt       time.Time     `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	ChainID         string        `boil:"chain_id" json:"chain_id" toml:"chain_id" yaml:"chain_id"`
+	ChainID         int64         `boil:"chain_id" json:"chain_id" toml:"chain_id" yaml:"chain_id"`
 
 	R *tokenTransferR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L tokenTransferL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -109,6 +109,29 @@ func (w whereHelpertypes_Decimal) GTE(x types.Decimal) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
+type whereHelperint64 struct{ field string }
+
+func (w whereHelperint64) EQ(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint64) NEQ(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint64) LT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint64) LTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint64) GT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint64) GTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint64) IN(slice []int64) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
 var TokenTransferWhere = struct {
 	AddressFrom     whereHelper__byte
 	AddressTo       whereHelper__byte
@@ -117,7 +140,7 @@ var TokenTransferWhere = struct {
 	LogIndex        whereHelperint
 	BlockTimestamp  whereHelpertime_Time
 	UpdatedAt       whereHelpertime_Time
-	ChainID         whereHelperstring
+	ChainID         whereHelperint64
 }{
 	AddressFrom:     whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"address_from\""},
 	AddressTo:       whereHelper__byte{field: "\"rewards_api\".\"token_transfers\".\"address_to\""},
@@ -126,7 +149,7 @@ var TokenTransferWhere = struct {
 	LogIndex:        whereHelperint{field: "\"rewards_api\".\"token_transfers\".\"log_index\""},
 	BlockTimestamp:  whereHelpertime_Time{field: "\"rewards_api\".\"token_transfers\".\"block_timestamp\""},
 	UpdatedAt:       whereHelpertime_Time{field: "\"rewards_api\".\"token_transfers\".\"updated_at\""},
-	ChainID:         whereHelperstring{field: "\"rewards_api\".\"token_transfers\".\"chain_id\""},
+	ChainID:         whereHelperint64{field: "\"rewards_api\".\"token_transfers\".\"chain_id\""},
 }
 
 // TokenTransferRels is where relationship names are stored.
@@ -444,7 +467,7 @@ func TokenTransfers(mods ...qm.QueryMod) tokenTransferQuery {
 
 // FindTokenTransfer retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, chainID string, selectCols ...string) (*TokenTransfer, error) {
+func FindTokenTransfer(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, chainID int64, selectCols ...string) (*TokenTransfer, error) {
 	tokenTransferObj := &TokenTransfer{}
 
 	sel := "*"
@@ -961,7 +984,7 @@ func (o *TokenTransferSlice) ReloadAll(ctx context.Context, exec boil.ContextExe
 }
 
 // TokenTransferExists checks if the TokenTransfer row exists.
-func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, chainID string) (bool, error) {
+func TokenTransferExists(ctx context.Context, exec boil.ContextExecutor, transactionHash []byte, logIndex int, chainID int64) (bool, error) {
 	var exists bool
 	sql := "select exists(select 1 from \"rewards_api\".\"token_transfers\" where \"transaction_hash\"=$1 AND \"log_index\"=$2 AND \"chain_id\"=$3 limit 1)"
 

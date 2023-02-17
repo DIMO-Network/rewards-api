@@ -3,10 +3,10 @@
 SET search_path = rewards_api, public;
 
 ALTER TABLE token_transfers
-    ADD chain_id VARCHAR;
+    ADD chain_id BIGINT;
 
 UPDATE token_transfers 
-SET chain_id = 'chain/137'
+SET chain_id = 137
 WHERE chain_id IS NULL;
 
 ALTER TABLE token_transfers
@@ -16,7 +16,7 @@ ALTER TABLE token_transfers
     DROP CONSTRAINT token_transfers_pkey;
 
 ALTER TABLE token_transfers
-    ADD PRIMARY KEY (transaction_hash, log_index, chain_id);
+    ADD CONSTRAINT token_transfers_pkey PRIMARY KEY (transaction_hash, log_index, chain_id);
 
 -- +goose StatementEnd
 

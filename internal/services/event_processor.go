@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -115,6 +117,14 @@ func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent
 		return err
 	}
 
+	chainID := new(big.Int)
+	chainID, ok := chainID.SetString(strings.Replace(e.Source, "chain/", "", -1), 10)
+	if !ok {
+		err = errors.New("unable to convert chain id to big int")
+		ec.log.Error().Err(err).Msg("failed while converting chain id to big int")
+		return err
+	}
+
 	transfer := models.TokenTransfer{
 		AddressFrom:     args.From[:],
 		AddressTo:       args.To[:],
@@ -122,7 +132,7 @@ func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent
 		TransactionHash: []byte(e.Subject),
 		LogIndex:        int(e.Data.Index),
 		BlockTimestamp:  e.Time,
-		ChainID:         e.Source,
+		ChainID:         chainID.Int64(),
 	}
 
 	err = transfer.Upsert(context.Background(), ec.Db.DBS().Writer, true,
