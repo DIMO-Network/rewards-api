@@ -26,7 +26,7 @@ const (
 type ContractEventStreamConsumer struct {
 	Db                 db.Store
 	log                *zerolog.Logger
-	TokenAddress       string
+	TokenAddress       []string
 	TokenTransferEvent abi.Event
 }
 
@@ -53,9 +53,13 @@ type transferEventData struct {
 	From  common.Address `json:"from"`
 }
 
-type Config struct {
+type contractSettings struct {
 	TokenAddress string `yaml:"token_address"`
 	ChainID      string `yaml:"chain_id"`
+}
+
+type Config struct {
+	Contracts []contractSettings `yaml:"contracts"`
 }
 
 func NewEventConsumer(db db.Store, logger *zerolog.Logger, conf *Config) (*ContractEventStreamConsumer, error) {
@@ -64,9 +68,14 @@ func NewEventConsumer(db db.Store, logger *zerolog.Logger, conf *Config) (*Contr
 		return &ContractEventStreamConsumer{}, err
 	}
 
+	addrs := make([]string, len(conf.Contracts))
+	for _, c := range conf.Contracts {
+		addrs = append(addrs, c.TokenAddress)
+	}
+
 	return &ContractEventStreamConsumer{Db: db,
 		log:                logger,
-		TokenAddress:       conf.TokenAddress,
+		TokenAddress:       addrs,
 		TokenTransferEvent: abi.Events["Transfer"]}, nil
 }
 
@@ -92,8 +101,8 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 				continue
 			}
 
-			switch event.Data.Contract {
-			case c.TokenAddress:
+			if contains(c.TokenAddress, event.Data.Contract) {
+
 				switch event.Data.EventName {
 				case c.TokenTransferEvent.Name:
 					err = c.processTransferEvent(&event)
@@ -101,6 +110,7 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 						c.log.Err(err).Str("contract", event.Data.Contract).Str("txHash", event.Data.TransactionHash).Int("logIndex", int(event.Data.Index)).Msg("error storing transfer event")
 					}
 				}
+
 			}
 
 			session.MarkMessage(message, "")
@@ -138,4 +148,14 @@ func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent
 	}
 
 	return nil
+}
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }

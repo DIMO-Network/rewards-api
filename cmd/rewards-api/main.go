@@ -232,7 +232,7 @@ func main() {
 		}
 	case "event-processor":
 
-		var conf services.Config
+		conf, err := shared.LoadConfig[services.Config]("config.yaml")
 		cb, err := os.ReadFile("config.yaml")
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to read config file.")

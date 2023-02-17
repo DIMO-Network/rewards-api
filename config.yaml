@@ -1,2 +1,7 @@
-token_address: 0x80Ee7ec4493A1d7975ab900F94dB25ba7C688201
-chain_id: 80001
+contracts:
+  - chain_id: 80001
+    token_address: 0x80Ee7ec4493A1d7975ab900F94dB25ba7C688201
+  - chain_id: 137
+    token_address: 0xE261D618a959aFfFd53168Cd07D12E37B26761db
+  - chain_id: 1
+    token_address: 0x5fab9761d60419c9eeebe3915a8fa1ed7e8d2e1b
