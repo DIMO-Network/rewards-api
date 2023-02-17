@@ -26,7 +26,7 @@ const (
 type ContractEventStreamConsumer struct {
 	Db                 db.Store
 	log                *zerolog.Logger
-	TokenAddress       []string
+	TokenAddresses     []string
 	TokenTransferEvent abi.Event
 }
 
@@ -75,7 +75,7 @@ func NewEventConsumer(db db.Store, logger *zerolog.Logger, conf *Config) (*Contr
 
 	return &ContractEventStreamConsumer{Db: db,
 		log:                logger,
-		TokenAddress:       addrs,
+		TokenAddresses:     addrs,
 		TokenTransferEvent: abi.Events["Transfer"]}, nil
 }
 
@@ -101,7 +101,7 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 				continue
 			}
 
-			if contains(c.TokenAddress, event.Data.Contract) {
+			if contains(c.TokenAddresses, event.Data.Contract) {
 
 				switch event.Data.EventName {
 				case c.TokenTransferEvent.Name:
