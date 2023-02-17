@@ -32,7 +32,6 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"gopkg.in/yaml.v2"
 )
 
 // @title                       DIMO Rewards API
@@ -233,12 +232,6 @@ func main() {
 	case "event-processor":
 
 		conf, err := shared.LoadConfig[services.Config]("config.yaml")
-		cb, err := os.ReadFile("config.yaml")
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to read config file.")
-		}
-
-		err = yaml.Unmarshal(cb, &conf)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to unmarshal config")
 		}
