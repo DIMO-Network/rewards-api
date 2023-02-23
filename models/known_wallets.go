@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -23,9 +24,10 @@ import (
 
 // KnownWallet is an object representing the database table.
 type KnownWallet struct {
-	ChainID     int64  `boil:"chain_id" json:"chain_id" toml:"chain_id" yaml:"chain_id"`
-	Address     []byte `boil:"address" json:"address" toml:"address" yaml:"address"`
-	Description string `boil:"description" json:"description" toml:"description" yaml:"description"`
+	ChainID     int64       `boil:"chain_id" json:"chain_id" toml:"chain_id" yaml:"chain_id"`
+	Address     []byte      `boil:"address" json:"address" toml:"address" yaml:"address"`
+	Description string      `boil:"description" json:"description" toml:"description" yaml:"description"`
+	Type        null.String `boil:"type" json:"type,omitempty" toml:"type" yaml:"type,omitempty"`
 
 	R *knownWalletR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L knownWalletL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -35,20 +37,24 @@ var KnownWalletColumns = struct {
 	ChainID     string
 	Address     string
 	Description string
+	Type        string
 }{
 	ChainID:     "chain_id",
 	Address:     "address",
 	Description: "description",
+	Type:        "type",
 }
 
 var KnownWalletTableColumns = struct {
 	ChainID     string
 	Address     string
 	Description string
+	Type        string
 }{
 	ChainID:     "known_wallets.chain_id",
 	Address:     "known_wallets.address",
 	Description: "known_wallets.description",
+	Type:        "known_wallets.type",
 }
 
 // Generated where
@@ -85,14 +91,54 @@ func (w whereHelper__byte) LTE(x []byte) qm.QueryMod { return qmhelper.Where(w.f
 func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
 func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
+type whereHelpernull_String struct{ field string }
+
+func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+func (w whereHelpernull_String) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var KnownWalletWhere = struct {
 	ChainID     whereHelperint64
 	Address     whereHelper__byte
 	Description whereHelperstring
+	Type        whereHelpernull_String
 }{
 	ChainID:     whereHelperint64{field: "\"rewards_api\".\"known_wallets\".\"chain_id\""},
 	Address:     whereHelper__byte{field: "\"rewards_api\".\"known_wallets\".\"address\""},
 	Description: whereHelperstring{field: "\"rewards_api\".\"known_wallets\".\"description\""},
+	Type:        whereHelpernull_String{field: "\"rewards_api\".\"known_wallets\".\"type\""},
 }
 
 // KnownWalletRels is where relationship names are stored.
@@ -112,9 +158,9 @@ func (*knownWalletR) NewStruct() *knownWalletR {
 type knownWalletL struct{}
 
 var (
-	knownWalletAllColumns            = []string{"chain_id", "address", "description"}
+	knownWalletAllColumns            = []string{"chain_id", "address", "description", "type"}
 	knownWalletColumnsWithoutDefault = []string{"chain_id", "address", "description"}
-	knownWalletColumnsWithDefault    = []string{}
+	knownWalletColumnsWithDefault    = []string{"type"}
 	knownWalletPrimaryKeyColumns     = []string{"chain_id", "address"}
 	knownWalletGeneratedColumns      = []string{}
 )

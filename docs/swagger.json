@@ -51,6 +51,14 @@
                     }
                 ],
                 "description": "A summary of the user's DIMO transaction history, all time.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The transaction type: Baseline, Referrals, Marketplace, or Other.",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -70,6 +78,9 @@
                     "description": "ChainID is the chain id of the chain on which the transaction took place. Important\nvalues are 137 for Polygon, 1 for Ethereum.",
                     "type": "integer",
                     "example": 137
+                },
+                "description": {
+                    "type": "string"
                 },
                 "from": {
                     "description": "From is the address of the source of the value, in 0x-prefixed hex.",

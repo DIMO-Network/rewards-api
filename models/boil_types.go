@@ -66,6 +66,21 @@ func AllIssuanceWeeksJobStatus() []string {
 	}
 }
 
+// Enum values for WalletType
+const (
+	WalletTypeBaseline    string = "Baseline"
+	WalletTypeReferrals   string = "Referrals"
+	WalletTypeMarketplace string = "Marketplace"
+)
+
+func AllWalletType() []string {
+	return []string{
+		WalletTypeBaseline,
+		WalletTypeReferrals,
+		WalletTypeMarketplace,
+	}
+}
+
 // Enum values for MetaTransactionRequestStatus
 const (
 	MetaTransactionRequestStatusUnsubmitted string = "Unsubmitted"

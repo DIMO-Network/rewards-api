@@ -10,12 +10,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"golang.org/x/exp/slices"
 )
 
 // GetTransactionHistory godoc
 // @Description  A summary of the user's DIMO transaction history, all time.
 // @Success      200 {object} controllers.TransactionHistory
 // @Security     BearerAuth
+// @Param        type query string false "The transaction type: Baseline, Referrals, Marketplace, or Other."
 // @Router       /user/history/transactions [get]
 func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	userID := getUserID(c)
@@ -42,18 +44,31 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	type enrichedTransfer struct {
 		models.TokenTransfer `boil:",bind"`
 		Description          null.String
+		Type                 null.String
 	}
 
 	txes := []enrichedTransfer{}
 
-	err = models.NewQuery(
-		qm.Select(models.TableNames.TokenTransfers+".*, "+models.KnownWalletTableColumns.Description),
+	mods := []qm.QueryMod{
+		qm.Select(models.TableNames.TokenTransfers + ".*, " + models.KnownWalletTableColumns.Description),
 		qm.From(models.TableNames.TokenTransfers),
-		qm.LeftOuterJoin(models.TableNames.KnownWallets+" ON "+models.TokenTransferTableColumns.ChainID+" = "+models.KnownWalletTableColumns.ChainID+" AND "+models.TokenTransferTableColumns.AddressFrom+" = "+models.KnownWalletTableColumns.Address),
+		qm.LeftOuterJoin(models.TableNames.KnownWallets + " ON " + models.TokenTransferTableColumns.ChainID + " = " + models.KnownWalletTableColumns.ChainID + " AND " + models.TokenTransferTableColumns.AddressFrom + " = " + models.KnownWalletTableColumns.Address),
 		models.TokenTransferWhere.AddressTo.EQ(addr.Bytes()),
 		qm.Or2(models.TokenTransferWhere.AddressFrom.EQ(addr.Bytes())),
-		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp+" DESC, "+models.TokenTransferColumns.ChainID+" ASC, "+models.TokenTransferColumns.LogIndex),
-	).Bind(c.Context(), r.DB.DBS().Reader, &txes)
+		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp + " DESC, " + models.TokenTransferColumns.ChainID + " ASC, " + models.TokenTransferColumns.LogIndex),
+	}
+
+	if typ := c.Params("type"); typ != "" {
+		if typ == "Other" {
+			mods = append(mods, models.KnownWalletWhere.Type.IsNull())
+		} else if slices.Contains(models.AllWalletType(), typ) {
+			mods = append(mods, models.KnownWalletWhere.Type.EQ(null.StringFrom(typ)))
+		} else {
+			return fiber.NewError(fiber.StatusBadRequest, "Unrecognized type filter.")
+		}
+	}
+
+	err = models.NewQuery(mods...).Bind(c.Context(), r.DB.DBS().Reader, &txes)
 	if err != nil {
 		logger.Err(err).Msg("Database failure retrieving incoming transactions.")
 		return opaqueInternalError
