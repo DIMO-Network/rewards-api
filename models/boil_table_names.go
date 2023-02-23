@@ -6,6 +6,7 @@ package models
 var TableNames = struct {
 	Blacklist               string
 	IssuanceWeeks           string
+	KnownWallets            string
 	MetaTransactionRequests string
 	Overrides               string
 	Rewards                 string
@@ -13,6 +14,7 @@ var TableNames = struct {
 }{
 	Blacklist:               "blacklist",
 	IssuanceWeeks:           "issuance_weeks",
+	KnownWallets:            "known_wallets",
 	MetaTransactionRequests: "meta_transaction_requests",
 	Overrides:               "overrides",
 	Rewards:                 "rewards",

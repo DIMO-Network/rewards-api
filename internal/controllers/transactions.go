@@ -38,11 +38,20 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 
 	addr := common.HexToAddress(*user.EthereumAddress)
 
-	txes, err := models.TokenTransfers(
+	type enrichedTransfer struct {
+		models.TokenTransfer `boil:",bind"`
+		models.KnownWallet   `boil:",bind"`
+	}
+
+	txes := []enrichedTransfer{}
+
+	err = models.NewQuery(
+		qm.From(models.TableNames.TokenTransfers),
+		qm.LeftOuterJoin(models.TableNames.KnownWallets+" ON "+models.TokenTransferTableColumns.ChainID+" = "+models.KnownWalletTableColumns.ChainID+" AND "+models.TokenTransferTableColumns.AddressFrom+" = "+models.KnownWalletTableColumns.Address),
 		models.TokenTransferWhere.AddressTo.EQ(addr.Bytes()),
 		qm.Or2(models.TokenTransferWhere.AddressFrom.EQ(addr.Bytes())),
-		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp+" DESC"),
-	).All(c.Context(), r.DB.DBS().Reader)
+		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp+" DESC, "+models.TokenTransferColumns.ChainID+" ASC, "+models.TokenTransferColumns.LogIndex),
+	).Bind(c.Context(), r.DB.DBS().Reader, &txes)
 	if err != nil {
 		logger.Err(err).Msg("Database failure retrieving incoming transactions.")
 		return opaqueInternalError
@@ -50,11 +59,12 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 
 	for _, tx := range txes {
 		apiTx := APITransaction{
-			ChainID: tx.ChainID,
-			Time:    tx.BlockTimestamp,
-			From:    common.BytesToAddress(tx.AddressFrom),
-			To:      common.BytesToAddress(tx.AddressTo),
-			Value:   tx.Amount.Int(nil),
+			ChainID:     tx.TokenTransfer.ChainID,
+			Time:        tx.BlockTimestamp,
+			From:        common.BytesToAddress(tx.AddressFrom),
+			To:          common.BytesToAddress(tx.AddressTo),
+			Value:       tx.Amount.Int(nil),
+			Description: tx.Description,
 		}
 		txHistory.Transactions = append(txHistory.Transactions, apiTx)
 	}
@@ -78,5 +88,6 @@ type APITransaction struct {
 	To common.Address `json:"to" example:"0xc66d80f5063677425270013136ef9fa2bf1f9f1a" swaggertype:"string"`
 	// Value is the amount of token being transferred. Divide by 10^18 to get what people
 	// normally consider $DIMO.
-	Value *big.Int `json:"value" example:"10000000000000000" swaggertype:"number"`
+	Value       *big.Int `json:"value" example:"10000000000000000" swaggertype:"number"`
+	Description string   `json:"description,omitempty"`
 }
