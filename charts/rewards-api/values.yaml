@@ -49,6 +49,10 @@ env:
   FIRST_AUTOMATED_WEEK: 44
   TOKEN_ADDRESS: '0x80ee7ec4493a1d7975ab900f94db25ba7c688201'
   CONTRACT_EVENT_TOPIC: topic.contract.event
+config:
+  tokens:
+    - chainId: 80001
+      address: '0x80ee7ec4493a1d7975ab900f94db25ba7c688201'
 service:
   type: ClusterIP
   ports:

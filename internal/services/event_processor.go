@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
@@ -16,6 +15,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
@@ -26,9 +26,9 @@ const (
 )
 
 type ContractEventStreamConsumer struct {
-	Db           db.Store
-	log          *zerolog.Logger
-	TokenAddress common.Address
+	Db     db.Store
+	log    *zerolog.Logger
+	tokens map[string]string
 }
 
 type contractEventData struct {
@@ -47,10 +47,23 @@ type eventBlock struct {
 	Time   time.Time
 }
 
-func NewEventConsumer(db db.Store, logger *zerolog.Logger, settings *config.Settings) (*ContractEventStreamConsumer, error) {
+type TokenConfig struct {
+	Tokens []struct {
+		ChainID int64          `yaml:"chainId"`
+		Address common.Address `yaml:"address"`
+	} `yaml:"tokens"`
+}
+
+func NewEventConsumer(db db.Store, logger *zerolog.Logger, tc *TokenConfig) (*ContractEventStreamConsumer, error) {
+	m := map[string]string{}
+
+	for _, tk := range tc.Tokens {
+		m[fmt.Sprintf("chain/%d", tk.ChainID)] = hexutil.Encode(tk.Address.Bytes())
+	}
+
 	return &ContractEventStreamConsumer{Db: db,
-		log:          logger,
-		TokenAddress: common.HexToAddress(settings.TokenAddress),
+		log:    logger,
+		tokens: m,
 	}, nil
 }
 
@@ -75,15 +88,14 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 				continue
 			}
 
-			switch event.Data.Contract {
-			case c.TokenAddress:
-				switch event.Data.EventName {
-				case "Transfer":
-					err = c.processTransferEvent(&event)
-					if err != nil {
-						c.log.Err(err).Str("contract", event.Data.Contract.Hex()).Str("txHash", event.Data.TransactionHash.Hex()).Int("logIndex", event.Data.Index).Msg("error storing transfer event")
-					}
-				}
+			if addr, ok := c.tokens[event.Source]; !ok || addr != event.Subject || event.Data.EventName != "Transfer" {
+				session.MarkMessage(message, "")
+				continue
+			}
+
+			err = c.processTransferEvent(&event)
+			if err != nil {
+				c.log.Err(err).Str("contract", event.Data.Contract.Hex()).Str("txHash", event.Data.TransactionHash.Hex()).Int("logIndex", event.Data.Index).Msg("error storing transfer event")
 			}
 
 			session.MarkMessage(message, "")

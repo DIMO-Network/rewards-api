@@ -32,6 +32,7 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"gopkg.in/yaml.v3"
 )
 
 // @title                       DIMO Rewards API
@@ -153,12 +154,23 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
 		}
 
+		f, err := os.Open("config.yaml")
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Couldn't load config.")
+		}
+		defer f.Close()
+
+		var tc services.TokenConfig
+		if err := yaml.NewDecoder(f).Decode(&tc); err != nil {
+			logger.Fatal().Err(err).Msg("Couldn't load token config.")
+		}
+
 		consumer2, err := sarama.NewConsumerGroupFromClient(settings.ConsumerGroup, kclient2)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka consumer.")
 		}
 
-		msgHandler, err := services.NewEventConsumer(pdb, &logger, &settings)
+		msgHandler, err := services.NewEventConsumer(pdb, &logger, &tc)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create new event consumer.")
 		}
