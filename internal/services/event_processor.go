@@ -58,6 +58,7 @@ func NewEventConsumer(db db.Store, logger *zerolog.Logger, tc *TokenConfig) (*Co
 	m := map[string]string{}
 
 	for _, tk := range tc.Tokens {
+		logger.Info().Msgf("Tracking %s on chain %d.", tk.Address, tk.ChainID)
 		m[fmt.Sprintf("chain/%d", tk.ChainID)] = hexutil.Encode(tk.Address.Bytes())
 	}
 
