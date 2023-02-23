@@ -53,8 +53,14 @@
                 "description": "A summary of the user's DIMO transaction history, all time.",
                 "parameters": [
                     {
+                        "enum": [
+                            "Baseline",
+                            "Referrals",
+                            "Marketplace",
+                            "Other"
+                        ],
                         "type": "string",
-                        "description": "The transaction type: Baseline, Referrals, Marketplace, or Other.",
+                        "description": "A label for a transaction type.",
                         "name": "type",
                         "in": "query"
                     }

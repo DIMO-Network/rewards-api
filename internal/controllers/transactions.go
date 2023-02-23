@@ -17,7 +17,7 @@ import (
 // @Description  A summary of the user's DIMO transaction history, all time.
 // @Success      200 {object} controllers.TransactionHistory
 // @Security     BearerAuth
-// @Param        type query string false "The transaction type: Baseline, Referrals, Marketplace, or Other."
+// @Param        type query string false "A label for a transaction type." Enums(Baseline, Referrals, Marketplace, Other)
 // @Router       /user/history/transactions [get]
 func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	userID := getUserID(c)

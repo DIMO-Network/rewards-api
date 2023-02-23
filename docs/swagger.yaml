@@ -244,7 +244,12 @@ paths:
     get:
       description: A summary of the user's DIMO transaction history, all time.
       parameters:
-      - description: 'The transaction type: Baseline, Referrals, Marketplace, or Other.'
+      - description: A label for a transaction type.
+        enum:
+        - Baseline
+        - Referrals
+        - Marketplace
+        - Other
         in: query
         name: type
         type: string
