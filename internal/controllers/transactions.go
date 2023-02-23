@@ -67,9 +67,9 @@ type TransactionHistory struct {
 }
 
 type APITransaction struct {
-	ChainID     int64          `json:"chainId"`
-	Time        time.Time      `json:"time"`
-	ToAddress   common.Address `json:"to"`
-	FromAddress common.Address `json:"from"`
-	Value       *big.Int       `json:"value"`
+	ChainID     int64          `json:"chainId" example:"137"`
+	Time        time.Time      `json:"time" example:"2023-01-22T09:00:12Z"`
+	ToAddress   common.Address `json:"to" example:"0xc66d80f5063677425270013136ef9fa2bf1f9f1a" swaggertype:"string"`
+	FromAddress common.Address `json:"from" example:"0xf316832fbfe49f90df09eee019c2ece87fad3fac" swaggertype:"string"`
+	Value       *big.Int       `json:"value" example:"10000000000000000" swaggertype:"number"`
 }

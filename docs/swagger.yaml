@@ -1,23 +1,22 @@
 basePath: /v1
 definitions:
-  big.Int:
-    type: object
   internal_controllers.APITransaction:
     properties:
       chainId:
+        example: 137
         type: integer
       from:
-        items:
-          type: integer
-        type: array
+        example: 0xf316832fbfe49f90df09eee019c2ece87fad3fac
+        type: string
       time:
+        example: "2023-01-22T09:00:12Z"
         type: string
       to:
-        items:
-          type: integer
-        type: array
+        example: 0xc66d80f5063677425270013136ef9fa2bf1f9f1a
+        type: string
       value:
-        $ref: '#/definitions/big.Int'
+        example: 10000000000000000
+        type: number
     type: object
   internal_controllers.HistoryResponse:
     properties:
