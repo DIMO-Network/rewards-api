@@ -19,7 +19,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/controllers.UserResponse"
+                            "$ref": "#/definitions/internal_controllers.UserResponse"
                         }
                     }
                 }
@@ -37,7 +37,25 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/controllers.HistoryResponse"
+                            "$ref": "#/definitions/internal_controllers.HistoryResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/history/transactions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A summary of the user's DIMO transaction history, all time.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_controllers.TransactionHistory"
                         }
                     }
                 }
@@ -45,18 +63,47 @@
         }
     },
     "definitions": {
-        "controllers.HistoryResponse": {
+        "big.Int": {
+            "type": "object"
+        },
+        "internal_controllers.APITransaction": {
+            "type": "object",
+            "properties": {
+                "chainId": {
+                    "type": "integer"
+                },
+                "from": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "time": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "value": {
+                    "$ref": "#/definitions/big.Int"
+                }
+            }
+        },
+        "internal_controllers.HistoryResponse": {
             "type": "object",
             "properties": {
                 "weeks": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/controllers.HistoryResponseWeek"
+                        "$ref": "#/definitions/internal_controllers.HistoryResponseWeek"
                     }
                 }
             }
         },
-        "controllers.HistoryResponseWeek": {
+        "internal_controllers.HistoryResponseWeek": {
             "type": "object",
             "properties": {
                 "end": {
@@ -81,14 +128,25 @@
                 }
             }
         },
-        "controllers.UserResponse": {
+        "internal_controllers.TransactionHistory": {
+            "type": "object",
+            "properties": {
+                "transactions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_controllers.APITransaction"
+                    }
+                }
+            }
+        },
+        "internal_controllers.UserResponse": {
             "type": "object",
             "properties": {
                 "devices": {
                     "description": "Devices is a list of the user's devices, together with some information about their\nconnectivity.",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/controllers.UserResponseDevice"
+                        "$ref": "#/definitions/internal_controllers.UserResponseDevice"
                     }
                 },
                 "points": {
@@ -100,7 +158,7 @@
                     "description": "ThisWeek describes the current issuance week.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/controllers.UserResponseThisWeek"
+                            "$ref": "#/definitions/internal_controllers.UserResponseThisWeek"
                         }
                     ]
                 },
@@ -116,7 +174,7 @@
                 }
             }
         },
-        "controllers.UserResponseDevice": {
+        "internal_controllers.UserResponseDevice": {
             "type": "object",
             "properties": {
                 "connectedThisWeek": {
@@ -143,7 +201,7 @@
                     "description": "IntegrationsThisWeek details the integrations we've seen active this week.",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/controllers.UserResponseIntegration"
+                        "$ref": "#/definitions/internal_controllers.UserResponseIntegration"
                     }
                 },
                 "lastActive": {
@@ -155,7 +213,7 @@
                     "description": "Level is the level 1-4 of the device. This is fully determined by ConnectionStreak.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/controllers.UserResponseLevel"
+                            "$ref": "#/definitions/internal_controllers.UserResponseLevel"
                         }
                     ]
                 },
@@ -179,7 +237,7 @@
                 }
             }
         },
-        "controllers.UserResponseIntegration": {
+        "internal_controllers.UserResponseIntegration": {
             "type": "object",
             "properties": {
                 "dataThisWeek": {
@@ -212,7 +270,7 @@
                 }
             }
         },
-        "controllers.UserResponseLevel": {
+        "internal_controllers.UserResponseLevel": {
             "type": "object",
             "properties": {
                 "maxWeeks": {
@@ -237,7 +295,7 @@
                 }
             }
         },
-        "controllers.UserResponseThisWeek": {
+        "internal_controllers.UserResponseThisWeek": {
             "type": "object",
             "properties": {
                 "end": {
