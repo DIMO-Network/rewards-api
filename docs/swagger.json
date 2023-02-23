@@ -67,22 +67,27 @@
             "type": "object",
             "properties": {
                 "chainId": {
+                    "description": "ChainID is the chain id of the chain on which the transaction took place. Important\nvalues are 137 for Polygon, 1 for Ethereum.",
                     "type": "integer",
                     "example": 137
                 },
                 "from": {
+                    "description": "From is the address of the source of the value, in 0x-prefixed hex.",
                     "type": "string",
                     "example": "0xf316832fbfe49f90df09eee019c2ece87fad3fac"
                 },
                 "time": {
+                    "description": "Time is the timestamp of the block in which the transaction took place, in RFC-3999 format.",
                     "type": "string",
                     "example": "2023-01-22T09:00:12Z"
                 },
                 "to": {
+                    "description": "To is the address of the recipient of the value, in 0x-prefixed hex.",
                     "type": "string",
                     "example": "0xc66d80f5063677425270013136ef9fa2bf1f9f1a"
                 },
                 "value": {
+                    "description": "Value is the amount of token being transferred. Divide by 10^18 to get what people\nnormally consider $DIMO.",
                     "type": "number",
                     "example": 10000000000000000
                 }
