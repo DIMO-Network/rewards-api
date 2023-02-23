@@ -8,6 +8,7 @@ import (
 	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
@@ -40,7 +41,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 
 	type enrichedTransfer struct {
 		models.TokenTransfer `boil:",bind"`
-		models.KnownWallet   `boil:",bind"`
+		Description          null.String
 	}
 
 	txes := []enrichedTransfer{}
@@ -65,7 +66,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 			From:        common.BytesToAddress(tx.AddressFrom),
 			To:          common.BytesToAddress(tx.AddressTo),
 			Value:       tx.Amount.Int(nil),
-			Description: tx.Description,
+			Description: tx.Description.Ptr(),
 		}
 		txHistory.Transactions = append(txHistory.Transactions, apiTx)
 	}
@@ -90,5 +91,5 @@ type APITransaction struct {
 	// Value is the amount of token being transferred. Divide by 10^18 to get what people
 	// normally consider $DIMO.
 	Value       *big.Int `json:"value" example:"10000000000000000" swaggertype:"number"`
-	Description string   `json:"description,omitempty"`
+	Description *string  `json:"description,omitempty"`
 }
