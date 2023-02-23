@@ -58,7 +58,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp + " DESC, " + models.TokenTransferColumns.ChainID + " ASC, " + models.TokenTransferColumns.LogIndex),
 	}
 
-	if typ := c.Params("type"); typ != "" {
+	if typ := c.Query("type"); typ != "" {
 		if typ == "Other" {
 			mods = append(mods, models.KnownWalletWhere.Type.IsNull())
 		} else if slices.Contains(models.AllWalletType(), typ) {
