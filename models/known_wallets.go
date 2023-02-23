@@ -23,27 +23,32 @@ import (
 
 // KnownWallet is an object representing the database table.
 type KnownWallet struct {
-	ChainID int64  `boil:"chain_id" json:"chain_id" toml:"chain_id" yaml:"chain_id"`
-	Address []byte `boil:"address" json:"address" toml:"address" yaml:"address"`
+	ChainID     int64  `boil:"chain_id" json:"chain_id" toml:"chain_id" yaml:"chain_id"`
+	Address     []byte `boil:"address" json:"address" toml:"address" yaml:"address"`
+	Description string `boil:"description" json:"description" toml:"description" yaml:"description"`
 
 	R *knownWalletR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L knownWalletL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var KnownWalletColumns = struct {
-	ChainID string
-	Address string
+	ChainID     string
+	Address     string
+	Description string
 }{
-	ChainID: "chain_id",
-	Address: "address",
+	ChainID:     "chain_id",
+	Address:     "address",
+	Description: "description",
 }
 
 var KnownWalletTableColumns = struct {
-	ChainID string
-	Address string
+	ChainID     string
+	Address     string
+	Description string
 }{
-	ChainID: "known_wallets.chain_id",
-	Address: "known_wallets.address",
+	ChainID:     "known_wallets.chain_id",
+	Address:     "known_wallets.address",
+	Description: "known_wallets.description",
 }
 
 // Generated where
@@ -81,11 +86,13 @@ func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.f
 func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
 var KnownWalletWhere = struct {
-	ChainID whereHelperint64
-	Address whereHelper__byte
+	ChainID     whereHelperint64
+	Address     whereHelper__byte
+	Description whereHelperstring
 }{
-	ChainID: whereHelperint64{field: "\"rewards_api\".\"known_wallets\".\"chain_id\""},
-	Address: whereHelper__byte{field: "\"rewards_api\".\"known_wallets\".\"address\""},
+	ChainID:     whereHelperint64{field: "\"rewards_api\".\"known_wallets\".\"chain_id\""},
+	Address:     whereHelper__byte{field: "\"rewards_api\".\"known_wallets\".\"address\""},
+	Description: whereHelperstring{field: "\"rewards_api\".\"known_wallets\".\"description\""},
 }
 
 // KnownWalletRels is where relationship names are stored.
@@ -105,8 +112,8 @@ func (*knownWalletR) NewStruct() *knownWalletR {
 type knownWalletL struct{}
 
 var (
-	knownWalletAllColumns            = []string{"chain_id", "address"}
-	knownWalletColumnsWithoutDefault = []string{"chain_id", "address"}
+	knownWalletAllColumns            = []string{"chain_id", "address", "description"}
+	knownWalletColumnsWithoutDefault = []string{"chain_id", "address", "description"}
 	knownWalletColumnsWithDefault    = []string{}
 	knownWalletPrimaryKeyColumns     = []string{"chain_id", "address"}
 	knownWalletGeneratedColumns      = []string{}

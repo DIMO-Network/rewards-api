@@ -59,11 +59,12 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 
 	for _, tx := range txes {
 		apiTx := APITransaction{
-			ChainID: tx.TokenTransfer.ChainID,
-			Time:    tx.BlockTimestamp,
-			From:    common.BytesToAddress(tx.AddressFrom),
-			To:      common.BytesToAddress(tx.AddressTo),
-			Value:   tx.Amount.Int(nil),
+			ChainID:     tx.TokenTransfer.ChainID,
+			Time:        tx.BlockTimestamp,
+			From:        common.BytesToAddress(tx.AddressFrom),
+			To:          common.BytesToAddress(tx.AddressTo),
+			Value:       tx.Amount.Int(nil),
+			Description: tx.Description,
 		}
 		txHistory.Transactions = append(txHistory.Transactions, apiTx)
 	}
@@ -88,5 +89,5 @@ type APITransaction struct {
 	// Value is the amount of token being transferred. Divide by 10^18 to get what people
 	// normally consider $DIMO.
 	Value       *big.Int `json:"value" example:"10000000000000000" swaggertype:"number"`
-	Description string   `json:"description"`
+	Description string   `json:"description,omitempty"`
 }
