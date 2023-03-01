@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_users "github.com/DIMO-Network/shared/api/users"
@@ -40,7 +39,6 @@ func (r *ReferralsTask) CollectReferrals(issuanceWeek int) ([]Referrals, error) 
 	// historicalEthAddrs := make([]string, len(historicalUsers))
 
 	for _, usr := range historicalUsers {
-		fmt.Println("historical: ", usr.UserID)
 		historicalUserIDs = append(historicalUserIDs, usr.UserID)
 		// historicalEthAddrs = append(historicalEthAddrs, usr.UserEthereumAddress.String)
 	}
@@ -64,7 +62,7 @@ func (r *ReferralsTask) CollectReferrals(issuanceWeek int) ([]Referrals, error) 
 			return []Referrals{}, err
 		}
 
-		if len(user.ReferredBy.EthereumAddress) == 0 {
+		if user.ReferredBy == nil {
 			continue
 		}
 

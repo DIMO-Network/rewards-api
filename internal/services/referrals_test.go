@@ -25,22 +25,26 @@ import (
 const newUserDeviceID = "2LFD2qeDxWMf49jSdEGQ2Znde3l"
 const existingUserDeviceID = "2LFQTaaEzsUGyO2m1KtDIz4cgs0"
 
-const newUser = "NewUser"
+const newUserReferred = "NewUserReferred"
+const newUserNotReferred = "newUserNotReferred"
 const existingUser = "ExistingUser"
 
 var addr = "0x67B94473D81D0cd00849D563C94d0432Ac988B49"
 var fakeUserClientResponse = map[string]*pb_users.User{
-	newUser: {
-		Id:              newUser,
+	newUserReferred: {
+		Id:              newUserReferred,
 		EthereumAddress: &addr,
 		ReferredBy:      &pb_users.UserReferrer{EthereumAddress: common.FromHex("0x67B94473D81D0cd00849D563C94d0432Ac988B50")},
+	},
+	newUserNotReferred: {
+		Id:              newUserReferred,
+		EthereumAddress: &addr,
 	},
 }
 
 type FakeUserClient struct{}
 
 func (d *FakeUserClient) GetUser(ctx context.Context, in *pb_users.GetUserRequest, opts ...grpc.CallOption) (*pb_users.User, error) {
-	fmt.Println(in.Id, "!!!!")
 	ud, ok := fakeUserClientResponse[in.Id]
 	if !ok {
 		return nil, status.Error(codes.NotFound, "No user with that ID found.")
@@ -113,7 +117,7 @@ func TestReferrals(t *testing.T) {
 
 	scens := []Scenario{
 		{
-			Name:         newUser,
+			Name:         newUserReferred,
 			Referral:     true,
 			NewUserCount: 1,
 			LastWeek: []*models.Reward{
@@ -121,7 +125,19 @@ func TestReferrals(t *testing.T) {
 			},
 			ThisWeek: []*models.Reward{
 				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUser, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+			},
+		},
+		{
+			Name:         newUserNotReferred,
+			Referral:     true,
+			NewUserCount: 0,
+			LastWeek: []*models.Reward{
+				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+			},
+			ThisWeek: []*models.Reward{
+				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserNotReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 	}
@@ -175,6 +191,7 @@ func TestReferrals(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			t.Log(scen.Name)
 			assert.Equal(t, len(weeklyRefs), scen.NewUserCount)
 
 		})
