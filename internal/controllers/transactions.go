@@ -50,7 +50,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	txes := []enrichedTransfer{}
 
 	mods := []qm.QueryMod{
-		qm.Select(models.TableNames.TokenTransfers + ".*, " + models.KnownWalletTableColumns.Description),
+		qm.Select(models.TableNames.TokenTransfers + ".*, " +models.KnownWalletTableColumns.Type + ", " + models.KnownWalletTableColumns.Description),
 		qm.From(models.TableNames.TokenTransfers),
 		qm.LeftOuterJoin(models.TableNames.KnownWallets + " ON " + models.TokenTransferTableColumns.ChainID + " = " + models.KnownWalletTableColumns.ChainID + " AND " + models.TokenTransferTableColumns.AddressFrom + " = " + models.KnownWalletTableColumns.Address),
 		qm.Expr(
