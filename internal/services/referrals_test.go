@@ -7,8 +7,13 @@ import (
 
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
+	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/docker/go-connections/nat"
+	"github.com/ethereum/go-ethereum/common"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gotest.tools/assert"
 
 	"github.com/rs/zerolog"
@@ -17,8 +22,31 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
-const newUser = "2LFD2qeDxWMf49jSdEGQ2Znde3l"
-const existingUser = "2LFQTaaEzsUGyO2m1KtDIz4cgs0"
+const newUserDeviceID = "2LFD2qeDxWMf49jSdEGQ2Znde3l"
+const existingUserDeviceID = "2LFQTaaEzsUGyO2m1KtDIz4cgs0"
+
+const newUser = "NewUser"
+const existingUser = "ExistingUser"
+
+var addr = "0x67B94473D81D0cd00849D563C94d0432Ac988B49"
+var fakeUserClientResponse = map[string]*pb_users.User{
+	newUser: {
+		Id:              newUser,
+		EthereumAddress: &addr,
+		ReferredBy:      &pb_users.UserReferrer{EthereumAddress: common.FromHex("0x67B94473D81D0cd00849D563C94d0432Ac988B50")},
+	},
+}
+
+type FakeUserClient struct{}
+
+func (d *FakeUserClient) GetUser(ctx context.Context, in *pb_users.GetUserRequest, opts ...grpc.CallOption) (*pb_users.User, error) {
+	fmt.Println(in.Id, "!!!!")
+	ud, ok := fakeUserClientResponse[in.Id]
+	if !ok {
+		return nil, status.Error(codes.NotFound, "No user with that ID found.")
+	}
+	return ud, nil
+}
 
 func TestReferrals(t *testing.T) {
 	ctx := context.Background()
@@ -85,15 +113,15 @@ func TestReferrals(t *testing.T) {
 
 	scens := []Scenario{
 		{
-			Name:         "newUser",
+			Name:         newUser,
 			Referral:     true,
 			NewUserCount: 1,
 			LastWeek: []*models.Reward{
-				{UserID: "User1", IssuanceWeekID: 0, UserDeviceID: existingUser, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 			ThisWeek: []*models.Reward{
-				{UserID: "User2", IssuanceWeekID: 1, UserDeviceID: newUser, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: "User1", IssuanceWeekID: 1, UserDeviceID: existingUser, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUser, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 	}
@@ -137,16 +165,17 @@ func TestReferrals(t *testing.T) {
 			}
 
 			task := ReferralsTask{
-				Logger: &logger,
-				DB:     conn,
+				Logger:      &logger,
+				DB:          conn,
+				UsersClient: &FakeUserClient{},
 			}
 
-			newUsrAddrs, err := task.CollectReferrals(1)
+			weeklyRefs, err := task.CollectReferrals(1)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			assert.Equal(t, len(newUsrAddrs), scen.NewUserCount)
+			assert.Equal(t, len(weeklyRefs), scen.NewUserCount)
 
 		})
 

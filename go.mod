@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/DIMO-Network/device-definitions-api v0.7.8
-	github.com/DIMO-Network/shared v0.8.0
+	github.com/DIMO-Network/shared v0.8.6
 	github.com/Shopify/sarama v1.37.2
 	github.com/aquasecurity/esquery v0.2.0
 	github.com/arsmn/fiber-swagger/v2 v2.31.1
@@ -14,7 +14,6 @@ require (
 	github.com/ericlagergren/decimal v0.0.0-20211103172832-aca2edc11f73
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/friendsofgo/errors v0.9.2
-	github.com/jgroeneveld/trial v2.0.0+incompatible
 	github.com/lib/pq v1.10.7
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose/v3 v3.7.0
@@ -77,7 +76,6 @@ require (
 	github.com/jcmturner/gofork v1.7.6 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
-	github.com/jgroeneveld/schema v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.14 // indirect
 	github.com/kr/pretty v0.3.1 // indirect

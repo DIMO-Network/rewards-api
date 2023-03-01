@@ -2,12 +2,13 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 // ReferralsTask controller to collect referrals and issue bonus
@@ -19,20 +20,27 @@ type ReferralsTask struct {
 	TransferService Transfer
 }
 
-func (r *ReferralsTask) CollectReferrals(issuanceWeek int) ([]string, error) {
+type Referrals struct {
+	Referred common.Address
+	Referrer common.Address
+}
+
+// CollectReferrals Check if users who recieved rewards for the first time this week were referred
+// if they were, collect their address and the address of their referrer
+func (r *ReferralsTask) CollectReferrals(issuanceWeek int) ([]Referrals, error) {
 	ctx := context.Background()
 
 	historicalUsers, err := models.Rewards(
-		models.RewardWhere.IssuanceWeekID.NEQ(issuanceWeek),
-		qm.Select(models.RewardColumns.UserID)).All(ctx, r.DB.DBS().Reader)
+		models.RewardWhere.IssuanceWeekID.NEQ(issuanceWeek)).All(ctx, r.DB.DBS().Reader)
 	if err != nil {
-		return []string{}, err
+		return []Referrals{}, err
 	}
 
 	historicalUserIDs := make([]string, len(historicalUsers))
 	// historicalEthAddrs := make([]string, len(historicalUsers))
 
 	for _, usr := range historicalUsers {
+		fmt.Println("historical: ", usr.UserID)
 		historicalUserIDs = append(historicalUserIDs, usr.UserID)
 		// historicalEthAddrs = append(historicalEthAddrs, usr.UserEthereumAddress.String)
 	}
@@ -43,13 +51,28 @@ func (r *ReferralsTask) CollectReferrals(issuanceWeek int) ([]string, error) {
 	).
 		All(ctx, r.DB.DBS().Reader)
 	if err != nil {
-		return []string{}, err
+		return []Referrals{}, err
 	}
 
-	newUsers := make([]string, len(newUserResp))
-	for n, usr := range newUserResp {
-		newUsers[n] = usr.UserID
+	refs := make([]Referrals, 0)
+	for _, usr := range newUserResp {
+
+		user, err := r.UsersClient.GetUser(ctx, &pb_users.GetUserRequest{
+			Id: usr.UserID,
+		})
+		if err != nil {
+			return []Referrals{}, err
+		}
+
+		if len(user.ReferredBy.EthereumAddress) == 0 {
+			continue
+		}
+
+		refs = append(refs, Referrals{
+			Referred: common.HexToAddress(*user.EthereumAddress),
+			Referrer: common.BytesToAddress(user.ReferredBy.EthereumAddress),
+		})
 	}
 
-	return newUsers, nil
+	return refs, nil
 }
