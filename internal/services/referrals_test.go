@@ -186,13 +186,14 @@ func TestReferrals(t *testing.T) {
 				UsersClient: &FakeUserClient{},
 			}
 
-			weeklyRefs, err := task.CollectReferrals(1)
+			weeklyRefs, err := task.CollectReferrals(ctx, 1)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			t.Log(scen.Name)
-			assert.Equal(t, len(weeklyRefs), scen.NewUserCount)
+			assert.Equal(t, len(weeklyRefs.Referreds), scen.NewUserCount)
+			assert.Equal(t, len(weeklyRefs.Referrers), scen.NewUserCount)
 
 		})
 
