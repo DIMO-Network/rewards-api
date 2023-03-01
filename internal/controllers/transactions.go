@@ -83,6 +83,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 			To:          common.BytesToAddress(tx.AddressTo),
 			Value:       tx.Amount.Int(nil),
 			Description: tx.Description.Ptr(),
+			Type:        tx.Type.Ptr(),
 		}
 		txHistory.Transactions = append(txHistory.Transactions, apiTx)
 	}
@@ -108,4 +109,5 @@ type APITransaction struct {
 	// normally consider $DIMO.
 	Value       *big.Int `json:"value" example:"10000000000000000" swaggertype:"number"`
 	Description *string  `json:"description,omitempty"`
+	Type        *string  `json:"type,omitempty"`
 }
