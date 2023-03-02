@@ -29,7 +29,7 @@ type RewardsController struct {
 	DevicesClient     pb_devices.UserDeviceServiceClient
 	UsersClient       pb_users.UserServiceClient
 	Settings          *config.Settings
-	Token             *contracts.Token
+	Tokens            []*contracts.Token
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -62,13 +62,14 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	var addrBalance *big.Int
 
 	if addr := user.EthereumAddress; addr != nil {
-		ab, err := r.Token.BalanceOf(nil, common.HexToAddress(*addr))
-		if err != nil {
-			logger.Err(err).Str("address", *addr).Msg("Failed to retrieve token balance.")
-			return err
+		addrBalance = big.NewInt(0)
+		for _, tk := range r.Tokens {
+			val, err := tk.BalanceOf(nil, common.HexToAddress(*addr))
+			if err != nil {
+				return err
+			}
+			addrBalance = new(big.Int).Add(addrBalance, val)
 		}
-
-		addrBalance = ab
 	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
