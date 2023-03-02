@@ -47,7 +47,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 		Type                 null.String
 	}
 
-	txes := []enrichedTransfer{}
+	txes := []*enrichedTransfer{}
 
 	mods := []qm.QueryMod{
 		qm.Select(models.TableNames.TokenTransfers + ".*, " + models.KnownWalletTableColumns.Type + ", " + models.KnownWalletTableColumns.Description),
