@@ -53,6 +53,7 @@ config:
   tokens:
     - chainId: 80001
       address: '0x80ee7ec4493a1d7975ab900f94db25ba7c688201'
+      rpcUrl: $MUMBAI_RPC_URL
 service:
   type: ClusterIP
   ports:
