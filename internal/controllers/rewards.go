@@ -275,8 +275,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		Devices: outLi,
 	}
 
-	logger.Info().Interface("response", out).Msg("User rewards response.")
-
 	return c.JSON(out)
 }
 
