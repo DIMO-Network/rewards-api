@@ -57,7 +57,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 			models.TokenTransferWhere.AddressTo.EQ(addr.Bytes()),
 			qm.Or2(models.TokenTransferWhere.AddressFrom.EQ(addr.Bytes())),
 		),
-		qm.OrderBy(models.TokenTransferColumns.BlockTimestamp + " DESC, " + models.TokenTransferColumns.ChainID + " ASC, " + models.TokenTransferColumns.LogIndex + " DESC"),
+		qm.OrderBy(models.TokenTransferTableColumns.BlockTimestamp + " DESC, " + models.TokenTransferTableColumns.ChainID + " ASC, " + models.TokenTransferTableColumns.LogIndex + " DESC"),
 	}
 
 	if typ := c.Query("type"); typ != "" {
