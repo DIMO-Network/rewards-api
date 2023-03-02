@@ -114,7 +114,7 @@ func main() {
 
 			token, err := contracts.NewToken(tkCopy.Address, client)
 			if err != nil {
-				logger.Fatal().Err(err).Msg("Failed to instantiate token.")
+				logger.Fatal().Err(err).Msgf("Failed to instantiate token for chain %d.", tkCopy.ChainID)
 			}
 
 			tks = append(tks, token)
