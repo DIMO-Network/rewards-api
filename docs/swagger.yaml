@@ -1,7 +1,5 @@
 basePath: /v1
 definitions:
-  big.Int:
-    type: object
   internal_controllers.APITransaction:
     properties:
       chainId:
@@ -39,8 +37,13 @@ definitions:
   internal_controllers.Balance:
     properties:
       balance:
-        $ref: '#/definitions/big.Int'
+        description: Balance is the total amount of $DIMO held at this time, across
+          all chains.
+        example: 2.3727721709254885e+20
+        type: number
       time:
+        description: Time is the block timestamp of this balance update.
+        example: "2023-03-06T09:11:00Z"
         type: string
     type: object
   internal_controllers.BalanceHistory:

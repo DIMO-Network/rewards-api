@@ -79,6 +79,8 @@ type BalanceHistory struct {
 }
 
 type Balance struct {
-	Time    time.Time `json:"time"`
-	Balance *big.Int  `json:"balance"`
+	// Time is the block timestamp of this balance update.
+	Time time.Time `json:"time" swaggertype:"string" example:"2023-03-06T09:11:00Z"`
+	// Balance is the total amount of $DIMO held at this time, across all chains.
+	Balance *big.Int `json:"balance" swaggertype:"number" example:"237277217092548851191"`
 }
