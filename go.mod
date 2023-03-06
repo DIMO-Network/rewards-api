@@ -3,7 +3,7 @@ module github.com/DIMO-Network/rewards-api
 go 1.19
 
 require (
-	github.com/DIMO-Network/device-definitions-api v0.1.8
+	github.com/DIMO-Network/device-definitions-api v0.8.9
 	github.com/DIMO-Network/shared v0.8.6
 	github.com/Shopify/sarama v1.37.2
 	github.com/aquasecurity/esquery v0.2.0
@@ -191,7 +191,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.4.1 // indirect
 	go.opentelemetry.io/otel/internal/metric v0.27.0 // indirect
 	go.opentelemetry.io/otel/metric v0.27.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.9.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.10.0 // indirect
 	go.opentelemetry.io/otel/trace v1.13.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
 	golang.org/x/crypto v0.2.0 // indirect
