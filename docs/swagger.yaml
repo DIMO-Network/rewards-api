@@ -1,5 +1,7 @@
 basePath: /v1
 definitions:
+  big.Int:
+    type: object
   internal_controllers.APITransaction:
     properties:
       chainId:
@@ -25,12 +27,28 @@ definitions:
           hex.
         example: 0xc66d80f5063677425270013136ef9fa2bf1f9f1a
         type: string
+      type:
+        type: string
       value:
         description: |-
           Value is the amount of token being transferred. Divide by 10^18 to get what people
           normally consider $DIMO.
         example: 10000000000000000
         type: number
+    type: object
+  internal_controllers.Balance:
+    properties:
+      balance:
+        $ref: '#/definitions/big.Int'
+      time:
+        type: string
+    type: object
+  internal_controllers.BalanceHistory:
+    properties:
+      balanceHistory:
+        items:
+          $ref: '#/definitions/internal_controllers.Balance'
+        type: array
     type: object
   internal_controllers.HistoryResponse:
     properties:
@@ -238,6 +256,16 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_controllers.HistoryResponse'
+      security:
+      - BearerAuth: []
+  /user/history/balance:
+    get:
+      description: A summary of the user's DIMO balance across all chains.
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_controllers.BalanceHistory'
       security:
       - BearerAuth: []
   /user/history/transactions:
