@@ -145,6 +145,7 @@ func main() {
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 		v1.Get("/user/history/transactions", rewardsController.GetTransactionHistory)
+		v1.Get("/user/history/balance", rewardsController.GetBalanceHistory)
 
 		go startGRPCServer(&settings, pdb, &logger)
 
