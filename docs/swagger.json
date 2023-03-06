@@ -43,6 +43,24 @@
                 }
             }
         },
+        "/user/history/balance": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A summary of the user's DIMO balance across all chains.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_controllers.BalanceHistory"
+                        }
+                    }
+                }
+            }
+        },
         "/user/history/transactions": {
             "get": {
                 "security": [
@@ -77,6 +95,9 @@
         }
     },
     "definitions": {
+        "big.Int": {
+            "type": "object"
+        },
         "internal_controllers.APITransaction": {
             "type": "object",
             "properties": {
@@ -103,10 +124,35 @@
                     "type": "string",
                     "example": "0xc66d80f5063677425270013136ef9fa2bf1f9f1a"
                 },
+                "type": {
+                    "type": "string"
+                },
                 "value": {
                     "description": "Value is the amount of token being transferred. Divide by 10^18 to get what people\nnormally consider $DIMO.",
                     "type": "number",
                     "example": 10000000000000000
+                }
+            }
+        },
+        "internal_controllers.Balance": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "$ref": "#/definitions/big.Int"
+                },
+                "time": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_controllers.BalanceHistory": {
+            "type": "object",
+            "properties": {
+                "balanceHistory": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_controllers.Balance"
+                    }
                 }
             }
         },
