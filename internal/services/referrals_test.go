@@ -73,7 +73,7 @@ func TestReferrals(t *testing.T) {
 		Started:          true,
 	})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to start geneic container: %v", err)
 	}
 
 	defer cont.Terminate(ctx)

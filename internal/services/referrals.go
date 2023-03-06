@@ -6,18 +6,19 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/models"
-	pb_users "github.com/DIMO-Network/shared/api/users"
+	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
+	"github.com/volatiletech/sqlboiler/queries"
 )
 
 // ReferralsTask controller to collect referrals and issue bonus
 type ReferralsTask struct {
 	Logger               *zerolog.Logger
-	UsersClient          pb_users.UserServiceClient
+	UsersClient          pb.UserServiceClient
 	DB                   db.Store
 	ReferralBonusService ReferralBonusService
 }
@@ -54,32 +55,18 @@ type ReferralBonusService interface {
 func (r *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
 	var refs Referrals
 
-	historicalUsers, err := models.Rewards(
-		models.RewardWhere.IssuanceWeekID.NEQ(issuanceWeek)).All(ctx, r.DB.DBS().Reader)
+	var res []models.Reward
+
+	err := queries.Raw(`SELECT DISTINCT r1.user_id, r1.user_ethereum_address FROM rewards r1 LEFT
+	OUTER JOIN rewards r2 ON r1.user_id = r2.user_id AND r2.issuance_week_id < $1 WHERE
+	r1.issuance_week_id = $1 AND r2.user_id IS NULL`, issuanceWeek).Bind(ctx, r.DB.DBS().Reader, &res)
 	if err != nil {
 		return refs, err
 	}
 
-	historicalUserIDs := make([]string, len(historicalUsers))
-	// historicalEthAddrs := make([]string, len(historicalUsers))
+	for _, usr := range res {
 
-	for _, usr := range historicalUsers {
-		historicalUserIDs = append(historicalUserIDs, usr.UserID)
-		// historicalEthAddrs = append(historicalEthAddrs, usr.UserEthereumAddress.String)
-	}
-
-	newUserResp, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
-		models.RewardWhere.UserID.NIN(historicalUserIDs),
-		// models.RewardWhere.UserEthereumAddress.NIN(historicalEthAddrs),
-	).
-		All(ctx, r.DB.DBS().Reader)
-	if err != nil {
-		return refs, err
-	}
-
-	for _, usr := range newUserResp {
-
-		user, err := r.UsersClient.GetUser(ctx, &pb_users.GetUserRequest{
+		user, err := r.UsersClient.GetUser(ctx, &pb.GetUserRequest{
 			Id: usr.UserID,
 		})
 		if err != nil {
