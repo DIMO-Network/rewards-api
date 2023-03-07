@@ -59,25 +59,52 @@ func Consume(ctx context.Context, group sarama.ConsumerGroup, settings *config.S
 	}
 }
 
-func NewStatusProcessor(pdb db.Store, logger *zerolog.Logger) (*TransferStatusProcessor, error) {
-	abi, err := contracts.RewardMetaData.GetAbi()
+func NewStatusProcessor(pdb db.Store, logger *zerolog.Logger, settings *config.Settings) (*TransferStatusProcessor, error) {
+	baselineABI, err := contracts.RewardMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	referralABI, err := contracts.ReferralsMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
 
 	return &TransferStatusProcessor{
-		ABI:                    abi,
-		DB:                     pdb,
-		Logger:                 logger,
-		DidntQualifyEvent:      abi.Events["DidntQualify"],
-		TokensTransferredEvent: abi.Events["TokensTransferred"],
+		DB:     pdb,
+		Logger: logger,
+		BaselineProcessor: &BaselineProcessor{
+			Address:                common.HexToAddress(settings.IssuanceContractAddress),
+			ABI:                    baselineABI,
+			DidntQualifyEvent:      baselineABI.Events["DidntQualify"],
+			TokensTransferredEvent: baselineABI.Events["TokensTransferred"],
+		},
+		ReferralsProcessor: &ReferralsProcessor{
+			Address:          common.HexToAddress(settings.ReferralContractAddress),
+			ABI:              referralABI,
+			ReferralInvalid:  referralABI.Events["ReferralInvalid"],
+			ReferralComplete: referralABI.Events["ReferralComplete"],
+		},
 	}, nil
 }
 
 type TransferStatusProcessor struct {
+	ReferralsProcessor *ReferralsProcessor
+	BaselineProcessor  *BaselineProcessor
+	DB                 db.Store
+	Logger             *zerolog.Logger
+}
+
+type ReferralsProcessor struct {
+	Address          common.Address
+	ABI              *abi.ABI
+	ReferralInvalid  abi.Event
+	ReferralComplete abi.Event
+}
+
+type BaselineProcessor struct {
+	Address                common.Address
 	ABI                    *abi.ABI
-	DB                     db.Store
-	Logger                 *zerolog.Logger
 	DidntQualifyEvent      abi.Event
 	TokensTransferredEvent abi.Event
 }
@@ -93,6 +120,23 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		Interface("eventData", event.Data).
 		Msg("Processing transaction status.")
 
+	switch event.Subject {
+	case s.BaselineProcessor.Address.String():
+		err := s.processBaselineEvent(event)
+		if err != nil {
+			return err
+		}
+	case s.ReferralsProcessor.Address.String():
+		err := s.processBaselineEvent(event)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *TransferStatusProcessor) processBaselineEvent(event shared.CloudEvent[ceData]) error {
 	tx, err := s.DB.DBS().Writer.BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
@@ -122,17 +166,17 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 				var userDeviceTokenID *big.Int
 
 				switch log.Topics[0] {
-				case s.TokensTransferredEvent.ID:
+				case s.BaselineProcessor.TokensTransferredEvent.ID:
 					success = true
 					event := contracts.RewardTokensTransferred{}
-					err := s.parseLog(&event, s.TokensTransferredEvent, *txLog)
+					err := s.parseLog(&event, s.BaselineProcessor.TokensTransferredEvent, *txLog, s.BaselineProcessor.ABI)
 					if err != nil {
 						return err
 					}
 					userDeviceTokenID = event.VehicleNodeId
-				case s.DidntQualifyEvent.ID:
+				case s.BaselineProcessor.DidntQualifyEvent.ID:
 					event := contracts.RewardDidntQualify{}
-					err := s.parseLog(&event, s.DidntQualifyEvent, *txLog)
+					err := s.parseLog(&event, s.BaselineProcessor.DidntQualifyEvent, *txLog, s.BaselineProcessor.ABI)
 					if err != nil {
 						return err
 					}
@@ -186,9 +230,108 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 	return nil
 }
 
-func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log eth_types.Log) error {
+func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEvent[ceData]) error {
+	tx, err := s.DB.DBS().Writer.BeginTx(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback() //nolint
+
+	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB.DBS().Reader, cloudEvent.Data.RequestID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return err
+	}
+
+	txnRow.Hash = null.StringFrom(cloudEvent.Data.Transaction.Hash)
+	txnRow.Status = cloudEvent.Data.Type
+
+	if cloudEvent.Data.Type == "Confirmed" {
+		txnRow.Successful = null.BoolFrom(*cloudEvent.Data.Transaction.Successful)
+
+		if *cloudEvent.Data.Transaction.Successful {
+			for _, log := range cloudEvent.Data.Transaction.Logs {
+				success := false
+				txLog := convertLog(&log)
+
+				// need to change what these variables are called
+				var referrer common.Address
+				var referred common.Address
+				switch log.Topics[0] {
+				case s.ReferralsProcessor.ReferralComplete.ID:
+					success = true
+					event := contracts.ReferralsReferralComplete{}
+					err := s.parseLog(&event, s.ReferralsProcessor.ReferralComplete, *txLog, s.ReferralsProcessor.ABI)
+					if err != nil {
+						return err
+					}
+					referred = event.Referred
+					referrer = event.Referrer
+
+				case s.ReferralsProcessor.ReferralInvalid.ID:
+					event := contracts.ReferralsReferralInvalid{}
+					err := s.parseLog(&event, s.ReferralsProcessor.ReferralInvalid, *txLog, s.ReferralsProcessor.ABI)
+					if err != nil {
+						return err
+					}
+					referred = event.Referred
+					referrer = event.Referrer
+
+				default:
+					continue
+				}
+
+				rewardRow, err := models.Referrals(
+					models.ReferralWhere.ID.EQ(null.StringFrom(cloudEvent.Data.RequestID)),
+					models.ReferralWhere.Referred.EQ(referred[:]),
+					models.ReferralWhere.Referrer.EQ(referrer[:]),
+				).One(context.Background(), tx)
+				if err != nil {
+					return err
+				}
+
+				rewardRow.TransferSuccessful = null.BoolFrom(success)
+				if !success {
+					rewardRow.TransferFailureReason = null.StringFrom(models.ReferralsTransferFailureReasonReferralInvalid)
+				}
+
+				_, err = rewardRow.Update(context.TODO(), tx, boil.Whitelist(models.ReferralColumns.TransferSuccessful, models.RewardColumns.TransferFailureReason))
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			_, err := models.Referrals(
+				models.ReferralWhere.ID.EQ(null.StringFrom(cloudEvent.Data.RequestID)),
+			).UpdateAll(context.Background(), tx, models.M{
+				models.ReferralColumns.TransferSuccessful:    false,
+				models.ReferralColumns.TransferFailureReason: models.RewardsTransferFailureReasonTxReverted,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, err = txnRow.Update(context.TODO(), tx, boil.Infer())
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log eth_types.Log, ctrABI *abi.ABI) error {
 	if len(log.Data) > 0 {
-		err := s.ABI.UnpackIntoInterface(out, event.Name, log.Data)
+		err := ctrABI.UnpackIntoInterface(out, event.Name, log.Data)
 		if err != nil {
 			return err
 		}
