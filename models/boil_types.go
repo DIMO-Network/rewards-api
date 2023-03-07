@@ -98,20 +98,29 @@ func AllMetaTransactionRequestStatus() []string {
 	}
 }
 
-// Enum values for ReferralsStatus
+// Enum values for ReferralsJobStatus
 const (
-	ReferralsStatusReferralComplete string = "ReferralComplete"
-	ReferralsStatusReferralInvalid  string = "ReferralInvalid"
-	ReferralsStatusTxFailed         string = "TxFailed"
-	ReferralsStatusStarted          string = "Started"
+	ReferralsJobStatusComplete string = "Complete"
+	ReferralsJobStatusStarted  string = "Started"
 )
 
-func AllReferralsStatus() []string {
+func AllReferralsJobStatus() []string {
 	return []string{
-		ReferralsStatusReferralComplete,
-		ReferralsStatusReferralInvalid,
-		ReferralsStatusTxFailed,
-		ReferralsStatusStarted,
+		ReferralsJobStatusComplete,
+		ReferralsJobStatusStarted,
+	}
+}
+
+// Enum values for ReferralsTransferFailureReason
+const (
+	ReferralsTransferFailureReasonReferralInvalid string = "ReferralInvalid"
+	ReferralsTransferFailureReasonTxReverted      string = "TxReverted"
+)
+
+func AllReferralsTransferFailureReason() []string {
+	return []string{
+		ReferralsTransferFailureReasonReferralInvalid,
+		ReferralsTransferFailureReasonTxReverted,
 	}
 }
 

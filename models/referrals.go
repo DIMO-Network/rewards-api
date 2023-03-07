@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -23,79 +24,58 @@ import (
 
 // Referral is an object representing the database table.
 type Referral struct {
-	ChainID         int64     `boil:"chain_id" json:"chain_id" toml:"chain_id" yaml:"chain_id"`
-	JobStatus       string    `boil:"job_status" json:"job_status" toml:"job_status" yaml:"job_status"`
-	Referred        []byte    `boil:"referred" json:"referred" toml:"referred" yaml:"referred"`
-	Referrer        []byte    `boil:"referrer" json:"referrer" toml:"referrer" yaml:"referrer"`
-	TransactionHash []byte    `boil:"transaction_hash" json:"transaction_hash" toml:"transaction_hash" yaml:"transaction_hash"`
-	LogIndex        int       `boil:"log_index" json:"log_index" toml:"log_index" yaml:"log_index"`
-	BlockTimestamp  time.Time `boil:"block_timestamp" json:"block_timestamp" toml:"block_timestamp" yaml:"block_timestamp"`
-	UpdatedAt       time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	JobStatus             string      `boil:"job_status" json:"job_status" toml:"job_status" yaml:"job_status"`
+	Referred              []byte      `boil:"referred" json:"referred" toml:"referred" yaml:"referred"`
+	Referrer              []byte      `boil:"referrer" json:"referrer" toml:"referrer" yaml:"referrer"`
+	TransferSuccessful    null.Bool   `boil:"transfer_successful" json:"transfer_successful,omitempty" toml:"transfer_successful" yaml:"transfer_successful,omitempty"`
+	TransferFailureReason null.String `boil:"transfer_failure_reason" json:"transfer_failure_reason,omitempty" toml:"transfer_failure_reason" yaml:"transfer_failure_reason,omitempty"`
 
 	R *referralR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L referralL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var ReferralColumns = struct {
-	ChainID         string
-	JobStatus       string
-	Referred        string
-	Referrer        string
-	TransactionHash string
-	LogIndex        string
-	BlockTimestamp  string
-	UpdatedAt       string
+	JobStatus             string
+	Referred              string
+	Referrer              string
+	TransferSuccessful    string
+	TransferFailureReason string
 }{
-	ChainID:         "chain_id",
-	JobStatus:       "job_status",
-	Referred:        "referred",
-	Referrer:        "referrer",
-	TransactionHash: "transaction_hash",
-	LogIndex:        "log_index",
-	BlockTimestamp:  "block_timestamp",
-	UpdatedAt:       "updated_at",
+	JobStatus:             "job_status",
+	Referred:              "referred",
+	Referrer:              "referrer",
+	TransferSuccessful:    "transfer_successful",
+	TransferFailureReason: "transfer_failure_reason",
 }
 
 var ReferralTableColumns = struct {
-	ChainID         string
-	JobStatus       string
-	Referred        string
-	Referrer        string
-	TransactionHash string
-	LogIndex        string
-	BlockTimestamp  string
-	UpdatedAt       string
+	JobStatus             string
+	Referred              string
+	Referrer              string
+	TransferSuccessful    string
+	TransferFailureReason string
 }{
-	ChainID:         "referrals.chain_id",
-	JobStatus:       "referrals.job_status",
-	Referred:        "referrals.referred",
-	Referrer:        "referrals.referrer",
-	TransactionHash: "referrals.transaction_hash",
-	LogIndex:        "referrals.log_index",
-	BlockTimestamp:  "referrals.block_timestamp",
-	UpdatedAt:       "referrals.updated_at",
+	JobStatus:             "referrals.job_status",
+	Referred:              "referrals.referred",
+	Referrer:              "referrals.referrer",
+	TransferSuccessful:    "referrals.transfer_successful",
+	TransferFailureReason: "referrals.transfer_failure_reason",
 }
 
 // Generated where
 
 var ReferralWhere = struct {
-	ChainID         whereHelperint64
-	JobStatus       whereHelperstring
-	Referred        whereHelper__byte
-	Referrer        whereHelper__byte
-	TransactionHash whereHelper__byte
-	LogIndex        whereHelperint
-	BlockTimestamp  whereHelpertime_Time
-	UpdatedAt       whereHelpertime_Time
+	JobStatus             whereHelperstring
+	Referred              whereHelper__byte
+	Referrer              whereHelper__byte
+	TransferSuccessful    whereHelpernull_Bool
+	TransferFailureReason whereHelpernull_String
 }{
-	ChainID:         whereHelperint64{field: "\"rewards_api\".\"referrals\".\"chain_id\""},
-	JobStatus:       whereHelperstring{field: "\"rewards_api\".\"referrals\".\"job_status\""},
-	Referred:        whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referred\""},
-	Referrer:        whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referrer\""},
-	TransactionHash: whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"transaction_hash\""},
-	LogIndex:        whereHelperint{field: "\"rewards_api\".\"referrals\".\"log_index\""},
-	BlockTimestamp:  whereHelpertime_Time{field: "\"rewards_api\".\"referrals\".\"block_timestamp\""},
-	UpdatedAt:       whereHelpertime_Time{field: "\"rewards_api\".\"referrals\".\"updated_at\""},
+	JobStatus:             whereHelperstring{field: "\"rewards_api\".\"referrals\".\"job_status\""},
+	Referred:              whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referred\""},
+	Referrer:              whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referrer\""},
+	TransferSuccessful:    whereHelpernull_Bool{field: "\"rewards_api\".\"referrals\".\"transfer_successful\""},
+	TransferFailureReason: whereHelpernull_String{field: "\"rewards_api\".\"referrals\".\"transfer_failure_reason\""},
 }
 
 // ReferralRels is where relationship names are stored.
@@ -115,10 +95,10 @@ func (*referralR) NewStruct() *referralR {
 type referralL struct{}
 
 var (
-	referralAllColumns            = []string{"chain_id", "job_status", "referred", "referrer", "transaction_hash", "log_index", "block_timestamp", "updated_at"}
-	referralColumnsWithoutDefault = []string{"chain_id", "job_status", "referred", "referrer", "transaction_hash", "log_index", "block_timestamp"}
-	referralColumnsWithDefault    = []string{"updated_at"}
-	referralPrimaryKeyColumns     = []string{"chain_id", "transaction_hash", "log_index"}
+	referralAllColumns            = []string{"job_status", "referred", "referrer", "transfer_successful", "transfer_failure_reason"}
+	referralColumnsWithoutDefault = []string{"job_status", "referred", "referrer"}
+	referralColumnsWithDefault    = []string{"transfer_successful", "transfer_failure_reason"}
+	referralPrimaryKeyColumns     = []string{"referred", "referrer"}
 	referralGeneratedColumns      = []string{}
 )
 
@@ -413,7 +393,7 @@ func Referrals(mods ...qm.QueryMod) referralQuery {
 
 // FindReferral retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindReferral(ctx context.Context, exec boil.ContextExecutor, chainID int64, transactionHash []byte, logIndex int, selectCols ...string) (*Referral, error) {
+func FindReferral(ctx context.Context, exec boil.ContextExecutor, referred []byte, referrer []byte, selectCols ...string) (*Referral, error) {
 	referralObj := &Referral{}
 
 	sel := "*"
@@ -421,10 +401,10 @@ func FindReferral(ctx context.Context, exec boil.ContextExecutor, chainID int64,
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"rewards_api\".\"referrals\" where \"chain_id\"=$1 AND \"transaction_hash\"=$2 AND \"log_index\"=$3", sel,
+		"select %s from \"rewards_api\".\"referrals\" where \"referred\"=$1 AND \"referrer\"=$2", sel,
 	)
 
-	q := queries.Raw(query, chainID, transactionHash, logIndex)
+	q := queries.Raw(query, referred, referrer)
 
 	err := q.Bind(ctx, exec, referralObj)
 	if err != nil {
@@ -449,13 +429,6 @@ func (o *Referral) Insert(ctx context.Context, exec boil.ContextExecutor, column
 	}
 
 	var err error
-	if !boil.TimestampsAreSkipped(ctx) {
-		currTime := time.Now().In(boil.GetLocation())
-
-		if o.UpdatedAt.IsZero() {
-			o.UpdatedAt = currTime
-		}
-	}
 
 	if err := o.doBeforeInsertHooks(ctx, exec); err != nil {
 		return err
@@ -531,12 +504,6 @@ func (o *Referral) Insert(ctx context.Context, exec boil.ContextExecutor, column
 // See boil.Columns.UpdateColumnSet documentation to understand column list inference for updates.
 // Update does not automatically update the record in case of default values. Use .Reload() to refresh the records.
 func (o *Referral) Update(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) (int64, error) {
-	if !boil.TimestampsAreSkipped(ctx) {
-		currTime := time.Now().In(boil.GetLocation())
-
-		o.UpdatedAt = currTime
-	}
-
 	var err error
 	if err = o.doBeforeUpdateHooks(ctx, exec); err != nil {
 		return 0, err
@@ -667,11 +634,6 @@ func (o *Referral) Upsert(ctx context.Context, exec boil.ContextExecutor, update
 	if o == nil {
 		return errors.New("models: no referrals provided for upsert")
 	}
-	if !boil.TimestampsAreSkipped(ctx) {
-		currTime := time.Now().In(boil.GetLocation())
-
-		o.UpdatedAt = currTime
-	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {
 		return err
@@ -794,7 +756,7 @@ func (o *Referral) Delete(ctx context.Context, exec boil.ContextExecutor) (int64
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), referralPrimaryKeyMapping)
-	sql := "DELETE FROM \"rewards_api\".\"referrals\" WHERE \"chain_id\"=$1 AND \"transaction_hash\"=$2 AND \"log_index\"=$3"
+	sql := "DELETE FROM \"rewards_api\".\"referrals\" WHERE \"referred\"=$1 AND \"referrer\"=$2"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -891,7 +853,7 @@ func (o ReferralSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor)
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *Referral) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindReferral(ctx, exec, o.ChainID, o.TransactionHash, o.LogIndex)
+	ret, err := FindReferral(ctx, exec, o.Referred, o.Referrer)
 	if err != nil {
 		return err
 	}
@@ -930,16 +892,16 @@ func (o *ReferralSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor
 }
 
 // ReferralExists checks if the Referral row exists.
-func ReferralExists(ctx context.Context, exec boil.ContextExecutor, chainID int64, transactionHash []byte, logIndex int) (bool, error) {
+func ReferralExists(ctx context.Context, exec boil.ContextExecutor, referred []byte, referrer []byte) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"rewards_api\".\"referrals\" where \"chain_id\"=$1 AND \"transaction_hash\"=$2 AND \"log_index\"=$3 limit 1)"
+	sql := "select exists(select 1 from \"rewards_api\".\"referrals\" where \"referred\"=$1 AND \"referrer\"=$2 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, chainID, transactionHash, logIndex)
+		fmt.Fprintln(writer, referred, referrer)
 	}
-	row := exec.QueryRowContext(ctx, sql, chainID, transactionHash, logIndex)
+	row := exec.QueryRowContext(ctx, sql, referred, referrer)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -951,5 +913,5 @@ func ReferralExists(ctx context.Context, exec boil.ContextExecutor, chainID int6
 
 // Exists checks if the Referral row exists.
 func (o *Referral) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return ReferralExists(ctx, exec, o.ChainID, o.TransactionHash, o.LogIndex)
+	return ReferralExists(ctx, exec, o.Referred, o.Referrer)
 }
