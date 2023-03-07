@@ -24,6 +24,7 @@ import (
 
 // Referral is an object representing the database table.
 type Referral struct {
+	ID                    null.String `boil:"id" json:"id,omitempty" toml:"id" yaml:"id,omitempty"`
 	JobStatus             string      `boil:"job_status" json:"job_status" toml:"job_status" yaml:"job_status"`
 	Referred              []byte      `boil:"referred" json:"referred" toml:"referred" yaml:"referred"`
 	Referrer              []byte      `boil:"referrer" json:"referrer" toml:"referrer" yaml:"referrer"`
@@ -35,12 +36,14 @@ type Referral struct {
 }
 
 var ReferralColumns = struct {
+	ID                    string
 	JobStatus             string
 	Referred              string
 	Referrer              string
 	TransferSuccessful    string
 	TransferFailureReason string
 }{
+	ID:                    "id",
 	JobStatus:             "job_status",
 	Referred:              "referred",
 	Referrer:              "referrer",
@@ -49,12 +52,14 @@ var ReferralColumns = struct {
 }
 
 var ReferralTableColumns = struct {
+	ID                    string
 	JobStatus             string
 	Referred              string
 	Referrer              string
 	TransferSuccessful    string
 	TransferFailureReason string
 }{
+	ID:                    "referrals.id",
 	JobStatus:             "referrals.job_status",
 	Referred:              "referrals.referred",
 	Referrer:              "referrals.referrer",
@@ -65,12 +70,14 @@ var ReferralTableColumns = struct {
 // Generated where
 
 var ReferralWhere = struct {
+	ID                    whereHelpernull_String
 	JobStatus             whereHelperstring
 	Referred              whereHelper__byte
 	Referrer              whereHelper__byte
 	TransferSuccessful    whereHelpernull_Bool
 	TransferFailureReason whereHelpernull_String
 }{
+	ID:                    whereHelpernull_String{field: "\"rewards_api\".\"referrals\".\"id\""},
 	JobStatus:             whereHelperstring{field: "\"rewards_api\".\"referrals\".\"job_status\""},
 	Referred:              whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referred\""},
 	Referrer:              whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referrer\""},
@@ -95,9 +102,9 @@ func (*referralR) NewStruct() *referralR {
 type referralL struct{}
 
 var (
-	referralAllColumns            = []string{"job_status", "referred", "referrer", "transfer_successful", "transfer_failure_reason"}
+	referralAllColumns            = []string{"id", "job_status", "referred", "referrer", "transfer_successful", "transfer_failure_reason"}
 	referralColumnsWithoutDefault = []string{"job_status", "referred", "referrer"}
-	referralColumnsWithDefault    = []string{"transfer_successful", "transfer_failure_reason"}
+	referralColumnsWithDefault    = []string{"id", "transfer_successful", "transfer_failure_reason"}
 	referralPrimaryKeyColumns     = []string{"referred", "referrer"}
 	referralGeneratedColumns      = []string{}
 )

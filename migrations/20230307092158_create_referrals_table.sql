@@ -7,6 +7,7 @@ CREATE TYPE referrals_job_status AS ENUM ('Complete', 'Started');
 CREATE TYPE referrals_transfer_failure_reason AS ENUM ('ReferralInvalid', 'TxReverted');
 
 CREATE TABLE referrals(
+    id char(27),
     job_status referrals_job_status NOT NULL,
     
     referred bytea NOT NULL,
