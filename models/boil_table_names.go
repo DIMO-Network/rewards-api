@@ -9,6 +9,7 @@ var TableNames = struct {
 	KnownWallets            string
 	MetaTransactionRequests string
 	Overrides               string
+	Referrals               string
 	Rewards                 string
 	TokenTransfers          string
 }{
@@ -17,6 +18,7 @@ var TableNames = struct {
 	KnownWallets:            "known_wallets",
 	MetaTransactionRequests: "meta_transaction_requests",
 	Overrides:               "overrides",
+	Referrals:               "referrals",
 	Rewards:                 "rewards",
 	TokenTransfers:          "token_transfers",
 }
