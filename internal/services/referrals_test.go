@@ -2,24 +2,30 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
+	"github.com/DIMO-Network/shared"
 	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/Shopify/sarama"
+	"github.com/Shopify/sarama/mocks"
 	"github.com/docker/go-connections/nat"
 	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"gotest.tools/assert"
-
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const newUserDeviceID = "2LFD2qeDxWMf49jSdEGQ2Znde3l"
@@ -197,6 +203,56 @@ func TestReferrals(t *testing.T) {
 
 		})
 
+	}
+
+}
+
+func TestReferralsBatchRequest(t *testing.T) {
+
+	config := mocks.NewTestConfig()
+	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
+	producer := mocks.NewSyncProducer(t, nil)
+
+	refs := Referrals{
+		Referreds: []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B49")},
+		Referrers: []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B48")},
+	}
+
+	abi, err := contracts.ReferralMetaData.GetAbi()
+	assert.Nil(t, err)
+
+	data, err := abi.Pack("sendReferralBonuses", refs.Referreds, refs.Referrers)
+	assert.Nil(t, err)
+
+	event := shared.CloudEvent[string]{
+		ID:          "",
+		Source:      "rewards-api",
+		SpecVersion: "1.0",
+		Subject:     "contract addr",
+		Time:        time.Now(),
+		Type:        "zone.dimo.referrals.transaction.request",
+		Data:        hexutil.Encode(data),
+	}
+
+	eventBytes, err := json.Marshal(event)
+	assert.Nil(t, err)
+
+	checker := func(b2 []byte) error {
+		assert.Equal(t, eventBytes, b2)
+		return nil
+	}
+
+	producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
+
+	if _, _, err = producer.SendMessage(
+		&sarama.ProducerMessage{
+			Topic: "test",
+			Key:   sarama.StringEncoder(""),
+			Value: sarama.ByteEncoder(eventBytes),
+		},
+	); err != nil {
+		assert.Nil(t, err)
 	}
 
 }
