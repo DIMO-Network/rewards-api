@@ -61,26 +61,26 @@ func NewRewardBonusTokenTransferService(
 
 // CollectReferrals Check if users who recieved rewards for the first time this week were referred
 // if they were, collect their address and the address of their referrer
-func (r *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
+func (rc *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
 	var refs Referrals
 
 	var res []models.Reward
 
 	err := queries.Raw(`SELECT DISTINCT r1.user_id, r1.user_ethereum_address FROM rewards r1 LEFT
 	OUTER JOIN rewards r2 ON r1.user_id = r2.user_id AND r2.issuance_week_id < $1 WHERE
-	r1.issuance_week_id = $1 AND r2.user_id IS NULL`, issuanceWeek).Bind(ctx, r.db.DBS().Reader, &res)
+	r1.issuance_week_id = $1 AND r2.user_id IS NULL`, issuanceWeek).Bind(ctx, rc.db.DBS().Reader, &res)
 	if err != nil {
 		return refs, err
 	}
 
 	for _, usr := range res {
 
-		user, err := r.UsersClient.GetUser(ctx, &pb.GetUserRequest{
+		user, err := rc.UsersClient.GetUser(ctx, &pb.GetUserRequest{
 			Id: usr.UserID,
 		})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				r.Logger.Info().Msg("User has deleted their account.")
+				rc.Logger.Info().Msg("User has deleted their account.")
 				continue
 			}
 			return refs, err
@@ -97,23 +97,23 @@ func (r *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 	return refs, nil
 }
 
-func (c *ReferralsClient) TransferReferralBonuses(ctx context.Context, refs Referrals) error {
-	err := c.transferReferralBonuses(ctx, refs)
+func (rc *ReferralsClient) TransferReferralBonuses(ctx context.Context, refs Referrals) error {
+	err := rc.transferReferralBonuses(ctx, refs)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *ReferralsClient) transferReferralBonuses(ctx context.Context, refs Referrals) error {
+func (rc *ReferralsClient) transferReferralBonuses(ctx context.Context, refs Referrals) error {
 
-	for i := 0; i < len(refs.Referreds); i += c.batchSize {
+	for i := 0; i < len(refs.Referreds); i += rc.batchSize {
 		reqID := ksuid.New().String()
-		j := i + c.batchSize
+		j := i + rc.batchSize
 		if j > len(refs.Referreds) {
 			j = len(refs.Referreds)
 		}
-		err := c.BatchTransferReferralBonuses(reqID, refs.Referreds[i:j], refs.Referrers[i:j])
+		err := rc.BatchTransferReferralBonuses(reqID, refs.Referreds[i:j], refs.Referrers[i:j])
 		if err != nil {
 			return err
 		}
@@ -122,7 +122,7 @@ func (c *ReferralsClient) transferReferralBonuses(ctx context.Context, refs Refe
 	return nil
 }
 
-func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referreds []common.Address, referrers []common.Address) error {
+func (rc *ReferralsClient) BatchTransferReferralBonuses(requestID string, referreds []common.Address, referrers []common.Address) error {
 	abi, err := contracts.ReferralMetaData.GetAbi()
 	if err != nil {
 		return err
@@ -131,20 +131,20 @@ func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referre
 	if err != nil {
 		return err
 	}
-	return c.sendRequest(requestID, data)
+	return rc.sendRequest(requestID, data)
 }
 
-func (c *ReferralsClient) sendRequest(requestID string, data []byte) error {
+func (rc *ReferralsClient) sendRequest(requestID string, data []byte) error {
 	event := shared.CloudEvent[transferData]{
 		ID:          requestID,
 		Source:      "rewards-api",
 		SpecVersion: "1.0",
-		Subject:     hexutil.Encode(c.ContractAddress[:]),
+		Subject:     hexutil.Encode(rc.ContractAddress[:]),
 		Time:        time.Now(),
 		Type:        "zone.dimo.referrals.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   hexutil.Encode(c.ContractAddress[:]),
+			To:   hexutil.Encode(rc.ContractAddress[:]),
 			Data: hexutil.Encode(data),
 		},
 	}
@@ -154,9 +154,9 @@ func (c *ReferralsClient) sendRequest(requestID string, data []byte) error {
 		return err
 	}
 
-	_, _, err = c.Producer.SendMessage(
+	_, _, err = rc.Producer.SendMessage(
 		&sarama.ProducerMessage{
-			Topic: c.RequestTopic,
+			Topic: rc.RequestTopic,
 			Key:   sarama.StringEncoder(requestID),
 			Value: sarama.ByteEncoder(eventBytes),
 		},
