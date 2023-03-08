@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -68,6 +69,11 @@ func (d *FakeUserClient) GetUser(ctx context.Context, in *pb_users.GetUserReques
 
 func TestReferrals(t *testing.T) {
 	ctx := context.Background()
+
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	port := 5432
 	nport := fmt.Sprintf("%d/tcp", port)
@@ -199,13 +205,11 @@ func TestReferrals(t *testing.T) {
 				}
 			}
 
-			task := ReferralsTask{
-				Logger:      &logger,
-				DB:          conn,
-				UsersClient: &FakeUserClient{},
-			}
+			producer := mocks.NewSyncProducer(t, nil)
+			addr := common.HexToAddress(settings.IssuanceContractAddress)
+			referralBonusService := NewRewardBonusTokenTransferService(&settings, producer, addr, &FakeUserClient{}, conn, &logger)
 
-			weeklyRefs, err := task.CollectReferrals(ctx, 1)
+			weeklyRefs, err := referralBonusService.CollectReferrals(ctx, 1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -225,7 +229,7 @@ func TestReferralsBatchRequest(t *testing.T) {
 	config := mocks.NewTestConfig()
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
-	producer := mocks.NewSyncProducer(t, nil)
+	producer := mocks.NewSyncProducer(t, config)
 
 	refs := Referrals{
 		Referreds: []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B49")},
