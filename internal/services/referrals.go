@@ -13,6 +13,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/sqlboiler/queries"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ReferralsTask controller to collect referrals and issue bonus
@@ -70,6 +72,10 @@ func (r *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) 
 			Id: usr.UserID,
 		})
 		if err != nil {
+			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+				r.Logger.Info().Msg("User has deleted their account.")
+				continue
+			}
 			return refs, err
 		}
 
