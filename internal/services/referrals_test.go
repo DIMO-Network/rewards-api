@@ -205,7 +205,7 @@ func TestReferrals(t *testing.T) {
 			}
 
 			t.Log(scen.Name)
-			assert.Equal(t, len(weeklyRefs.Referred), scen.NewUserCount)
+			assert.Equal(t, len(weeklyRefs.Referees), scen.NewUserCount)
 			assert.Equal(t, len(weeklyRefs.Referrer), scen.NewUserCount)
 
 		})

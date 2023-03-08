@@ -8,35 +8,42 @@ import (
 	"github.com/DIMO-Network/shared/db"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/sqlboiler/queries"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// ReferralsTask controller to collect referrals and issue bonus
+// ReferralsTask issues referral bonuses for users who
 type ReferralsTask struct {
-	Logger          *zerolog.Logger
-	UsersClient     pb.UserServiceClient
-	DataService     DeviceActivityClient
-	DB              db.Store
-	TransferService Transfer
+	Logger      *zerolog.Logger
+	UsersClient pb.UserServiceClient
+	DB          db.Store
 }
 
 type Referrals struct {
-	Referred []common.Address
+	Referees []common.Address
 	Referrer []common.Address
 }
 
-// CollectReferrals Check if users who recieved rewards for the first time this week were referred
-// if they were, collect their address and the address of their referrer
+// CollectReferrals returns address information for referrals completed in the given week.
+// These will come from referees who are earning for the first time and have a referrer
+// attached to their account.
 func (r *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
 	var refs Referrals
 
 	var res []models.Reward
 
-	err := queries.Raw(`SELECT DISTINCT r1.user_id, r1.user_ethereum_address FROM rewards r1 LEFT
-	OUTER JOIN rewards r2 ON r1.user_id = r2.user_id AND r2.issuance_week_id < $1 WHERE
-	r1.issuance_week_id = $1 AND r2.user_id IS NULL`, issuanceWeek).Bind(ctx, r.DB.DBS().Reader, &res)
+	err := models.NewQuery(
+		qm.Distinct("r1."+models.RewardColumns.UserID+", r1."+models.RewardColumns.UserEthereumAddress),
+		qm.From(models.TableNames.Rewards+" r1"),
+		qm.LeftOuterJoin(models.TableNames.Rewards+" r2 ON r1."+models.RewardColumns.UserID+" = r2."+models.RewardColumns.UserID+" AND r2."+models.RewardColumns.IssuanceWeekID+" < ?", issuanceWeek),
+		qm.Where("r1."+models.RewardColumns.IssuanceWeekID+" = ?", issuanceWeek),
+		qm.Where("r2."+models.RewardColumns.UserID+" IS NULL"),
+	).Bind(ctx, r.DB.DBS().Reader, &res)
+
+	// err := queries.Raw(`SELECT DISTINCT r1.user_id, r1.user_ethereum_address FROM rewards r1 LEFT
+	// OUTER JOIN rewards r2 ON r1.user_id = r2.user_id AND r2.issuance_week_id < $1 WHERE
+	// r1.issuance_week_id = $1 AND r2.user_id IS NULL`, issuanceWeek)
 	if err != nil {
 		return refs, err
 	}
@@ -58,7 +65,7 @@ func (r *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) 
 			continue
 		}
 
-		refs.Referred = append(refs.Referred, common.HexToAddress(*user.EthereumAddress))
+		refs.Referees = append(refs.Referees, common.HexToAddress(*user.EthereumAddress))
 		refs.Referrer = append(refs.Referrer, common.BytesToAddress(user.ReferredBy.EthereumAddress))
 	}
 
