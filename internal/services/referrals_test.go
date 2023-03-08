@@ -27,6 +27,7 @@ const existingUserDeviceID = "2LFQTaaEzsUGyO2m1KtDIz4cgs0"
 
 const newUserReferred = "NewUserReferred"
 const newUserNotReferred = "newUserNotReferred"
+const userDeletedTheirAccount = "userDeletedTheirAccount"
 const existingUser = "ExistingUser"
 
 var addr = "0x67B94473D81D0cd00849D563C94d0432Ac988B49"
@@ -40,6 +41,10 @@ var fakeUserClientResponse = map[string]*pb_users.User{
 		Id:              newUserReferred,
 		EthereumAddress: &addr,
 	},
+	userDeletedTheirAccount: {
+		Id:              userDeletedTheirAccount,
+		EthereumAddress: &addr,
+	},
 }
 
 type FakeUserClient struct{}
@@ -48,6 +53,9 @@ func (d *FakeUserClient) GetUser(ctx context.Context, in *pb_users.GetUserReques
 	ud, ok := fakeUserClientResponse[in.Id]
 	if !ok {
 		return nil, status.Error(codes.NotFound, "No user with that ID found.")
+	}
+	if ud.Id == userDeletedTheirAccount {
+		return nil, nil
 	}
 	return ud, nil
 }
@@ -139,6 +147,11 @@ func TestReferrals(t *testing.T) {
 				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 				{UserID: newUserNotReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
+		},
+		{
+			Name:         userDeletedTheirAccount,
+			Referral:     true,
+			NewUserCount: 0,
 		},
 	}
 

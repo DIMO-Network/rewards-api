@@ -48,7 +48,7 @@ func (r *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) 
 		})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				r.Logger.Info().Msg("User was referred during the week but has deleted their account.")
+				r.Logger.Info().Msg("User has deleted their account.")
 				continue
 			}
 			return refs, err
