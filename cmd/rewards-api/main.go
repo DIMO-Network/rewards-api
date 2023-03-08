@@ -107,6 +107,13 @@ func main() {
 			UsersClient:       usersClient,
 		}
 
+		referralsController := controllers.ReferralsController{
+			DB:          pdb,
+			Logger:      &logger,
+			Settings:    &settings,
+			UsersClient: usersClient,
+		}
+
 		// secured paths
 		keyRefreshInterval := time.Hour
 		keyRefreshUnknownKID := true
@@ -121,6 +128,7 @@ func main() {
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 		v1.Get("/user/history/transactions", rewardsController.GetTransactionHistory)
+		v1.Get("/user/referrals", referralsController.GetUserReferralHistory)
 
 		go startGRPCServer(&settings, pdb, &logger)
 
