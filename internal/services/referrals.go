@@ -4,72 +4,62 @@ import (
 	"context"
 
 	"github.com/DIMO-Network/rewards-api/models"
-	pb_users "github.com/DIMO-Network/shared/api/users"
+	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
+	"github.com/volatiletech/sqlboiler/queries"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ReferralsTask controller to collect referrals and issue bonus
 type ReferralsTask struct {
 	Logger          *zerolog.Logger
-	UsersClient     pb_users.UserServiceClient
+	UsersClient     pb.UserServiceClient
 	DataService     DeviceActivityClient
 	DB              db.Store
 	TransferService Transfer
 }
 
 type Referrals struct {
-	Referred common.Address
-	Referrer common.Address
+	Referred []common.Address
+	Referrer []common.Address
 }
 
 // CollectReferrals Check if users who recieved rewards for the first time this week were referred
 // if they were, collect their address and the address of their referrer
-func (r *ReferralsTask) CollectReferrals(issuanceWeek int) ([]Referrals, error) {
-	ctx := context.Background()
+func (r *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
+	var refs Referrals
 
-	historicalUsers, err := models.Rewards(
-		models.RewardWhere.IssuanceWeekID.NEQ(issuanceWeek)).All(ctx, r.DB.DBS().Reader)
+	var res []models.Reward
+
+	err := queries.Raw(`SELECT DISTINCT r1.user_id, r1.user_ethereum_address FROM rewards r1 LEFT
+	OUTER JOIN rewards r2 ON r1.user_id = r2.user_id AND r2.issuance_week_id < $1 WHERE
+	r1.issuance_week_id = $1 AND r2.user_id IS NULL`, issuanceWeek).Bind(ctx, r.DB.DBS().Reader, &res)
 	if err != nil {
-		return []Referrals{}, err
+		return refs, err
 	}
 
-	historicalUserIDs := make([]string, len(historicalUsers))
-	// historicalEthAddrs := make([]string, len(historicalUsers))
+	for _, usr := range res {
 
-	for _, usr := range historicalUsers {
-		historicalUserIDs = append(historicalUserIDs, usr.UserID)
-		// historicalEthAddrs = append(historicalEthAddrs, usr.UserEthereumAddress.String)
-	}
-
-	newUserResp, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
-		models.RewardWhere.UserID.NIN(historicalUserIDs),
-		// models.RewardWhere.UserEthereumAddress.NIN(historicalEthAddrs),
-	).
-		All(ctx, r.DB.DBS().Reader)
-	if err != nil {
-		return []Referrals{}, err
-	}
-
-	refs := make([]Referrals, 0)
-	for _, usr := range newUserResp {
-
-		user, err := r.UsersClient.GetUser(ctx, &pb_users.GetUserRequest{
+		user, err := r.UsersClient.GetUser(ctx, &pb.GetUserRequest{
 			Id: usr.UserID,
 		})
 		if err != nil {
-			return []Referrals{}, err
+			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+				r.Logger.Info().Msg("User was referred during the week but has deleted their account.")
+				continue
+			}
+			return refs, err
 		}
 
 		if user.ReferredBy == nil {
 			continue
 		}
 
-		refs = append(refs, Referrals{
-			Referred: common.HexToAddress(*user.EthereumAddress),
-			Referrer: common.BytesToAddress(user.ReferredBy.EthereumAddress),
-		})
+		refs.Referred = append(refs.Referred, common.HexToAddress(*user.EthereumAddress))
+		refs.Referrer = append(refs.Referrer, common.BytesToAddress(user.ReferredBy.EthereumAddress))
 	}
 
 	return refs, nil
