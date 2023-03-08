@@ -43,6 +43,24 @@
                 }
             }
         },
+        "/user/history/balance": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A summary of the user's DIMO balance across all chains.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_controllers.BalanceHistory"
+                        }
+                    }
+                }
+            }
+        },
         "/user/history/transactions": {
             "get": {
                 "security": [
@@ -103,10 +121,39 @@
                     "type": "string",
                     "example": "0xc66d80f5063677425270013136ef9fa2bf1f9f1a"
                 },
+                "type": {
+                    "type": "string"
+                },
                 "value": {
                     "description": "Value is the amount of token being transferred. Divide by 10^18 to get what people\nnormally consider $DIMO.",
                     "type": "number",
                     "example": 10000000000000000
+                }
+            }
+        },
+        "internal_controllers.Balance": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "description": "Balance is the total amount of $DIMO held at this time, across all chains.",
+                    "type": "number",
+                    "example": 237277217092548850000
+                },
+                "time": {
+                    "description": "Time is the block timestamp of this balance update.",
+                    "type": "string",
+                    "example": "2023-03-06T09:11:00Z"
+                }
+            }
+        },
+        "internal_controllers.BalanceHistory": {
+            "type": "object",
+            "properties": {
+                "balanceHistory": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_controllers.Balance"
+                    }
                 }
             }
         },

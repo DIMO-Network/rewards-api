@@ -12,7 +12,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	pb_users "github.com/DIMO-Network/shared/api/users"
+	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
@@ -38,11 +38,11 @@ const userDeletedTheirAccount = "userDeletedTheirAccount"
 const existingUser = "ExistingUser"
 
 var addr = "0x67B94473D81D0cd00849D563C94d0432Ac988B49"
-var fakeUserClientResponse = map[string]*pb_users.User{
+var fakeUserClientResponse = map[string]*pb.User{
 	newUserReferred: {
 		Id:              newUserReferred,
 		EthereumAddress: &addr,
-		ReferredBy:      &pb_users.UserReferrer{EthereumAddress: common.FromHex("0x67B94473D81D0cd00849D563C94d0432Ac988B50")},
+		ReferredBy:      &pb.UserReferrer{EthereumAddress: common.FromHex("0x67B94473D81D0cd00849D563C94d0432Ac988B50")},
 	},
 	newUserNotReferred: {
 		Id:              newUserReferred,
@@ -56,7 +56,7 @@ var fakeUserClientResponse = map[string]*pb_users.User{
 
 type FakeUserClient struct{}
 
-func (d *FakeUserClient) GetUser(ctx context.Context, in *pb_users.GetUserRequest, opts ...grpc.CallOption) (*pb_users.User, error) {
+func (d *FakeUserClient) GetUser(ctx context.Context, in *pb.GetUserRequest, opts ...grpc.CallOption) (*pb.User, error) {
 	ud, ok := fakeUserClientResponse[in.Id]
 	if !ok {
 		return nil, status.Error(codes.NotFound, "No user with that ID found.")
