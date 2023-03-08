@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -138,9 +136,6 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 		).
 		Size(0)
 
-	qb, _ := json.Marshal(query)
-	log.Print(string(qb))
-
 	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
 	if err != nil {
 		return nil, err
@@ -151,11 +146,8 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 		return nil, fmt.Errorf("status code %d", code)
 	}
 
-	rb, _ := io.ReadAll(res.Body)
-	log.Print(string(rb))
-
-	respb := new(DeviceIntegrationsResp)
-	if err := json.Unmarshal(rb, respb); err != nil {
+	var respb DeviceIntegrationsResp
+	if err := json.NewDecoder(res.Body).Decode(&respb); err != nil {
 		return nil, err
 	}
 

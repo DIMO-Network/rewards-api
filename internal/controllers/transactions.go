@@ -47,16 +47,17 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 		Type                 null.String
 	}
 
-	txes := []enrichedTransfer{}
+	txes := []*enrichedTransfer{}
 
 	mods := []qm.QueryMod{
-		qm.Select(models.TableNames.TokenTransfers + ".*, " + models.KnownWalletTableColumns.Description),
+		qm.Select(models.TableNames.TokenTransfers + ".*, " + models.KnownWalletTableColumns.Type + ", " + models.KnownWalletTableColumns.Description),
 		qm.From(models.TableNames.TokenTransfers),
 		qm.LeftOuterJoin(models.TableNames.KnownWallets + " ON " + models.TokenTransferTableColumns.ChainID + " = " + models.KnownWalletTableColumns.ChainID + " AND " + models.TokenTransferTableColumns.AddressFrom + " = " + models.KnownWalletTableColumns.Address),
 		qm.Expr(
 			models.TokenTransferWhere.AddressTo.EQ(addr.Bytes()),
 			qm.Or2(models.TokenTransferWhere.AddressFrom.EQ(addr.Bytes())),
 		),
+		qm.OrderBy(models.TokenTransferTableColumns.BlockTimestamp + " DESC, " + models.TokenTransferTableColumns.ChainID + " ASC, " + models.TokenTransferTableColumns.LogIndex + " DESC"),
 	}
 
 	if typ := c.Query("type"); typ != "" {
@@ -83,6 +84,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 			To:          common.BytesToAddress(tx.AddressTo),
 			Value:       tx.Amount.Int(nil),
 			Description: tx.Description.Ptr(),
+			Type:        tx.Type.Ptr(),
 		}
 		txHistory.Transactions = append(txHistory.Transactions, apiTx)
 	}
@@ -108,4 +110,5 @@ type APITransaction struct {
 	// normally consider $DIMO.
 	Value       *big.Int `json:"value" example:"10000000000000000" swaggertype:"number"`
 	Description *string  `json:"description,omitempty"`
+	Type        *string  `json:"type,omitempty"`
 }
