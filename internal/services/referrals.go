@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/sqlboiler/queries"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -113,7 +114,24 @@ func (rc *ReferralsClient) transferReferralBonuses(ctx context.Context, refs Ref
 		if j > len(refs.Referreds) {
 			j = len(refs.Referreds)
 		}
-		err := rc.BatchTransferReferralBonuses(reqID, refs.Referreds[i:j], refs.Referrers[i:j])
+
+		userBatch := refs.Referreds[i:j]
+		referrerBatch := refs.Referrers[i:j]
+
+		for n, u := range userBatch {
+			r := models.Referral{
+				ID:        reqID,
+				JobStatus: models.ReferralsJobStatusStarted,
+				Referred:  u.Bytes(),
+				Referrer:  referrerBatch[n].Bytes(),
+			}
+			err := r.Insert(ctx, rc.db.DBS().Writer, boil.Infer())
+			if err != nil {
+				return err
+			}
+		}
+
+		err := rc.BatchTransferReferralBonuses(reqID, userBatch, referrerBatch)
 		if err != nil {
 			return err
 		}
