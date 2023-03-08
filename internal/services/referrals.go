@@ -123,7 +123,7 @@ func (rc *ReferralsClient) transferReferralBonuses(ctx context.Context, refs Ref
 }
 
 func (rc *ReferralsClient) BatchTransferReferralBonuses(requestID string, referreds []common.Address, referrers []common.Address) error {
-	abi, err := contracts.ReferralMetaData.GetAbi()
+	abi, err := contracts.ReferralsMetaData.GetAbi()
 	if err != nil {
 		return err
 	}
