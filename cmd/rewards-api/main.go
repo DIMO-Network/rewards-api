@@ -285,6 +285,60 @@ func main() {
 		if err := task.Calculate(week); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
 		}
+	case "issue-referral-bonus":
+		var week int
+		if len(os.Args) == 2 {
+			// We have to subtract 1 because we're getting the number of the newly beginning week.
+			week = services.GetWeekNumForCron(time.Now()) - 1
+		} else {
+			var err error
+			week, err = strconv.Atoi(os.Args[2])
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Could not parse week number.")
+			}
+		}
+		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
+		totalTime := 0
+		for !pdb.IsReady() {
+			if totalTime > 30 {
+				logger.Fatal().Msg("could not connect to postgres after 30 seconds")
+			}
+			time.Sleep(time.Second)
+			totalTime++
+		}
+
+		kclient, err := createKafkaClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
+		}
+
+		producer, err := sarama.NewSyncProducerFromClient(kclient)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
+		}
+
+		addr := common.HexToAddress(settings.IssuanceContractAddress)
+
+		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
+		}
+		defer usersConn.Close()
+
+		usersClient := pb_users.NewUserServiceClient(usersConn)
+
+		referralBonusService := services.NewRewardBonusTokenTransferService(&settings, producer, addr, usersClient, pdb, &logger)
+
+		refs, err := referralBonusService.CollectReferrals(ctx, week)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to collect weeks referrals.")
+		}
+
+		err = referralBonusService.TransferReferralBonuses(ctx, refs)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
+		}
+
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
