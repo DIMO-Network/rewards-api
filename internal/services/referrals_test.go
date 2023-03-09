@@ -15,6 +15,7 @@ import (
 	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
+
 	"github.com/Shopify/sarama/mocks"
 	"github.com/docker/go-connections/nat"
 	"github.com/ethereum/go-ethereum/common"
@@ -124,46 +125,42 @@ func TestReferrals(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	conn := db.NewDbConnectionFromSettings(ctx, &dbset, true)
+	conn := db.NewDbConnectionForTest(ctx, &dbset, true)
 	conn.WaitForDB(logger)
 
 	type Scenario struct {
-		Name         string
-		Referral     bool
-		NewUserCount int
-		LastWeek     []*models.Reward
-		ThisWeek     []*models.Reward
+		Name          string
+		ReferralCount int
+		LastWeek      []*models.Reward
+		ThisWeek      []*models.Reward
 	}
 
 	scens := []Scenario{
 		{
-			Name:         newUserReferred,
-			Referral:     true,
-			NewUserCount: 1,
+			Name:          newUserReferred,
+			ReferralCount: 1,
 			LastWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 			ThisWeek: []*models.Reward{
 				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 		{
-			Name:         newUserNotReferred,
-			Referral:     true,
-			NewUserCount: 0,
+			Name:          newUserNotReferred,
+			ReferralCount: 0,
 			LastWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 			ThisWeek: []*models.Reward{
 				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserNotReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserNotReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 		{
-			Name:         userDeletedTheirAccount,
-			Referral:     true,
-			NewUserCount: 0,
+			Name:          userDeletedTheirAccount,
+			ReferralCount: 0,
 		},
 	}
 
@@ -214,10 +211,8 @@ func TestReferrals(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			t.Log(scen.Name)
-			assert.Equal(t, len(weeklyRefs.Referreds), scen.NewUserCount)
-			assert.Equal(t, len(weeklyRefs.Referrers), scen.NewUserCount)
-
+			assert.Equal(t, len(weeklyRefs.Referees), scen.ReferralCount)
+			assert.Equal(t, len(weeklyRefs.Referrers), scen.ReferralCount)
 		})
 
 	}
@@ -225,21 +220,20 @@ func TestReferrals(t *testing.T) {
 }
 
 func TestReferralsBatchRequest(t *testing.T) {
-
 	config := mocks.NewTestConfig()
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
 	producer := mocks.NewSyncProducer(t, config)
 
 	refs := Referrals{
-		Referreds: []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B49")},
+		Referees:  []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B49")},
 		Referrers: []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B48")},
 	}
 
 	abi, err := contracts.ReferralMetaData.GetAbi()
 	assert.Nil(t, err)
 
-	data, err := abi.Pack("sendReferralBonuses", refs.Referreds, refs.Referrers)
+	data, err := abi.Pack("sendReferralBonuses", refs.Referees, refs.Referrers)
 	assert.Nil(t, err)
 
 	event := shared.CloudEvent[string]{
@@ -271,5 +265,4 @@ func TestReferralsBatchRequest(t *testing.T) {
 	); err != nil {
 		assert.Nil(t, err)
 	}
-
 }

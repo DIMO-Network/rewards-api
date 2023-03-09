@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+
 	"encoding/json"
 	"time"
 
@@ -16,13 +17,13 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
-	"github.com/volatiletech/sqlboiler/queries"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// ReferralsClient controller to collect referrals and issue bonus
-type ReferralsClient struct {
+// ReferralsTask to collect referrals and issue bonuses
+type ReferralsTask struct {
 	Producer        sarama.SyncProducer
 	Consumer        sarama.ConsumerGroup
 	RequestTopic    string
@@ -35,7 +36,7 @@ type ReferralsClient struct {
 }
 
 type Referrals struct {
-	Referreds []common.Address
+	Referees  []common.Address
 	Referrers []common.Address
 }
 
@@ -45,9 +46,9 @@ func NewRewardBonusTokenTransferService(
 	contractAddress common.Address,
 	usersClient pb.UserServiceClient,
 	db db.Store,
-	logger *zerolog.Logger) *ReferralsClient {
+	logger *zerolog.Logger) *ReferralsTask {
 
-	return &ReferralsClient{
+	return &ReferralsTask{
 		Producer:        producer,
 		RequestTopic:    settings.MetaTransactionSendTopic,
 		StatusTopic:     settings.MetaTransactionStatusTopic,
@@ -59,28 +60,30 @@ func NewRewardBonusTokenTransferService(
 	}
 }
 
-// CollectReferrals Check if users who recieved rewards for the first time this week were referred
-// if they were, collect their address and the address of their referrer
-func (rc *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
+// CollectReferrals returns address pairs for referrals completed in the given week.
+// These will come from referees who are earning for the first time and have a referrer
+// attached to their account.
+func (t *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
 	var refs Referrals
 
 	var res []models.Reward
 
-	err := queries.Raw(`SELECT DISTINCT r1.user_id, r1.user_ethereum_address FROM rewards r1 LEFT
-	OUTER JOIN rewards r2 ON r1.user_id = r2.user_id AND r2.issuance_week_id < $1 WHERE
-	r1.issuance_week_id = $1 AND r2.user_id IS NULL`, issuanceWeek).Bind(ctx, rc.db.DBS().Reader, &res)
+	err := models.NewQuery(
+		qm.Distinct("r1."+models.RewardColumns.UserID+", r1."+models.RewardColumns.UserEthereumAddress),
+		qm.From(models.TableNames.Rewards+" r1"),
+		qm.LeftOuterJoin(models.TableNames.Rewards+" r2 ON r1."+models.RewardColumns.UserID+" = r2."+models.RewardColumns.UserID+" AND r2."+models.RewardColumns.IssuanceWeekID+" < ?", issuanceWeek),
+		qm.Where("r1."+models.RewardColumns.IssuanceWeekID+" = ?", issuanceWeek),
+		qm.Where("r2."+models.RewardColumns.UserID+" IS NULL"),
+	).Bind(ctx, t.db.DBS().Reader, &res)
 	if err != nil {
 		return refs, err
 	}
 
 	for _, usr := range res {
-
-		user, err := rc.UsersClient.GetUser(ctx, &pb.GetUserRequest{
-			Id: usr.UserID,
-		})
+		user, err := t.UsersClient.GetUser(ctx, &pb.GetUserRequest{Id: usr.UserID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				rc.Logger.Info().Msg("User has deleted their account.")
+				t.Logger.Info().Str("userId", usr.UserID).Msg("User was new this week but deleted their account.")
 				continue
 			}
 			return refs, err
@@ -90,30 +93,22 @@ func (rc *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek in
 			continue
 		}
 
-		refs.Referreds = append(refs.Referreds, common.HexToAddress(*user.EthereumAddress))
+		// TODO(elffjs): What if this is nil?
+		refs.Referees = append(refs.Referees, common.HexToAddress(*user.EthereumAddress))
 		refs.Referrers = append(refs.Referrers, common.BytesToAddress(user.ReferredBy.EthereumAddress))
 	}
 
 	return refs, nil
 }
 
-func (rc *ReferralsClient) TransferReferralBonuses(ctx context.Context, refs Referrals) error {
-	err := rc.transferReferralBonuses(ctx, refs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (rc *ReferralsClient) transferReferralBonuses(ctx context.Context, refs Referrals) error {
-
-	for i := 0; i < len(refs.Referreds); i += rc.batchSize {
+func (t *ReferralsTask) TransferReferralBonuses(ctx context.Context, refs Referrals) error {
+	for i := 0; i < len(refs.Referees); i += t.batchSize {
 		reqID := ksuid.New().String()
-		j := i + rc.batchSize
-		if j > len(refs.Referreds) {
-			j = len(refs.Referreds)
+		j := i + t.batchSize
+		if j > len(refs.Referees) {
+			j = len(refs.Referees)
 		}
-		err := rc.BatchTransferReferralBonuses(reqID, refs.Referreds[i:j], refs.Referrers[i:j])
+		err := t.BatchTransferReferralBonuses(reqID, refs.Referees[i:j], refs.Referrers[i:j])
 		if err != nil {
 			return err
 		}
@@ -122,7 +117,7 @@ func (rc *ReferralsClient) transferReferralBonuses(ctx context.Context, refs Ref
 	return nil
 }
 
-func (rc *ReferralsClient) BatchTransferReferralBonuses(requestID string, referreds []common.Address, referrers []common.Address) error {
+func (t *ReferralsTask) BatchTransferReferralBonuses(requestID string, referreds []common.Address, referrers []common.Address) error {
 	abi, err := contracts.ReferralMetaData.GetAbi()
 	if err != nil {
 		return err
@@ -131,20 +126,20 @@ func (rc *ReferralsClient) BatchTransferReferralBonuses(requestID string, referr
 	if err != nil {
 		return err
 	}
-	return rc.sendRequest(requestID, data)
+	return t.sendRequest(requestID, data)
 }
 
-func (rc *ReferralsClient) sendRequest(requestID string, data []byte) error {
+func (t *ReferralsTask) sendRequest(requestID string, data []byte) error {
 	event := shared.CloudEvent[transferData]{
 		ID:          requestID,
 		Source:      "rewards-api",
 		SpecVersion: "1.0",
-		Subject:     hexutil.Encode(rc.ContractAddress[:]),
+		Subject:     hexutil.Encode(t.ContractAddress[:]),
 		Time:        time.Now(),
-		Type:        "zone.dimo.referrals.request",
+		Type:        "zone.dimo.transaction.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   hexutil.Encode(rc.ContractAddress[:]),
+			To:   hexutil.Encode(t.ContractAddress[:]),
 			Data: hexutil.Encode(data),
 		},
 	}
@@ -154,9 +149,9 @@ func (rc *ReferralsClient) sendRequest(requestID string, data []byte) error {
 		return err
 	}
 
-	_, _, err = rc.Producer.SendMessage(
+	_, _, err = t.Producer.SendMessage(
 		&sarama.ProducerMessage{
-			Topic: rc.RequestTopic,
+			Topic: t.RequestTopic,
 			Key:   sarama.StringEncoder(requestID),
 			Value: sarama.ByteEncoder(eventBytes),
 		},
