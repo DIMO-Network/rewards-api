@@ -71,11 +71,6 @@ func (d *FakeUserClient) GetUser(ctx context.Context, in *pb.GetUserRequest, opt
 func TestReferrals(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	port := 5432
 	nport := fmt.Sprintf("%d/tcp", port)
 
@@ -201,6 +196,8 @@ func TestReferrals(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
+
+			settings := config.Settings{}
 
 			producer := mocks.NewSyncProducer(t, nil)
 			addr := common.HexToAddress(settings.IssuanceContractAddress)
