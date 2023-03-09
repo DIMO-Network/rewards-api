@@ -127,7 +127,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 			return err
 		}
 	case s.ReferralsProcessor.Address.String():
-		err := s.processBaselineEvent(event)
+		err := s.processReferralEvent(event)
 		if err != nil {
 			return err
 		}
