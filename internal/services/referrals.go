@@ -139,8 +139,8 @@ func (t *ReferralsTask) sendRequest(requestID string, data []byte) error {
 		Type:        "zone.dimo.transaction.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   hexutil.Encode(t.ContractAddress[:]),
-			Data: hexutil.Encode(data),
+			To:   t.ContractAddress,
+			Data: data,
 		},
 	}
 

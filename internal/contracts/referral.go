@@ -26,11 +26,12 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
 // ReferralMetaData contains all meta data concerning the Referral contract.
 var ReferralMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidArrayLength\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AdminWithdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"BonusChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"referreds\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"referrers\",\"type\":\"address\"}],\"name\":\"ReferralComplete\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ORACLE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"adminWithdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bonusAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"dimoToken\",\"outputs\":[{\"internalType\":\"contractIDimo\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"bonusAmount_\",\"type\":\"uint256\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"referreds\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"referrers\",\"type\":\"address[]\"}],\"name\":\"sendReferralBonuses\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSent\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidArrayLength\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AdminWithdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"BonusChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"referee\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"referrer\",\"type\":\"address\"}],\"name\":\"ReferralComplete\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"referee\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"referrer\",\"type\":\"address\"}],\"name\":\"ReferralInvalid\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ORACLE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"adminWithdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bonusAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"dimoToken\",\"outputs\":[{\"internalType\":\"contractIDimo\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"bonusAmount_\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"vehicleContract_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"sanctionsList_\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sanctionsList\",\"outputs\":[{\"internalType\":\"contractISanctionsList\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"referees\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"referrers\",\"type\":\"address[]\"}],\"name\":\"sendReferralBonuses\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSent\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vehicleContract\",\"outputs\":[{\"internalType\":\"contractIDimoVehicle\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // ReferralABI is the input ABI used to generate the binding from.
@@ -134,11 +135,11 @@ func NewReferralFilterer(address common.Address, filterer bind.ContractFilterer)
 
 // bindReferral binds a generic wrapper to an already deployed contract.
 func bindReferral(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(ReferralABI))
+	parsed, err := ReferralMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -396,6 +397,37 @@ func (_Referral *ReferralCallerSession) ProxiableUUID() ([32]byte, error) {
 	return _Referral.Contract.ProxiableUUID(&_Referral.CallOpts)
 }
 
+// SanctionsList is a free data retrieval call binding the contract method 0xec571c6a.
+//
+// Solidity: function sanctionsList() view returns(address)
+func (_Referral *ReferralCaller) SanctionsList(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _Referral.contract.Call(opts, &out, "sanctionsList")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// SanctionsList is a free data retrieval call binding the contract method 0xec571c6a.
+//
+// Solidity: function sanctionsList() view returns(address)
+func (_Referral *ReferralSession) SanctionsList() (common.Address, error) {
+	return _Referral.Contract.SanctionsList(&_Referral.CallOpts)
+}
+
+// SanctionsList is a free data retrieval call binding the contract method 0xec571c6a.
+//
+// Solidity: function sanctionsList() view returns(address)
+func (_Referral *ReferralCallerSession) SanctionsList() (common.Address, error) {
+	return _Referral.Contract.SanctionsList(&_Referral.CallOpts)
+}
+
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
@@ -458,6 +490,37 @@ func (_Referral *ReferralCallerSession) TotalSent() (*big.Int, error) {
 	return _Referral.Contract.TotalSent(&_Referral.CallOpts)
 }
 
+// VehicleContract is a free data retrieval call binding the contract method 0xffb70419.
+//
+// Solidity: function vehicleContract() view returns(address)
+func (_Referral *ReferralCaller) VehicleContract(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _Referral.contract.Call(opts, &out, "vehicleContract")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// VehicleContract is a free data retrieval call binding the contract method 0xffb70419.
+//
+// Solidity: function vehicleContract() view returns(address)
+func (_Referral *ReferralSession) VehicleContract() (common.Address, error) {
+	return _Referral.Contract.VehicleContract(&_Referral.CallOpts)
+}
+
+// VehicleContract is a free data retrieval call binding the contract method 0xffb70419.
+//
+// Solidity: function vehicleContract() view returns(address)
+func (_Referral *ReferralCallerSession) VehicleContract() (common.Address, error) {
+	return _Referral.Contract.VehicleContract(&_Referral.CallOpts)
+}
+
 // AdminWithdraw is a paid mutator transaction binding the contract method 0x401d4482.
 //
 // Solidity: function adminWithdraw(address user, uint256 amount) returns()
@@ -500,25 +563,25 @@ func (_Referral *ReferralTransactorSession) GrantRole(role [32]byte, account com
 	return _Referral.Contract.GrantRole(&_Referral.TransactOpts, role, account)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xcd6dc687.
+// Initialize is a paid mutator transaction binding the contract method 0x358394d8.
 //
-// Solidity: function initialize(address tokenAddress, uint256 bonusAmount_) returns()
-func (_Referral *ReferralTransactor) Initialize(opts *bind.TransactOpts, tokenAddress common.Address, bonusAmount_ *big.Int) (*types.Transaction, error) {
-	return _Referral.contract.Transact(opts, "initialize", tokenAddress, bonusAmount_)
+// Solidity: function initialize(address tokenAddress, uint256 bonusAmount_, address vehicleContract_, address sanctionsList_) returns()
+func (_Referral *ReferralTransactor) Initialize(opts *bind.TransactOpts, tokenAddress common.Address, bonusAmount_ *big.Int, vehicleContract_ common.Address, sanctionsList_ common.Address) (*types.Transaction, error) {
+	return _Referral.contract.Transact(opts, "initialize", tokenAddress, bonusAmount_, vehicleContract_, sanctionsList_)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xcd6dc687.
+// Initialize is a paid mutator transaction binding the contract method 0x358394d8.
 //
-// Solidity: function initialize(address tokenAddress, uint256 bonusAmount_) returns()
-func (_Referral *ReferralSession) Initialize(tokenAddress common.Address, bonusAmount_ *big.Int) (*types.Transaction, error) {
-	return _Referral.Contract.Initialize(&_Referral.TransactOpts, tokenAddress, bonusAmount_)
+// Solidity: function initialize(address tokenAddress, uint256 bonusAmount_, address vehicleContract_, address sanctionsList_) returns()
+func (_Referral *ReferralSession) Initialize(tokenAddress common.Address, bonusAmount_ *big.Int, vehicleContract_ common.Address, sanctionsList_ common.Address) (*types.Transaction, error) {
+	return _Referral.Contract.Initialize(&_Referral.TransactOpts, tokenAddress, bonusAmount_, vehicleContract_, sanctionsList_)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xcd6dc687.
+// Initialize is a paid mutator transaction binding the contract method 0x358394d8.
 //
-// Solidity: function initialize(address tokenAddress, uint256 bonusAmount_) returns()
-func (_Referral *ReferralTransactorSession) Initialize(tokenAddress common.Address, bonusAmount_ *big.Int) (*types.Transaction, error) {
-	return _Referral.Contract.Initialize(&_Referral.TransactOpts, tokenAddress, bonusAmount_)
+// Solidity: function initialize(address tokenAddress, uint256 bonusAmount_, address vehicleContract_, address sanctionsList_) returns()
+func (_Referral *ReferralTransactorSession) Initialize(tokenAddress common.Address, bonusAmount_ *big.Int, vehicleContract_ common.Address, sanctionsList_ common.Address) (*types.Transaction, error) {
+	return _Referral.Contract.Initialize(&_Referral.TransactOpts, tokenAddress, bonusAmount_, vehicleContract_, sanctionsList_)
 }
 
 // RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
@@ -565,23 +628,23 @@ func (_Referral *ReferralTransactorSession) RevokeRole(role [32]byte, account co
 
 // SendReferralBonuses is a paid mutator transaction binding the contract method 0xa6703aa1.
 //
-// Solidity: function sendReferralBonuses(address[] referreds, address[] referrers) returns()
-func (_Referral *ReferralTransactor) SendReferralBonuses(opts *bind.TransactOpts, referreds []common.Address, referrers []common.Address) (*types.Transaction, error) {
-	return _Referral.contract.Transact(opts, "sendReferralBonuses", referreds, referrers)
+// Solidity: function sendReferralBonuses(address[] referees, address[] referrers) returns()
+func (_Referral *ReferralTransactor) SendReferralBonuses(opts *bind.TransactOpts, referees []common.Address, referrers []common.Address) (*types.Transaction, error) {
+	return _Referral.contract.Transact(opts, "sendReferralBonuses", referees, referrers)
 }
 
 // SendReferralBonuses is a paid mutator transaction binding the contract method 0xa6703aa1.
 //
-// Solidity: function sendReferralBonuses(address[] referreds, address[] referrers) returns()
-func (_Referral *ReferralSession) SendReferralBonuses(referreds []common.Address, referrers []common.Address) (*types.Transaction, error) {
-	return _Referral.Contract.SendReferralBonuses(&_Referral.TransactOpts, referreds, referrers)
+// Solidity: function sendReferralBonuses(address[] referees, address[] referrers) returns()
+func (_Referral *ReferralSession) SendReferralBonuses(referees []common.Address, referrers []common.Address) (*types.Transaction, error) {
+	return _Referral.Contract.SendReferralBonuses(&_Referral.TransactOpts, referees, referrers)
 }
 
 // SendReferralBonuses is a paid mutator transaction binding the contract method 0xa6703aa1.
 //
-// Solidity: function sendReferralBonuses(address[] referreds, address[] referrers) returns()
-func (_Referral *ReferralTransactorSession) SendReferralBonuses(referreds []common.Address, referrers []common.Address) (*types.Transaction, error) {
-	return _Referral.Contract.SendReferralBonuses(&_Referral.TransactOpts, referreds, referrers)
+// Solidity: function sendReferralBonuses(address[] referees, address[] referrers) returns()
+func (_Referral *ReferralTransactorSession) SendReferralBonuses(referees []common.Address, referrers []common.Address) (*types.Transaction, error) {
+	return _Referral.Contract.SendReferralBonuses(&_Referral.TransactOpts, referees, referrers)
 }
 
 // UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
@@ -1387,26 +1450,26 @@ func (it *ReferralReferralCompleteIterator) Close() error {
 
 // ReferralReferralComplete represents a ReferralComplete event raised by the Referral contract.
 type ReferralReferralComplete struct {
-	Referreds common.Address
-	Referrers common.Address
-	Raw       types.Log // Blockchain specific contextual infos
+	Referee  common.Address
+	Referrer common.Address
+	Raw      types.Log // Blockchain specific contextual infos
 }
 
 // FilterReferralComplete is a free log retrieval operation binding the contract event 0x140ec1de14f412a3a1e4295313d7c4190785ddf8930efee41722cd36f00ebb91.
 //
-// Solidity: event ReferralComplete(address indexed referreds, address indexed referrers)
-func (_Referral *ReferralFilterer) FilterReferralComplete(opts *bind.FilterOpts, referreds []common.Address, referrers []common.Address) (*ReferralReferralCompleteIterator, error) {
+// Solidity: event ReferralComplete(address indexed referee, address indexed referrer)
+func (_Referral *ReferralFilterer) FilterReferralComplete(opts *bind.FilterOpts, referee []common.Address, referrer []common.Address) (*ReferralReferralCompleteIterator, error) {
 
-	var referredsRule []interface{}
-	for _, referredsItem := range referreds {
-		referredsRule = append(referredsRule, referredsItem)
+	var refereeRule []interface{}
+	for _, refereeItem := range referee {
+		refereeRule = append(refereeRule, refereeItem)
 	}
-	var referrersRule []interface{}
-	for _, referrersItem := range referrers {
-		referrersRule = append(referrersRule, referrersItem)
+	var referrerRule []interface{}
+	for _, referrerItem := range referrer {
+		referrerRule = append(referrerRule, referrerItem)
 	}
 
-	logs, sub, err := _Referral.contract.FilterLogs(opts, "ReferralComplete", referredsRule, referrersRule)
+	logs, sub, err := _Referral.contract.FilterLogs(opts, "ReferralComplete", refereeRule, referrerRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1415,19 +1478,19 @@ func (_Referral *ReferralFilterer) FilterReferralComplete(opts *bind.FilterOpts,
 
 // WatchReferralComplete is a free log subscription operation binding the contract event 0x140ec1de14f412a3a1e4295313d7c4190785ddf8930efee41722cd36f00ebb91.
 //
-// Solidity: event ReferralComplete(address indexed referreds, address indexed referrers)
-func (_Referral *ReferralFilterer) WatchReferralComplete(opts *bind.WatchOpts, sink chan<- *ReferralReferralComplete, referreds []common.Address, referrers []common.Address) (event.Subscription, error) {
+// Solidity: event ReferralComplete(address indexed referee, address indexed referrer)
+func (_Referral *ReferralFilterer) WatchReferralComplete(opts *bind.WatchOpts, sink chan<- *ReferralReferralComplete, referee []common.Address, referrer []common.Address) (event.Subscription, error) {
 
-	var referredsRule []interface{}
-	for _, referredsItem := range referreds {
-		referredsRule = append(referredsRule, referredsItem)
+	var refereeRule []interface{}
+	for _, refereeItem := range referee {
+		refereeRule = append(refereeRule, refereeItem)
 	}
-	var referrersRule []interface{}
-	for _, referrersItem := range referrers {
-		referrersRule = append(referrersRule, referrersItem)
+	var referrerRule []interface{}
+	for _, referrerItem := range referrer {
+		referrerRule = append(referrerRule, referrerItem)
 	}
 
-	logs, sub, err := _Referral.contract.WatchLogs(opts, "ReferralComplete", referredsRule, referrersRule)
+	logs, sub, err := _Referral.contract.WatchLogs(opts, "ReferralComplete", refereeRule, referrerRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1461,10 +1524,163 @@ func (_Referral *ReferralFilterer) WatchReferralComplete(opts *bind.WatchOpts, s
 
 // ParseReferralComplete is a log parse operation binding the contract event 0x140ec1de14f412a3a1e4295313d7c4190785ddf8930efee41722cd36f00ebb91.
 //
-// Solidity: event ReferralComplete(address indexed referreds, address indexed referrers)
+// Solidity: event ReferralComplete(address indexed referee, address indexed referrer)
 func (_Referral *ReferralFilterer) ParseReferralComplete(log types.Log) (*ReferralReferralComplete, error) {
 	event := new(ReferralReferralComplete)
 	if err := _Referral.contract.UnpackLog(event, "ReferralComplete", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ReferralReferralInvalidIterator is returned from FilterReferralInvalid and is used to iterate over the raw logs and unpacked data for ReferralInvalid events raised by the Referral contract.
+type ReferralReferralInvalidIterator struct {
+	Event *ReferralReferralInvalid // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ReferralReferralInvalidIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ReferralReferralInvalid)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ReferralReferralInvalid)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ReferralReferralInvalidIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ReferralReferralInvalidIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ReferralReferralInvalid represents a ReferralInvalid event raised by the Referral contract.
+type ReferralReferralInvalid struct {
+	Referee  common.Address
+	Referrer common.Address
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterReferralInvalid is a free log retrieval operation binding the contract event 0xa8129329835c7fa9561f19f5b059d91ada3feffb6a0c10e02a4e3d294fe3a1bc.
+//
+// Solidity: event ReferralInvalid(address indexed referee, address indexed referrer)
+func (_Referral *ReferralFilterer) FilterReferralInvalid(opts *bind.FilterOpts, referee []common.Address, referrer []common.Address) (*ReferralReferralInvalidIterator, error) {
+
+	var refereeRule []interface{}
+	for _, refereeItem := range referee {
+		refereeRule = append(refereeRule, refereeItem)
+	}
+	var referrerRule []interface{}
+	for _, referrerItem := range referrer {
+		referrerRule = append(referrerRule, referrerItem)
+	}
+
+	logs, sub, err := _Referral.contract.FilterLogs(opts, "ReferralInvalid", refereeRule, referrerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ReferralReferralInvalidIterator{contract: _Referral.contract, event: "ReferralInvalid", logs: logs, sub: sub}, nil
+}
+
+// WatchReferralInvalid is a free log subscription operation binding the contract event 0xa8129329835c7fa9561f19f5b059d91ada3feffb6a0c10e02a4e3d294fe3a1bc.
+//
+// Solidity: event ReferralInvalid(address indexed referee, address indexed referrer)
+func (_Referral *ReferralFilterer) WatchReferralInvalid(opts *bind.WatchOpts, sink chan<- *ReferralReferralInvalid, referee []common.Address, referrer []common.Address) (event.Subscription, error) {
+
+	var refereeRule []interface{}
+	for _, refereeItem := range referee {
+		refereeRule = append(refereeRule, refereeItem)
+	}
+	var referrerRule []interface{}
+	for _, referrerItem := range referrer {
+		referrerRule = append(referrerRule, referrerItem)
+	}
+
+	logs, sub, err := _Referral.contract.WatchLogs(opts, "ReferralInvalid", refereeRule, referrerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ReferralReferralInvalid)
+				if err := _Referral.contract.UnpackLog(event, "ReferralInvalid", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseReferralInvalid is a log parse operation binding the contract event 0xa8129329835c7fa9561f19f5b059d91ada3feffb6a0c10e02a4e3d294fe3a1bc.
+//
+// Solidity: event ReferralInvalid(address indexed referee, address indexed referrer)
+func (_Referral *ReferralFilterer) ParseReferralInvalid(log types.Log) (*ReferralReferralInvalid, error) {
+	event := new(ReferralReferralInvalid)
+	if err := _Referral.contract.UnpackLog(event, "ReferralInvalid", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

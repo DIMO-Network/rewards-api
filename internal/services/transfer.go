@@ -56,9 +56,9 @@ type Client struct {
 }
 
 type transferData struct {
-	ID   string `json:"id"`
-	To   string `json:"to"`
-	Data string `json:"data"`
+	ID   string         `json:"id"`
+	To   common.Address `json:"to"`
+	Data hexutil.Bytes  `json:"data"`
 }
 
 func (c *Client) TransferUserTokens(ctx context.Context, week int) error {
@@ -159,8 +159,8 @@ func (c *Client) sendRequest(requestID string, data []byte) error {
 		Type:        "zone.dimo.transaction.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   hexutil.Encode(c.ContractAddress[:]),
-			Data: hexutil.Encode(data),
+			To:   c.ContractAddress,
+			Data: data,
 		},
 	}
 
