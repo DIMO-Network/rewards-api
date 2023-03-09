@@ -257,16 +257,9 @@ func main() {
 
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 
-		task := services.BaselineClient{
-			TransferService: transferService,
-			DataService:     services.NewDeviceDataClient(&settings),
-			DevicesClient:   deviceClient,
-			DefsClient:      definitionsClient,
-			ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
-			Week:            week,
-			Logger:          &logger,
-		}
-		if err := task.Calculate(week); err != nil {
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, services.NewDeviceDataClient(&settings), deviceClient, definitionsClient, week, &logger)
+
+		if err := baselineRewardClient.Calculate(week); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
 		}
 	case "issue-referral-bonus":
@@ -307,19 +300,13 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
 		}
-		defer usersConn.Close()
+		defer usersConn.Close() //no lint
 
 		usersClient := pb_users.NewUserServiceClient(usersConn)
 
-		task := services.ReferralsClient{
-			TransferService: transferService,
-			UsersClient:     usersClient,
-			ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
-			Week:            week,
-			Logger:          &logger,
-		}
+		referralsClient := services.NewReferralBonusService(&settings, transferService, week, &logger, usersClient)
 
-		err = task.ReferralsIssuance(ctx)
+		err = referralsClient.ReferralsIssuance(ctx)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}

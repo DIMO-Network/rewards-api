@@ -7,6 +7,7 @@ import (
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
@@ -30,31 +31,6 @@ var baseWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
 var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
-
-// GetWeekNum calculates the number of the week in which the given time lies for DIMO point
-// issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
-// zero-based.
-func GetWeekNum(t time.Time) int {
-	sinceStart := t.Sub(startTime)
-	weekNum := int(sinceStart.Truncate(weekDuration) / weekDuration)
-	return weekNum
-}
-
-// GetWeekNumForCron calculates the week number for the current run of the cron job. We expect
-// the job to run every Monday at 05:00 UTC, but due to skew we just round the time.
-func GetWeekNumForCron(t time.Time) int {
-	sinceStart := t.Sub(startTime)
-	weekNum := int(sinceStart.Round(weekDuration) / weekDuration)
-	return weekNum
-}
-
-func NumToWeekStart(n int) time.Time {
-	return startTime.Add(time.Duration(n) * weekDuration)
-}
-
-func NumToWeekEnd(n int) time.Time {
-	return startTime.Add(time.Duration(n+1) * weekDuration)
-}
 
 type BaselineClient struct {
 	TransferService *TransferService
@@ -82,6 +58,53 @@ type integrationPointsCalculator struct {
 	AutoPiID   string
 	TeslaID    string
 	SmartcarID string
+}
+
+func NewBaselineRewardService(
+	settings *config.Settings,
+	transferService *TransferService,
+	dataService DeviceActivityClient,
+	devicesClient DevicesClient,
+	defsClient IntegrationsGetter,
+	week int,
+	logger *zerolog.Logger,
+
+) *BaselineClient {
+
+	return &BaselineClient{
+		TransferService: transferService,
+		DataService:     NewDeviceDataClient(settings),
+		DevicesClient:   devicesClient,
+		DefsClient:      defsClient,
+		ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
+		Week:            week,
+		Logger:          logger,
+	}
+}
+
+// GetWeekNum calculates the number of the week in which the given time lies for DIMO point
+// issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
+// zero-based.
+func GetWeekNum(t time.Time) int {
+	sinceStart := t.Sub(startTime)
+	weekNum := int(sinceStart.Truncate(weekDuration) / weekDuration)
+	return weekNum
+}
+
+// GetWeekNumForCron calculates the week number for the current run of the cron job. We expect
+// the job to run every Monday at 05:00 UTC, but due to skew we just round the time.
+func GetWeekNumForCron(t time.Time) int {
+	sinceStart := t.Sub(startTime)
+	weekNum := int(sinceStart.Round(weekDuration) / weekDuration)
+	return weekNum
+}
+
+func NumToWeekStart(n int) time.Time {
+	return startTime.Add(time.Duration(n) * weekDuration)
+}
+
+func NumToWeekEnd(n int) time.Time {
+	return startTime.Add(time.Duration(n+1) * weekDuration)
 }
 
 func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {

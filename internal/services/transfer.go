@@ -93,20 +93,6 @@ func (c *BaselineClient) BaselineIssuance(ctx context.Context) error {
 	return nil
 }
 
-func (c *ReferralsClient) ReferralsIssuance(ctx context.Context) error {
-
-	refs, err := c.CollectReferrals(ctx, c.Week)
-	if err != nil {
-		return err
-	}
-
-	err = c.transfer(ctx, refs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *BaselineClient) transfer(ctx context.Context) error {
 	batchSize := c.TransferService.batchSize
 	responseSize := batchSize
@@ -181,53 +167,6 @@ func (c *BaselineClient) BatchTransfer(requestID string, users []common.Address,
 		return err
 	}
 	data, err := abi.Pack("batchTransfer", users, values, vehicleIds)
-	if err != nil {
-		return err
-	}
-	return c.TransferService.sendRequest(requestID, c.ContractAddress, data)
-}
-
-func (rc *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
-	for i := 0; i < len(refs.Referreds); i += rc.TransferService.batchSize {
-		reqID := ksuid.New().String()
-		j := i + rc.TransferService.batchSize
-		if j > len(refs.Referreds) {
-			j = len(refs.Referreds)
-		}
-
-		referredsBatch := refs.Referreds[i:j]
-		referrersBatch := refs.Referrers[i:j]
-		tx, err := rc.TransferService.db.DBS().Writer.BeginTx(context.Background(), nil)
-		if err != nil {
-			return err
-		}
-
-		defer tx.Rollback() //nolint
-		for n, user := range referredsBatch {
-			r := models.Referral{
-				JobStatus: models.ReferralsJobStatusStarted,
-				Referred:  user[:],
-				Referrer:  referrersBatch[n][:],
-			}
-			err := r.Insert(ctx, rc.TransferService.db.DBS().Writer, boil.Infer())
-			if err != nil {
-				return err
-			}
-		}
-		err = rc.BatchTransferReferralBonuses(reqID, referredsBatch, referrersBatch)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referreds []common.Address, referrers []common.Address) error {
-	abi, err := contracts.ReferralsMetaData.GetAbi()
-	if err != nil {
-		return err
-	}
-	data, err := abi.Pack("sendReferralBonuses", referreds, referrers)
 	if err != nil {
 		return err
 	}

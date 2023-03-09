@@ -4,13 +4,14 @@ import (
 	"context"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb "github.com/DIMO-Network/shared/api/users"
-	"github.com/DIMO-Network/shared/db"
-	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
+	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/sqlboiler/queries"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 type ReferralsClient struct {
@@ -22,21 +23,23 @@ type ReferralsClient struct {
 }
 
 type Referrals struct {
-	Referreds []common.Address
+	Referrees []common.Address
 	Referrers []common.Address
 }
 
-func NewRewardBonusTokenTransferService(
+func NewReferralBonusService(
 	settings *config.Settings,
-	producer sarama.SyncProducer,
-	contractAddress common.Address,
-	// settings config.Settings, producer sarama.SyncProducer, reqTopic string, contract Contract,
 	transferService *TransferService,
-	db db.Store) *ReferralsClient {
+	week int,
+	logger *zerolog.Logger,
+	userClient pb.UserServiceClient) *ReferralsClient {
 
 	return &ReferralsClient{
-		ContractAddress: contractAddress,
 		TransferService: transferService,
+		ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
+		Week:            week,
+		Logger:          logger,
+		UsersClient:     userClient,
 	}
 }
 
@@ -67,9 +70,70 @@ func (r *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			continue
 		}
 
-		refs.Referreds = append(refs.Referreds, common.HexToAddress(*user.EthereumAddress))
+		refs.Referrees = append(refs.Referrees, common.HexToAddress(*user.EthereumAddress))
 		refs.Referrers = append(refs.Referrers, common.BytesToAddress(user.ReferredBy.EthereumAddress))
 	}
 
 	return refs, nil
+}
+
+func (c *ReferralsClient) ReferralsIssuance(ctx context.Context) error {
+
+	refs, err := c.CollectReferrals(ctx, c.Week)
+	if err != nil {
+		return err
+	}
+
+	err = c.transfer(ctx, refs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rc *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
+	for i := 0; i < len(refs.Referrees); i += rc.TransferService.batchSize {
+		reqID := ksuid.New().String()
+		j := i + rc.TransferService.batchSize
+		if j > len(refs.Referrees) {
+			j = len(refs.Referrees)
+		}
+
+		referreesBatch := refs.Referrees[i:j]
+		referrersBatch := refs.Referrers[i:j]
+		tx, err := rc.TransferService.db.DBS().Writer.BeginTx(context.Background(), nil)
+		if err != nil {
+			return err
+		}
+
+		defer tx.Rollback() //nolint
+		for n, user := range referreesBatch {
+			r := models.Referral{
+				JobStatus: models.ReferralsJobStatusStarted,
+				Referred:  user[:],
+				Referrer:  referrersBatch[n][:],
+			}
+			err := r.Insert(ctx, rc.TransferService.db.DBS().Writer, boil.Infer())
+			if err != nil {
+				return err
+			}
+		}
+		err = rc.BatchTransferReferralBonuses(reqID, referreesBatch, referrersBatch)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referrees []common.Address, referrers []common.Address) error {
+	abi, err := contracts.ReferralsMetaData.GetAbi()
+	if err != nil {
+		return err
+	}
+	data, err := abi.Pack("sendReferralBonuses", referrees, referrers)
+	if err != nil {
+		return err
+	}
+	return c.TransferService.sendRequest(requestID, c.ContractAddress, data)
 }
