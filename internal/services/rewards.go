@@ -73,7 +73,7 @@ func NewBaselineRewardService(
 
 	return &BaselineClient{
 		TransferService: transferService,
-		DataService:     NewDeviceDataClient(settings),
+		DataService:     dataService,
 		DevicesClient:   devicesClient,
 		DefsClient:      defsClient,
 		ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
@@ -321,9 +321,25 @@ func (t *BaselineClient) Calculate(issuanceWeek int) error {
 		return fmt.Errorf("failed to convert points to tokens: %w", err)
 	}
 
-	err = t.BaselineIssuance(ctx)
+	return nil
+}
+
+func (t *BaselineClient) BaselineIssuance(issuanceWeek int) error {
+	ctx := context.Background()
+
+	err := t.Calculate(t.Week)
 	if err != nil {
-		return fmt.Errorf("failed to submit transfers: %w", err)
+		return fmt.Errorf("failed to calculate and assign baseline tokens: %w", err)
+	}
+
+	err = t.transfer(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to submit baseline token transfers: %w", err)
+	}
+
+	week, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.TransferService.db.DBS().Writer)
+	if err != nil {
+		return err
 	}
 
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished

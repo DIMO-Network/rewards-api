@@ -85,14 +85,6 @@ type transferData struct {
 	Data string `json:"data"`
 }
 
-func (c *BaselineClient) BaselineIssuance(ctx context.Context) error {
-	err := c.transfer(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *BaselineClient) transfer(ctx context.Context) error {
 	batchSize := c.TransferService.batchSize
 	responseSize := batchSize
