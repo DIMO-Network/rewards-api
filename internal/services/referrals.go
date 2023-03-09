@@ -25,7 +25,7 @@ type Referrals struct {
 	Referrer []common.Address
 }
 
-// CollectReferrals returns address information for referrals completed in the given week.
+// CollectReferrals returns address pairs for referrals completed in the given week.
 // These will come from referees who are earning for the first time and have a referrer
 // attached to their account.
 func (r *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
@@ -40,22 +40,15 @@ func (r *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) 
 		qm.Where("r1."+models.RewardColumns.IssuanceWeekID+" = ?", issuanceWeek),
 		qm.Where("r2."+models.RewardColumns.UserID+" IS NULL"),
 	).Bind(ctx, r.DB.DBS().Reader, &res)
-
-	// err := queries.Raw(`SELECT DISTINCT r1.user_id, r1.user_ethereum_address FROM rewards r1 LEFT
-	// OUTER JOIN rewards r2 ON r1.user_id = r2.user_id AND r2.issuance_week_id < $1 WHERE
-	// r1.issuance_week_id = $1 AND r2.user_id IS NULL`, issuanceWeek)
 	if err != nil {
 		return refs, err
 	}
 
 	for _, usr := range res {
-
-		user, err := r.UsersClient.GetUser(ctx, &pb.GetUserRequest{
-			Id: usr.UserID,
-		})
+		user, err := r.UsersClient.GetUser(ctx, &pb.GetUserRequest{Id: usr.UserID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				r.Logger.Info().Msg("User has deleted their account.")
+				r.Logger.Info().Str("userId", usr.UserID).Msg("User was new this week but deleted their account.")
 				continue
 			}
 			return refs, err
@@ -65,6 +58,7 @@ func (r *ReferralsTask) CollectReferrals(ctx context.Context, issuanceWeek int) 
 			continue
 		}
 
+		// TODO(elffjs): What if this is nil?
 		refs.Referees = append(refs.Referees, common.HexToAddress(*user.EthereumAddress))
 		refs.Referrer = append(refs.Referrer, common.BytesToAddress(user.ReferredBy.EthereumAddress))
 	}

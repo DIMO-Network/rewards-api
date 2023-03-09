@@ -112,46 +112,42 @@ func TestReferrals(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	conn := db.NewDbConnectionFromSettings(ctx, &dbset, true)
+	conn := db.NewDbConnectionForTest(ctx, &dbset, true)
 	conn.WaitForDB(logger)
 
 	type Scenario struct {
-		Name         string
-		Referral     bool
-		NewUserCount int
-		LastWeek     []*models.Reward
-		ThisWeek     []*models.Reward
+		Name          string
+		ReferralCount int
+		LastWeek      []*models.Reward
+		ThisWeek      []*models.Reward
 	}
 
 	scens := []Scenario{
 		{
-			Name:         newUserReferred,
-			Referral:     true,
-			NewUserCount: 1,
+			Name:          newUserReferred,
+			ReferralCount: 1,
 			LastWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 			ThisWeek: []*models.Reward{
 				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 		{
-			Name:         newUserNotReferred,
-			Referral:     true,
-			NewUserCount: 0,
+			Name:          newUserNotReferred,
+			ReferralCount: 0,
 			LastWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 			ThisWeek: []*models.Reward{
 				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserNotReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserNotReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 		{
-			Name:         userDeletedTheirAccount,
-			Referral:     true,
-			NewUserCount: 0,
+			Name:          userDeletedTheirAccount,
+			ReferralCount: 0,
 		},
 	}
 
@@ -204,12 +200,8 @@ func TestReferrals(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			t.Log(scen.Name)
-			assert.Equal(t, len(weeklyRefs.Referees), scen.NewUserCount)
-			assert.Equal(t, len(weeklyRefs.Referrer), scen.NewUserCount)
-
+			assert.Equal(t, len(weeklyRefs.Referees), scen.ReferralCount)
+			assert.Equal(t, len(weeklyRefs.Referrer), scen.ReferralCount)
 		})
-
 	}
-
 }
