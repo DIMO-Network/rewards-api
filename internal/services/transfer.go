@@ -142,6 +142,7 @@ func (c *Client) BatchTransfer(requestID string, users []common.Address, values 
 	if err != nil {
 		return err
 	}
+
 	data, err := abi.Pack("batchTransfer", users, values, vehicleIds)
 	if err != nil {
 		return err

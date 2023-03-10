@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -111,6 +113,8 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 	txnRow.Hash = null.StringFrom(event.Data.Transaction.Hash)
 	txnRow.Status = event.Data.Type
 
+	log.Print("XDDGANG", event.Data.Type, *event.Data.Transaction.Successful)
+
 	if event.Data.Type == "Confirmed" {
 		txnRow.Successful = null.BoolFrom(*event.Data.Transaction.Successful)
 
@@ -141,6 +145,8 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 				default:
 					continue
 				}
+
+				fmt.Print("XDDL", "userDeviceId", userDeviceTokenID)
 
 				rewardRow, err := models.Rewards(
 					models.RewardWhere.TransferMetaTransactionRequestID.EQ(null.StringFrom(event.Data.RequestID)),
