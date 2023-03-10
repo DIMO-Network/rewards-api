@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	eth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
@@ -117,22 +116,21 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		if *event.Data.Transaction.Successful {
 			for _, log := range event.Data.Transaction.Logs {
 				success := false
-				txLog := convertLog(&log)
 
 				var userDeviceTokenID *big.Int
 
 				switch log.Topics[0] {
 				case s.TokensTransferredEvent.ID:
 					success = true
-					event := contracts.RewardTokensTransferred{}
-					err := s.parseLog(&event, s.TokensTransferredEvent, *txLog)
+					var event contracts.RewardTokensTransferred
+					err := s.parseLog(&event, s.TokensTransferredEvent, log)
 					if err != nil {
 						return err
 					}
 					userDeviceTokenID = event.VehicleNodeId
 				case s.DidntQualifyEvent.ID:
 					event := contracts.RewardDidntQualify{}
-					err := s.parseLog(&event, s.DidntQualifyEvent, *txLog)
+					err := s.parseLog(&event, s.DidntQualifyEvent, log)
 					if err != nil {
 						return err
 					}
@@ -186,7 +184,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 	return nil
 }
 
-func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log eth_types.Log) error {
+func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log ceLog) error {
 	if len(log.Data) > 0 {
 		err := s.ABI.UnpackIntoInterface(out, event.Name, log.Data)
 		if err != nil {
@@ -207,13 +205,6 @@ func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log eth_typ
 	}
 
 	return nil
-}
-
-func convertLog(logIn *ceLog) *eth_types.Log {
-	return &eth_types.Log{
-		Topics: logIn.Topics,
-		Data:   logIn.Data,
-	}
 }
 
 type ceLog struct {
