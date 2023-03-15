@@ -97,7 +97,7 @@ func TestReferrals(t *testing.T) {
 		t.Fatalf("failed to start geneic container: %v", err)
 	}
 
-	defer cont.Terminate(ctx)
+	defer cont.Terminate(ctx) //nolint
 
 	logger := zerolog.Nop()
 
