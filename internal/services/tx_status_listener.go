@@ -21,6 +21,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
@@ -116,21 +117,33 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		return err
 	}
 
-	s.Logger.Info().
-		Interface("eventData", event.Data).
-		Msg("Processing transaction status.")
+	s.Logger.Info().Msg("Processing transaction status.")
 
-	switch event.Subject {
-	case s.BaselineProcessor.Address.Hex():
+	mtr, err := models.MetaTransactionRequests(
+		models.MetaTransactionRequestWhere.ID.EQ(event.Data.RequestID),
+		qm.Load(models.MetaTransactionRequestRels.TransferMetaTransactionRequestRewards),
+		qm.Load(models.MetaTransactionRequestRels.RequestReferrals),
+	).One(context.TODO(), s.DB.DBS().Reader)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	}
+
+	switch {
+	case len(mtr.R.TransferMetaTransactionRequestRewards) != 0:
 		err := s.processBaselineEvent(event)
 		if err != nil {
 			return err
 		}
-	case s.ReferralsProcessor.Address.Hex():
+	case len(mtr.R.RequestReferrals) != 0:
 		err := s.processReferralEvent(event)
 		if err != nil {
 			return err
 		}
+	default:
+		s.Logger.Error().Msgf("Known meta-transaction %s has no associated baseline or referral batch.", event.Data.RequestID)
 	}
 
 	return nil
