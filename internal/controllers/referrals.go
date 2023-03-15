@@ -77,7 +77,7 @@ func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
 
 type ReferralHistory struct {
 	// ReferredBy address of user that that account was referred by
-	ReferredBy *common.Address `json:"referredBy,omitempty"`
+	ReferredBy *common.Address `json:"referredBy"`
 	// CompletedReferrals referrals for which awards have already been sent
 	CompletedReferrals []common.Address `json:"completed"`
 }
