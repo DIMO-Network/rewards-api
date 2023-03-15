@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	_ "github.com/lib/pq"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	_ "github.com/DIMO-Network/rewards-api/docs"
@@ -85,15 +88,38 @@ func main() {
 
 		dataClient := services.NewDeviceDataClient(&settings)
 
-		ethClient, err := ethclient.Dial(settings.EthereumRPCURL)
+		f, err := os.Open("config.yaml")
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create Ethereum client.")
+			logger.Fatal().Err(err).Msg("Couldn't load config.")
+		}
+		defer f.Close()
+
+		cs, err := io.ReadAll(f)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Couldn't load config file.")
 		}
 
-		tokenAddr := common.HexToAddress(settings.TokenAddress)
-		token, err := contracts.NewToken(tokenAddr, ethClient)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to instantiate token.")
+		rc := os.ExpandEnv(string(cs))
+
+		var tc services.TokenConfig
+		if err := yaml.Unmarshal([]byte(rc), &tc); err != nil {
+			logger.Fatal().Err(err).Msg("Couldn't load token config.")
+		}
+
+		var tks []*contracts.Token
+
+		for _, tkCopy := range tc.Tokens {
+			client, err := ethclient.Dial(tkCopy.RPCURL)
+			if err != nil {
+				logger.Fatal().Err(err).Msgf("Failed to create client for chain %d.", tkCopy.ChainID)
+			}
+
+			token, err := contracts.NewToken(tkCopy.Address, client)
+			if err != nil {
+				logger.Fatal().Err(err).Msgf("Failed to instantiate token for chain %d.", tkCopy.ChainID)
+			}
+
+			tks = append(tks, token)
 		}
 
 		rewardsController := controllers.RewardsController{
@@ -103,7 +129,7 @@ func main() {
 			DevicesClient:     deviceClient,
 			DataClient:        dataClient,
 			Settings:          &settings,
-			Token:             token,
+			Tokens:            tks,
 			UsersClient:       usersClient,
 		}
 
@@ -128,6 +154,7 @@ func main() {
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 		v1.Get("/user/history/transactions", rewardsController.GetTransactionHistory)
+		v1.Get("/user/history/balance", rewardsController.GetBalanceHistory)
 		v1.Get("/user/referrals", referralsController.GetUserReferralHistory)
 
 		go startGRPCServer(&settings, pdb, &logger)
@@ -157,31 +184,9 @@ func main() {
 			}
 		}()
 
-		referralProc, err := services.NewReferralStatusProcessor(pdb, &logger)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create referral status processor.")
-		}
-		go func() {
-			err := services.ConsumeReferrals(ctx, consumer, &settings, referralProc)
-			if err != nil {
-				logger.Fatal().Err(err).Send()
-			}
-		}()
-
 		kclient2, err := createKafkaClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
-		}
-
-		f, err := os.Open("config.yaml")
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Couldn't load config.")
-		}
-		defer f.Close()
-
-		var tc services.TokenConfig
-		if err := yaml.NewDecoder(f).Decode(&tc); err != nil {
-			logger.Fatal().Err(err).Msg("Couldn't load token config.")
 		}
 
 		consumer2, err := sarama.NewConsumerGroupFromClient(settings.ConsumerGroup, kclient2)
@@ -302,6 +307,13 @@ func main() {
 				logger.Fatal().Err(err).Msg("Could not parse week number.")
 			}
 		}
+
+		logger := logger.With().Int("week", week).Logger()
+
+		addr := common.HexToAddress(settings.ReferralContractAddress)
+
+		logger.Info().Msgf("Running referral job with address %s.", addr)
+
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
 		totalTime := 0
 		for !pdb.IsReady() {
@@ -322,8 +334,6 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
 		}
 
-		addr := common.HexToAddress(settings.IssuanceContractAddress)
-
 		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
@@ -336,8 +346,10 @@ func main() {
 
 		refs, err := referralBonusService.CollectReferrals(ctx, week)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to collect weeks referrals.")
+			logger.Fatal().Err(err).Msg("Failed to collect week's referrals.")
 		}
+
+		logger.Info().Msgf("Sending transactions for %d referrals.", len(refs.Referees))
 
 		err = referralBonusService.TransferReferralBonuses(ctx, refs)
 		if err != nil {

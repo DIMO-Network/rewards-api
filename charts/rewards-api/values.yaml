@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/rewards-api
   pullPolicy: IfNotPresent
-  tag: efb26f0
+  tag: 15fec51
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
@@ -49,10 +49,12 @@ env:
   FIRST_AUTOMATED_WEEK: 44
   TOKEN_ADDRESS: '0x80ee7ec4493a1d7975ab900f94db25ba7c688201'
   CONTRACT_EVENT_TOPIC: topic.contract.event
+  REFERRAL_CONTRACT_ADDRESS: '0xfF358a3dB687d9E80435a642bB3Ba8E64D4359A6'
 config:
   tokens:
     - chainId: 80001
       address: '0x80ee7ec4493a1d7975ab900f94db25ba7c688201'
+      rpcUrl: $MUMBAI_RPC_URL
 service:
   type: ClusterIP
   ports:

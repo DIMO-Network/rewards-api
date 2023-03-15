@@ -25,10 +25,9 @@ type Settings struct {
 	MetaTransactionSendTopic       string      `yaml:"META_TRANSACTION_SEND_TOPIC"`
 	MetaTransactionStatusTopic     string      `yaml:"META_TRANSACTION_STATUS_TOPIC"`
 	IssuanceContractAddress        string      `yaml:"ISSUANCE_CONTRACT_ADDRESS"`
+	ReferralContractAddress        string      `yaml:"REFERRAL_CONTRACT_ADDRESS"`
 	ConsumerGroup                  string      `yaml:"CONSUMER_GROUP"`
 	TransferBatchSize              int         `yaml:"TRANSFER_BATCH_SIZE"`
 	FirstAutomatedWeek             int         `yaml:"FIRST_AUTOMATED_WEEK"`
-	EthereumRPCURL                 string      `yaml:"ETHEREUM_RPC_URL"`
-	TokenAddress                   string      `yaml:"TOKEN_ADDRESS"`
 	ContractEventTopic             string      `yaml:"CONTRACT_EVENT_TOPIC"`
 }
