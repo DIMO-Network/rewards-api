@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/lib/pq"
+
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"

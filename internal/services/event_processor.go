@@ -107,7 +107,7 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 	}
 }
 
-func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent[contractEventData]) error {
+func (c *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent[contractEventData]) error {
 	if !strings.HasPrefix(e.Source, "chain/") {
 		return fmt.Errorf("source doesn't have the chain/ prefix: %s", e.Source)
 	}
@@ -121,7 +121,7 @@ func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent
 	var args contracts.TokenTransfer
 	err = json.Unmarshal(e.Data.Arguments, &args)
 	if err != nil {
-		ec.log.Error().Err(err).Msg("failed to unpack event arguments")
+		c.log.Error().Err(err).Msg("failed to unpack event arguments")
 		return err
 	}
 
@@ -135,11 +135,11 @@ func (ec *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent
 		ChainID:         chainID,
 	}
 
-	err = transfer.Upsert(context.Background(), ec.Db.DBS().Writer, true,
+	err = transfer.Upsert(context.Background(), c.Db.DBS().Writer, true,
 		[]string{models.TokenTransferColumns.TransactionHash, models.TokenTransferColumns.LogIndex, models.TokenTransferColumns.ChainID},
 		boil.Infer(), boil.Infer())
 	if err != nil {
-		ec.log.Error().Err(err).Msg("failed to insert token transfer record.")
+		c.log.Error().Err(err).Msg("failed to insert token transfer record.")
 		return err
 	}
 
