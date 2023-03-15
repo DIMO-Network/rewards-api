@@ -65,7 +65,7 @@ func NewStatusProcessor(pdb db.Store, logger *zerolog.Logger, settings *config.S
 		return nil, err
 	}
 
-	referralABI, err := contracts.ReferralsMetaData.GetAbi()
+	referralABI, err := contracts.ReferralMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -263,22 +263,19 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 				switch log.Topics[0] {
 				case s.ReferralsProcessor.ReferralComplete.ID:
 					success = true
-					var event contracts.ReferralsReferralComplete
+					var event contracts.ReferralReferralComplete
 					err := s.parseLog(&event, s.ReferralsProcessor.ReferralComplete, *txLog, s.ReferralsProcessor.ABI)
 					if err != nil {
 						return err
 					}
-					referee = event.Referred
-					referrer = event.Referrer
-
+					referee, referrer = event.Referee, event.Referrer
 				case s.ReferralsProcessor.ReferralInvalid.ID:
-					var event contracts.ReferralsReferralInvalid
+					var event contracts.ReferralReferralInvalid
 					err := s.parseLog(&event, s.ReferralsProcessor.ReferralInvalid, *txLog, s.ReferralsProcessor.ABI)
 					if err != nil {
 						return err
 					}
-					referee = event.Referred
-					referrer = event.Referrer
+					referee, referrer = event.Referee, event.Referrer
 
 				default:
 					continue

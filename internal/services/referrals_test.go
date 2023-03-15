@@ -231,7 +231,7 @@ func TestReferralsBatchRequest(t *testing.T) {
 		Referrers: []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B48")},
 	}
 
-	abi, err := contracts.ReferralsMetaData.GetAbi()
+	abi, err := contracts.ReferralMetaData.GetAbi()
 	assert.Nil(t, err)
 
 	data, err := abi.Pack("sendReferralBonuses", refs.Referees, refs.Referrers)

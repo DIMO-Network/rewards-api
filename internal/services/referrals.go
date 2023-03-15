@@ -158,7 +158,7 @@ func (rc *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 }
 
 func (rc *ReferralsClient) BatchTransferReferralBonuses(requestID string, referrees []common.Address, referrers []common.Address) error {
-	abi, err := contracts.ReferralsMetaData.GetAbi()
+	abi, err := contracts.ReferralMetaData.GetAbi()
 	if err != nil {
 		return err
 	}
