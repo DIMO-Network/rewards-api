@@ -121,12 +121,12 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		Msg("Processing transaction status.")
 
 	switch event.Subject {
-	case s.BaselineProcessor.Address.String():
+	case s.BaselineProcessor.Address.Hex():
 		err := s.processBaselineEvent(event)
 		if err != nil {
 			return err
 		}
-	case s.ReferralsProcessor.Address.String():
+	case s.ReferralsProcessor.Address.Hex():
 		err := s.processReferralEvent(event)
 		if err != nil {
 			return err
@@ -285,7 +285,7 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 				}
 
 				rewardRow, err := models.Referrals(
-					models.ReferralWhere.ID.EQ(null.StringFrom(cloudEvent.Data.RequestID)),
+					models.ReferralWhere.ID.EQ(cloudEvent.Data.RequestID),
 					models.ReferralWhere.Referred.EQ(referred[:]),
 					models.ReferralWhere.Referrer.EQ(referrer[:]),
 				).One(context.Background(), tx)
@@ -305,7 +305,7 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 			}
 		} else {
 			_, err := models.Referrals(
-				models.ReferralWhere.ID.EQ(null.StringFrom(cloudEvent.Data.RequestID)),
+				models.ReferralWhere.ID.EQ(cloudEvent.Data.RequestID),
 			).UpdateAll(context.Background(), tx, models.M{
 				models.ReferralColumns.TransferSuccessful:    false,
 				models.ReferralColumns.TransferFailureReason: models.RewardsTransferFailureReasonTxReverted,

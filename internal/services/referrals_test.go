@@ -60,10 +60,6 @@ var fakeUserClientResponse = map[string]*pb_users.User{
 		Id:              userDeletedTheirAccount,
 		EthereumAddress: &userDeletedAccountAddr,
 	},
-	userDeletedTheirAccount: {
-		Id:              userDeletedTheirAccount,
-		EthereumAddress: &addr,
-	},
 }
 
 type FakeUserClient struct{}
@@ -231,7 +227,7 @@ func TestReferrals(t *testing.T) {
 			}
 
 			t.Log("name: ", scen.Name)
-			assert.Equal(t, len(weeklyRefs.Referrees), scen.NewUserCount)
+			assert.Equal(t, len(weeklyRefs.Referees), scen.NewUserCount)
 			assert.Equal(t, len(weeklyRefs.Referrers), scen.NewUserCount)
 			for _, addr := range weeklyRefs.Referrers {
 				userClientResp := fakeUserClientResponse[scen.Name]
@@ -254,14 +250,14 @@ func TestReferralsBatchRequest(t *testing.T) {
 	producer := mocks.NewSyncProducer(t, config)
 
 	refs := Referrals{
-		Referrees: []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B49")},
+		Referees:  []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B49")},
 		Referrers: []common.Address{common.HexToAddress("0x67B94473D81D0cd00849D563C94d0432Ac988B48")},
 	}
 
 	abi, err := contracts.ReferralsMetaData.GetAbi()
 	assert.Nil(t, err)
 
-	data, err := abi.Pack("sendReferralBonuses", refs.Referrees, refs.Referrers)
+	data, err := abi.Pack("sendReferralBonuses", refs.Referees, refs.Referrers)
 	assert.Nil(t, err)
 
 	event := shared.CloudEvent[string]{

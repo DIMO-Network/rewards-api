@@ -10,12 +10,15 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb "github.com/DIMO-Network/shared/api/users"
+	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
-	"github.com/volatiletech/sqlboiler/queries"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ReferralsClient struct {
@@ -27,7 +30,7 @@ type ReferralsClient struct {
 }
 
 type Referrals struct {
-	Referrees []common.Address
+	Referees  []common.Address
 	Referrers []common.Address
 }
 
@@ -47,28 +50,30 @@ func NewReferralBonusService(
 	}
 }
 
-// CollectReferrals Check if users who recieved rewards for the first time this week were referred
-// if they were, collect their address and the address of their referrer
-func (r *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
+// CollectReferrals returns address pairs for referrals completed in the given week.
+// These will come from referees who are earning for the first time and have a referrer
+// attached to their account.
+func (rc *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
 	var refs Referrals
 
 	var res []models.Reward
 
-	err := queries.Raw(`SELECT DISTINCT r1.user_id, r1.user_ethereum_address FROM rewards r1 LEFT
-	OUTER JOIN rewards r2 ON r1.user_id = r2.user_id AND r2.issuance_week_id < $1 WHERE
-	r1.issuance_week_id = $1 AND r2.user_id IS NULL`, issuanceWeek).Bind(ctx, r.TransferService.db.DBS().Reader, &res)
+	err := models.NewQuery(
+		qm.Distinct("r1."+models.RewardColumns.UserID+", r1."+models.RewardColumns.UserEthereumAddress),
+		qm.From(models.TableNames.Rewards+" r1"),
+		qm.LeftOuterJoin(models.TableNames.Rewards+" r2 ON r1."+models.RewardColumns.UserID+" = r2."+models.RewardColumns.UserID+" AND r2."+models.RewardColumns.IssuanceWeekID+" < ?", issuanceWeek),
+		qm.Where("r1."+models.RewardColumns.IssuanceWeekID+" = ?", issuanceWeek),
+		qm.Where("r2."+models.RewardColumns.UserID+" IS NULL"),
+	).Bind(ctx, rc.TransferService.db.DBS().Reader, &res)
 	if err != nil {
 		return refs, err
 	}
 
 	for _, usr := range res {
-
-		user, err := rc.UsersClient.GetUser(ctx, &pb.GetUserRequest{
-			Id: usr.UserID,
-		})
+		user, err := rc.UsersClient.GetUser(ctx, &pb.GetUserRequest{Id: usr.UserID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				rc.Logger.Info().Msg("User has deleted their account.")
+				rc.Logger.Info().Str("userId", usr.UserID).Msg("User was new this week but deleted their account.")
 				continue
 			}
 			return refs, err
@@ -78,7 +83,12 @@ func (r *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			continue
 		}
 
-		refs.Referrees = append(refs.Referrees, common.HexToAddress(*user.EthereumAddress))
+		if user.EthereumAddress == nil {
+			rc.Logger.Info().Str("userId", usr.UserID).Msg("Referred user does not have a valid ethereum address.")
+			continue
+		}
+
+		refs.Referees = append(refs.Referees, common.HexToAddress(*user.EthereumAddress))
 		refs.Referrers = append(refs.Referrers, common.BytesToAddress(user.ReferredBy.EthereumAddress))
 	}
 
@@ -100,14 +110,14 @@ func (c *ReferralsClient) ReferralsIssuance(ctx context.Context) error {
 }
 
 func (rc *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
-	for i := 0; i < len(refs.Referrees); i += rc.TransferService.batchSize {
+	for i := 0; i < len(refs.Referees); i += rc.TransferService.batchSize {
 		reqID := ksuid.New().String()
 		j := i + rc.TransferService.batchSize
-		if j > len(refs.Referrees) {
-			j = len(refs.Referrees)
+		if j > len(refs.Referees) {
+			j = len(refs.Referees)
 		}
 
-		referreesBatch := refs.Referrees[i:j]
+		referreesBatch := refs.Referees[i:j]
 		referrersBatch := refs.Referrers[i:j]
 		tx, err := rc.TransferService.db.DBS().Writer.BeginTx(context.Background(), nil)
 		if err != nil {
@@ -134,8 +144,7 @@ func (rc *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 	return nil
 }
 
-
-func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referrees []common.Address, referrers []common.Address) error {
+func (rc *ReferralsClient) BatchTransferReferralBonuses(requestID string, referrees []common.Address, referrers []common.Address) error {
 	abi, err := contracts.ReferralsMetaData.GetAbi()
 	if err != nil {
 		return err
@@ -152,12 +161,12 @@ func (rc *ReferralsClient) sendRequest(requestID string, data []byte) error {
 		ID:          requestID,
 		Source:      "rewards-api",
 		SpecVersion: "1.0",
-		Subject:     hexutil.Encode(rc.ContractAddress[:]),
+		Subject:     rc.ContractAddress.Hex(),
 		Time:        time.Now(),
 		Type:        "zone.dimo.referrals.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   hexutil.Encode(rc.ContractAddress[:]),
+			To:   rc.ContractAddress.Hex(),
 			Data: hexutil.Encode(data),
 		},
 	}
@@ -167,9 +176,9 @@ func (rc *ReferralsClient) sendRequest(requestID string, data []byte) error {
 		return err
 	}
 
-	_, _, err = rc.Producer.SendMessage(
+	_, _, err = rc.TransferService.Producer.SendMessage(
 		&sarama.ProducerMessage{
-			Topic: rc.RequestTopic,
+			Topic: rc.TransferService.RequestTopic,
 			Key:   sarama.StringEncoder(requestID),
 			Value: sarama.ByteEncoder(eventBytes),
 		},
