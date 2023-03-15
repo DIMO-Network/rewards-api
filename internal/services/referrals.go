@@ -2,12 +2,16 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/models"
+	"github.com/DIMO-Network/shared"
 	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/sqlboiler/queries"
@@ -59,10 +63,14 @@ func (r *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 
 	for _, usr := range res {
 
-		user, err := r.UsersClient.GetUser(ctx, &pb.GetUserRequest{
+		user, err := rc.UsersClient.GetUser(ctx, &pb.GetUserRequest{
 			Id: usr.UserID,
 		})
 		if err != nil {
+			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+				rc.Logger.Info().Msg("User has deleted their account.")
+				continue
+			}
 			return refs, err
 		}
 
@@ -126,6 +134,7 @@ func (rc *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 	return nil
 }
 
+
 func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referrees []common.Address, referrers []common.Address) error {
 	abi, err := contracts.ReferralsMetaData.GetAbi()
 	if err != nil {
@@ -135,5 +144,36 @@ func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referre
 	if err != nil {
 		return err
 	}
-	return c.TransferService.sendRequest(requestID, c.ContractAddress, data)
+	return rc.sendRequest(requestID, data)
+}
+
+func (rc *ReferralsClient) sendRequest(requestID string, data []byte) error {
+	event := shared.CloudEvent[transferData]{
+		ID:          requestID,
+		Source:      "rewards-api",
+		SpecVersion: "1.0",
+		Subject:     hexutil.Encode(rc.ContractAddress[:]),
+		Time:        time.Now(),
+		Type:        "zone.dimo.referrals.request",
+		Data: transferData{
+			ID:   requestID,
+			To:   hexutil.Encode(rc.ContractAddress[:]),
+			Data: hexutil.Encode(data),
+		},
+	}
+
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = rc.Producer.SendMessage(
+		&sarama.ProducerMessage{
+			Topic: rc.RequestTopic,
+			Key:   sarama.StringEncoder(requestID),
+			Value: sarama.ByteEncoder(eventBytes),
+		},
+	)
+
+	return err
 }

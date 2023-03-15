@@ -149,6 +149,17 @@ func main() {
 			}
 		}()
 
+		referralProc, err := services.NewReferralStatusProcessor(pdb, &logger)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create referral status processor.")
+		}
+		go func() {
+			err := services.ConsumeReferrals(ctx, consumer, &settings, referralProc)
+			if err != nil {
+				logger.Fatal().Err(err).Send()
+			}
+		}()
+
 		kclient2, err := createKafkaClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
@@ -305,8 +316,8 @@ func main() {
 		usersClient := pb_users.NewUserServiceClient(usersConn)
 
 		referralsClient := services.NewReferralBonusService(&settings, transferService, week, &logger, usersClient)
-
 		err = referralsClient.ReferralsIssuance(ctx)
+    
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}

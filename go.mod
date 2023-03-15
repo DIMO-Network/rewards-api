@@ -22,6 +22,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/swaggo/swag v1.8.8
 	github.com/volatiletech/null/v8 v8.1.2
+	github.com/volatiletech/sqlboiler v3.7.1+incompatible
 	github.com/volatiletech/sqlboiler/v4 v4.13.0
 	github.com/volatiletech/strmangle v0.0.4
 	google.golang.org/grpc v1.51.0
@@ -126,7 +127,6 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/testcontainers/testcontainers-go v0.17.0
 	github.com/volatiletech/inflect v0.0.1 // indirect
-	github.com/volatiletech/sqlboiler v3.7.1+incompatible
 	golang.org/x/exp v0.0.0-20230131160201-f062dba9d201
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect

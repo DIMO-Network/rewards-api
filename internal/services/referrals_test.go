@@ -60,6 +60,10 @@ var fakeUserClientResponse = map[string]*pb_users.User{
 		Id:              userDeletedTheirAccount,
 		EthereumAddress: &userDeletedAccountAddr,
 	},
+	userDeletedTheirAccount: {
+		Id:              userDeletedTheirAccount,
+		EthereumAddress: &addr,
+	},
 }
 
 type FakeUserClient struct{}

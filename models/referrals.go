@@ -24,7 +24,7 @@ import (
 
 // Referral is an object representing the database table.
 type Referral struct {
-	ID                    null.String `boil:"id" json:"id,omitempty" toml:"id" yaml:"id,omitempty"`
+	ID                    string      `boil:"id" json:"id" toml:"id" yaml:"id"`
 	JobStatus             string      `boil:"job_status" json:"job_status" toml:"job_status" yaml:"job_status"`
 	Referred              []byte      `boil:"referred" json:"referred" toml:"referred" yaml:"referred"`
 	Referrer              []byte      `boil:"referrer" json:"referrer" toml:"referrer" yaml:"referrer"`
@@ -70,14 +70,14 @@ var ReferralTableColumns = struct {
 // Generated where
 
 var ReferralWhere = struct {
-	ID                    whereHelpernull_String
+	ID                    whereHelperstring
 	JobStatus             whereHelperstring
 	Referred              whereHelper__byte
 	Referrer              whereHelper__byte
 	TransferSuccessful    whereHelpernull_Bool
 	TransferFailureReason whereHelpernull_String
 }{
-	ID:                    whereHelpernull_String{field: "\"rewards_api\".\"referrals\".\"id\""},
+	ID:                    whereHelperstring{field: "\"rewards_api\".\"referrals\".\"id\""},
 	JobStatus:             whereHelperstring{field: "\"rewards_api\".\"referrals\".\"job_status\""},
 	Referred:              whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referred\""},
 	Referrer:              whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referrer\""},
@@ -103,8 +103,8 @@ type referralL struct{}
 
 var (
 	referralAllColumns            = []string{"id", "job_status", "referred", "referrer", "transfer_successful", "transfer_failure_reason"}
-	referralColumnsWithoutDefault = []string{"job_status", "referred", "referrer"}
-	referralColumnsWithDefault    = []string{"id", "transfer_successful", "transfer_failure_reason"}
+	referralColumnsWithoutDefault = []string{"id", "job_status", "referred", "referrer"}
+	referralColumnsWithDefault    = []string{"transfer_successful", "transfer_failure_reason"}
 	referralPrimaryKeyColumns     = []string{"referred", "referrer"}
 	referralGeneratedColumns      = []string{}
 )
