@@ -71,6 +71,11 @@ func (d *FakeUserClient) GetUser(ctx context.Context, in *pb.GetUserRequest, opt
 func TestReferrals(t *testing.T) {
 	ctx := context.Background()
 
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	port := 5432
 	nport := fmt.Sprintf("%d/tcp", port)
 
@@ -197,11 +202,10 @@ func TestReferrals(t *testing.T) {
 				}
 			}
 
-			settings := config.Settings{}
-
 			producer := mocks.NewSyncProducer(t, nil)
-			addr := common.HexToAddress(settings.IssuanceContractAddress)
-			referralBonusService := NewRewardBonusTokenTransferService(&settings, producer, addr, &FakeUserClient{}, conn, &logger)
+			transferService := NewTokenTransferService(&settings, producer, conn)
+
+			referralBonusService := NewReferralBonusService(&settings, transferService, 1, nil, &FakeUserClient{})
 
 			weeklyRefs, err := referralBonusService.CollectReferrals(ctx, 1)
 			if err != nil {

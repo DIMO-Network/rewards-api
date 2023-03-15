@@ -24,73 +24,70 @@ import (
 
 // Referral is an object representing the database table.
 type Referral struct {
-	ID                    string      `boil:"id" json:"id" toml:"id" yaml:"id"`
-	JobStatus             string      `boil:"job_status" json:"job_status" toml:"job_status" yaml:"job_status"`
-	Referred              []byte      `boil:"referred" json:"referred" toml:"referred" yaml:"referred"`
+	Referee               []byte      `boil:"referee" json:"referee" toml:"referee" yaml:"referee"`
 	Referrer              []byte      `boil:"referrer" json:"referrer" toml:"referrer" yaml:"referrer"`
 	TransferSuccessful    null.Bool   `boil:"transfer_successful" json:"transfer_successful,omitempty" toml:"transfer_successful" yaml:"transfer_successful,omitempty"`
 	TransferFailureReason null.String `boil:"transfer_failure_reason" json:"transfer_failure_reason,omitempty" toml:"transfer_failure_reason" yaml:"transfer_failure_reason,omitempty"`
+	RequestID             string      `boil:"request_id" json:"request_id" toml:"request_id" yaml:"request_id"`
 
 	R *referralR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L referralL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var ReferralColumns = struct {
-	ID                    string
-	JobStatus             string
-	Referred              string
+	Referee               string
 	Referrer              string
 	TransferSuccessful    string
 	TransferFailureReason string
+	RequestID             string
 }{
-	ID:                    "id",
-	JobStatus:             "job_status",
-	Referred:              "referred",
+	Referee:               "referee",
 	Referrer:              "referrer",
 	TransferSuccessful:    "transfer_successful",
 	TransferFailureReason: "transfer_failure_reason",
+	RequestID:             "request_id",
 }
 
 var ReferralTableColumns = struct {
-	ID                    string
-	JobStatus             string
-	Referred              string
+	Referee               string
 	Referrer              string
 	TransferSuccessful    string
 	TransferFailureReason string
+	RequestID             string
 }{
-	ID:                    "referrals.id",
-	JobStatus:             "referrals.job_status",
-	Referred:              "referrals.referred",
+	Referee:               "referrals.referee",
 	Referrer:              "referrals.referrer",
 	TransferSuccessful:    "referrals.transfer_successful",
 	TransferFailureReason: "referrals.transfer_failure_reason",
+	RequestID:             "referrals.request_id",
 }
 
 // Generated where
 
 var ReferralWhere = struct {
-	ID                    whereHelperstring
-	JobStatus             whereHelperstring
-	Referred              whereHelper__byte
+	Referee               whereHelper__byte
 	Referrer              whereHelper__byte
 	TransferSuccessful    whereHelpernull_Bool
 	TransferFailureReason whereHelpernull_String
+	RequestID             whereHelperstring
 }{
-	ID:                    whereHelperstring{field: "\"rewards_api\".\"referrals\".\"id\""},
-	JobStatus:             whereHelperstring{field: "\"rewards_api\".\"referrals\".\"job_status\""},
-	Referred:              whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referred\""},
+	Referee:               whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referee\""},
 	Referrer:              whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referrer\""},
 	TransferSuccessful:    whereHelpernull_Bool{field: "\"rewards_api\".\"referrals\".\"transfer_successful\""},
 	TransferFailureReason: whereHelpernull_String{field: "\"rewards_api\".\"referrals\".\"transfer_failure_reason\""},
+	RequestID:             whereHelperstring{field: "\"rewards_api\".\"referrals\".\"request_id\""},
 }
 
 // ReferralRels is where relationship names are stored.
 var ReferralRels = struct {
-}{}
+	Request string
+}{
+	Request: "Request",
+}
 
 // referralR is where relationships are stored.
 type referralR struct {
+	Request *MetaTransactionRequest `boil:"Request" json:"Request" toml:"Request" yaml:"Request"`
 }
 
 // NewStruct creates a new relationship struct
@@ -98,14 +95,21 @@ func (*referralR) NewStruct() *referralR {
 	return &referralR{}
 }
 
+func (r *referralR) GetRequest() *MetaTransactionRequest {
+	if r == nil {
+		return nil
+	}
+	return r.Request
+}
+
 // referralL is where Load methods for each relationship are stored.
 type referralL struct{}
 
 var (
-	referralAllColumns            = []string{"id", "job_status", "referred", "referrer", "transfer_successful", "transfer_failure_reason"}
-	referralColumnsWithoutDefault = []string{"id", "job_status", "referred", "referrer"}
+	referralAllColumns            = []string{"referee", "referrer", "transfer_successful", "transfer_failure_reason", "request_id"}
+	referralColumnsWithoutDefault = []string{"referee", "referrer", "request_id"}
 	referralColumnsWithDefault    = []string{"transfer_successful", "transfer_failure_reason"}
-	referralPrimaryKeyColumns     = []string{"referred", "referrer"}
+	referralPrimaryKeyColumns     = []string{"referee", "referrer"}
 	referralGeneratedColumns      = []string{}
 )
 
@@ -387,6 +391,184 @@ func (q referralQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (b
 	return count > 0, nil
 }
 
+// Request pointed to by the foreign key.
+func (o *Referral) Request(mods ...qm.QueryMod) metaTransactionRequestQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.RequestID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return MetaTransactionRequests(queryMods...)
+}
+
+// LoadRequest allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (referralL) LoadRequest(ctx context.Context, e boil.ContextExecutor, singular bool, maybeReferral interface{}, mods queries.Applicator) error {
+	var slice []*Referral
+	var object *Referral
+
+	if singular {
+		var ok bool
+		object, ok = maybeReferral.(*Referral)
+		if !ok {
+			object = new(Referral)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeReferral)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeReferral))
+			}
+		}
+	} else {
+		s, ok := maybeReferral.(*[]*Referral)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeReferral)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeReferral))
+			}
+		}
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &referralR{}
+		}
+		args = append(args, object.RequestID)
+
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &referralR{}
+			}
+
+			for _, a := range args {
+				if a == obj.RequestID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.RequestID)
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`rewards_api.meta_transaction_requests`),
+		qm.WhereIn(`rewards_api.meta_transaction_requests.id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load MetaTransactionRequest")
+	}
+
+	var resultSlice []*MetaTransactionRequest
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice MetaTransactionRequest")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for meta_transaction_requests")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for meta_transaction_requests")
+	}
+
+	if len(metaTransactionRequestAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.Request = foreign
+		if foreign.R == nil {
+			foreign.R = &metaTransactionRequestR{}
+		}
+		foreign.R.RequestReferrals = append(foreign.R.RequestReferrals, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.RequestID == foreign.ID {
+				local.R.Request = foreign
+				if foreign.R == nil {
+					foreign.R = &metaTransactionRequestR{}
+				}
+				foreign.R.RequestReferrals = append(foreign.R.RequestReferrals, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// SetRequest of the referral to the related item.
+// Sets o.R.Request to related.
+// Adds o to related.R.RequestReferrals.
+func (o *Referral) SetRequest(ctx context.Context, exec boil.ContextExecutor, insert bool, related *MetaTransactionRequest) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"rewards_api\".\"referrals\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"request_id"}),
+		strmangle.WhereClause("\"", "\"", 2, referralPrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.Referee, o.Referrer}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.RequestID = related.ID
+	if o.R == nil {
+		o.R = &referralR{
+			Request: related,
+		}
+	} else {
+		o.R.Request = related
+	}
+
+	if related.R == nil {
+		related.R = &metaTransactionRequestR{
+			RequestReferrals: ReferralSlice{o},
+		}
+	} else {
+		related.R.RequestReferrals = append(related.R.RequestReferrals, o)
+	}
+
+	return nil
+}
+
 // Referrals retrieves all the records using an executor.
 func Referrals(mods ...qm.QueryMod) referralQuery {
 	mods = append(mods, qm.From("\"rewards_api\".\"referrals\""))
@@ -400,7 +582,7 @@ func Referrals(mods ...qm.QueryMod) referralQuery {
 
 // FindReferral retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindReferral(ctx context.Context, exec boil.ContextExecutor, referred []byte, referrer []byte, selectCols ...string) (*Referral, error) {
+func FindReferral(ctx context.Context, exec boil.ContextExecutor, referee []byte, referrer []byte, selectCols ...string) (*Referral, error) {
 	referralObj := &Referral{}
 
 	sel := "*"
@@ -408,10 +590,10 @@ func FindReferral(ctx context.Context, exec boil.ContextExecutor, referred []byt
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"rewards_api\".\"referrals\" where \"referred\"=$1 AND \"referrer\"=$2", sel,
+		"select %s from \"rewards_api\".\"referrals\" where \"referee\"=$1 AND \"referrer\"=$2", sel,
 	)
 
-	q := queries.Raw(query, referred, referrer)
+	q := queries.Raw(query, referee, referrer)
 
 	err := q.Bind(ctx, exec, referralObj)
 	if err != nil {
@@ -763,7 +945,7 @@ func (o *Referral) Delete(ctx context.Context, exec boil.ContextExecutor) (int64
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), referralPrimaryKeyMapping)
-	sql := "DELETE FROM \"rewards_api\".\"referrals\" WHERE \"referred\"=$1 AND \"referrer\"=$2"
+	sql := "DELETE FROM \"rewards_api\".\"referrals\" WHERE \"referee\"=$1 AND \"referrer\"=$2"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -860,7 +1042,7 @@ func (o ReferralSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor)
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *Referral) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindReferral(ctx, exec, o.Referred, o.Referrer)
+	ret, err := FindReferral(ctx, exec, o.Referee, o.Referrer)
 	if err != nil {
 		return err
 	}
@@ -899,16 +1081,16 @@ func (o *ReferralSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor
 }
 
 // ReferralExists checks if the Referral row exists.
-func ReferralExists(ctx context.Context, exec boil.ContextExecutor, referred []byte, referrer []byte) (bool, error) {
+func ReferralExists(ctx context.Context, exec boil.ContextExecutor, referee []byte, referrer []byte) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"rewards_api\".\"referrals\" where \"referred\"=$1 AND \"referrer\"=$2 limit 1)"
+	sql := "select exists(select 1 from \"rewards_api\".\"referrals\" where \"referee\"=$1 AND \"referrer\"=$2 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, referred, referrer)
+		fmt.Fprintln(writer, referee, referrer)
 	}
-	row := exec.QueryRowContext(ctx, sql, referred, referrer)
+	row := exec.QueryRowContext(ctx, sql, referee, referrer)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -920,5 +1102,5 @@ func ReferralExists(ctx context.Context, exec boil.ContextExecutor, referred []b
 
 // Exists checks if the Referral row exists.
 func (o *Referral) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return ReferralExists(ctx, exec, o.Referred, o.Referrer)
+	return ReferralExists(ctx, exec, o.Referee, o.Referrer)
 }

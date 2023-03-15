@@ -7,10 +7,10 @@ import (
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
-	"github.com/DIMO-Network/shared/db"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"
@@ -31,6 +31,56 @@ var baseWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
 var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
+
+type BaselineClient struct {
+	TransferService *TransferService
+	DataService     DeviceActivityClient
+	DevicesClient   DevicesClient
+	DefsClient      IntegrationsGetter
+	ContractAddress common.Address
+	Week            int
+	Logger          *zerolog.Logger
+}
+
+type DeviceActivityClient interface {
+	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
+}
+
+type IntegrationsGetter interface {
+	GetIntegrations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error)
+}
+
+type DevicesClient interface {
+	GetUserDevice(ctx context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error)
+}
+
+type integrationPointsCalculator struct {
+	AutoPiID   string
+	TeslaID    string
+	SmartcarID string
+}
+
+func NewBaselineRewardService(
+	settings *config.Settings,
+	transferService *TransferService,
+	dataService DeviceActivityClient,
+	devicesClient DevicesClient,
+	defsClient IntegrationsGetter,
+	week int,
+	logger *zerolog.Logger,
+
+) *BaselineClient {
+
+	return &BaselineClient{
+		TransferService: transferService,
+		DataService:     dataService,
+		DevicesClient:   devicesClient,
+		DefsClient:      defsClient,
+		ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
+		Week:            week,
+		Logger:          logger,
+	}
+}
 
 // GetWeekNum calculates the number of the week in which the given time lies for DIMO point
 // issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
@@ -57,33 +107,6 @@ func NumToWeekEnd(n int) time.Time {
 	return startTime.Add(time.Duration(n+1) * weekDuration)
 }
 
-type RewardsTask struct {
-	Logger          *zerolog.Logger
-	DataService     DeviceActivityClient
-	DB              db.Store
-	TransferService Transfer
-	DevicesClient   DevicesClient
-	DefsClient      IntegrationsGetter
-}
-
-type DeviceActivityClient interface {
-	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
-}
-
-type IntegrationsGetter interface {
-	GetIntegrations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error)
-}
-
-type DevicesClient interface {
-	GetUserDevice(ctx context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error)
-}
-
-type integrationPointsCalculator struct {
-	AutoPiID   string
-	TeslaID    string
-	SmartcarID string
-}
-
 func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
 	// Only blessed combination.
 	if slices.Contains(integrationIDs, i.AutoPiID) {
@@ -99,7 +122,7 @@ func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
 	return 0
 }
 
-func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb_defs.GetIntegrationResponse) *integrationPointsCalculator {
+func (t *BaselineClient) createIntegrationPointsCalculator(resp *pb_defs.GetIntegrationResponse) *integrationPointsCalculator {
 	var calc integrationPointsCalculator
 
 	for _, integration := range resp.Integrations {
@@ -118,7 +141,7 @@ func (t *RewardsTask) createIntegrationPointsCalculator(resp *pb_defs.GetIntegra
 	return &calc
 }
 
-func (t *RewardsTask) Calculate(issuanceWeek int) error {
+func (t *BaselineClient) Calculate(issuanceWeek int) error {
 	ctx := context.Background()
 
 	weekStart := NumToWeekStart(issuanceWeek)
@@ -127,7 +150,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
 	// There shouldn't be anything there. This used to be used when we'd do historical overrides.
-	delCount, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.DB.DBS().Writer)
+	delCount, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.TransferService.db.DBS().Writer)
 	if err != nil {
 		return err
 	}
@@ -143,11 +166,11 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		EndsAt:    weekEnd,
 	}
 
-	if err := week.Upsert(ctx, t.DB.DBS().Writer, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
+	if err := week.Upsert(ctx, t.TransferService.db.DBS().Writer, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
 		return err
 	}
 
-	overrides, err := models.Overrides(models.OverrideWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.DB.DBS().Reader)
+	overrides, err := models.Overrides(models.OverrideWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.TransferService.db.DBS().Reader)
 	if err != nil {
 		return err
 	}
@@ -170,7 +193,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 
 	integCalc := t.createIntegrationPointsCalculator(integs)
 
-	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.DB.DBS().Reader)
+	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.TransferService.db.DBS().Reader)
 	if err != nil {
 		return err
 	}
@@ -264,7 +287,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		// This is a no-op if the device doesn't have a record from last week.
 		delete(lastWeekByDevice, deviceActivity.ID)
 
-		if err := thisWeek.Insert(ctx, t.DB.DBS().Writer, boil.Infer()); err != nil {
+		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
 	}
@@ -283,7 +306,7 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		}
 		streak := ComputeStreak(streakInput)
 		setStreakFields(thisWeek, streak)
-		if err := thisWeek.Insert(ctx, t.DB.DBS().Writer, boil.Infer()); err != nil {
+		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
 	}
@@ -292,19 +315,35 @@ func (t *RewardsTask) Calculate(issuanceWeek int) error {
 		t.Logger.Warn().Interface("overrides", deviceToOverride).Msg("Unused overrides.")
 	}
 
-	st := storage.DBStorage{DBS: t.DB}
+	st := storage.DBStorage{DBS: t.TransferService.db}
 	err = st.AssignTokens(ctx, issuanceWeek, baseWeeklyTokens)
 	if err != nil {
 		return fmt.Errorf("failed to convert points to tokens: %w", err)
 	}
 
-	err = t.TransferService.TransferUserTokens(ctx, issuanceWeek)
+	return nil
+}
+
+func (t *BaselineClient) BaselineIssuance(issuanceWeek int) error {
+	ctx := context.Background()
+
+	err := t.Calculate(t.Week)
 	if err != nil {
-		return fmt.Errorf("failed to submit transfers: %w", err)
+		return fmt.Errorf("failed to calculate and assign baseline tokens: %w", err)
+	}
+
+	err = t.transfer(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to submit baseline token transfers: %w", err)
+	}
+
+	week, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.TransferService.db.DBS().Writer)
+	if err != nil {
+		return err
 	}
 
 	week.JobStatus = models.IssuanceWeeksJobStatusFinished
-	if _, err := week.Update(ctx, t.DB.DBS().Writer, boil.Infer()); err != nil {
+	if _, err := week.Update(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 		return err
 	}
 

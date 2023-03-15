@@ -98,19 +98,6 @@ func AllMetaTransactionRequestStatus() []string {
 	}
 }
 
-// Enum values for ReferralsJobStatus
-const (
-	ReferralsJobStatusComplete string = "Complete"
-	ReferralsJobStatusStarted  string = "Started"
-)
-
-func AllReferralsJobStatus() []string {
-	return []string{
-		ReferralsJobStatusComplete,
-		ReferralsJobStatusStarted,
-	}
-}
-
 // Enum values for ReferralsTransferFailureReason
 const (
 	ReferralsTransferFailureReasonReferralInvalid string = "ReferralInvalid"
