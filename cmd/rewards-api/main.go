@@ -164,7 +164,7 @@ func main() {
 		defer consumer.Close()
 
 		// need to pass logger here
-		statusProc, err := services.NewStatusProcessor(pdb, &logger)
+		statusProc, err := services.NewStatusProcessor(pdb, &logger, &settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create transaction status processor.")
 		}
@@ -245,8 +245,6 @@ func main() {
 			totalTime++
 		}
 
-		var transferService services.Transfer
-
 		kclient, err := createKafkaClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
@@ -257,8 +255,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
 		}
 
-		addr := common.HexToAddress(settings.IssuanceContractAddress)
-		transferService = services.NewTokenTransferService(&settings, producer, addr, pdb)
+		transferService := services.NewTokenTransferService(&settings, producer, pdb)
 
 		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
@@ -276,15 +273,9 @@ func main() {
 
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 
-		task := services.RewardsTask{
-			DataService:     services.NewDeviceDataClient(&settings),
-			DB:              pdb,
-			Logger:          &logger,
-			TransferService: transferService,
-			DevicesClient:   deviceClient,
-			DefsClient:      definitionsClient,
-		}
-		if err := task.Calculate(week); err != nil {
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, services.NewDeviceDataClient(&settings), deviceClient, definitionsClient, week, &logger)
+
+		if err := baselineRewardClient.Calculate(week); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
 		}
 	case "issue-referral-bonus":
@@ -301,9 +292,7 @@ func main() {
 		}
 
 		logger := logger.With().Int("week", week).Logger()
-
 		addr := common.HexToAddress(settings.ReferralContractAddress)
-
 		logger.Info().Msgf("Running referral job with address %s.", addr)
 
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
@@ -326,6 +315,8 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
 		}
 
+		transferService := services.NewTokenTransferService(&settings, producer, pdb)
+
 		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
@@ -334,16 +325,8 @@ func main() {
 
 		usersClient := pb_users.NewUserServiceClient(usersConn)
 
-		referralBonusService := services.NewRewardBonusTokenTransferService(&settings, producer, addr, usersClient, pdb, &logger)
-
-		refs, err := referralBonusService.CollectReferrals(ctx, week)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to collect week's referrals.")
-		}
-
-		logger.Info().Msgf("Sending transactions for %d referrals.", len(refs.Referees))
-
-		err = referralBonusService.TransferReferralBonuses(ctx, refs)
+		referralsClient := services.NewReferralBonusService(&settings, transferService, week, &logger, usersClient)
+		err = referralsClient.ReferralsIssuance(ctx)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}

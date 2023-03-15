@@ -7,8 +7,10 @@ import (
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
+	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/docker/go-connections/nat"
@@ -39,6 +41,11 @@ func TestGetWeekNumForCron(t *testing.T) {
 
 func TestStreak(t *testing.T) {
 	ctx := context.Background()
+
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	port := 5432
 	nport := fmt.Sprintf("%d/tcp", port)
@@ -184,16 +191,11 @@ func TestStreak(t *testing.T) {
 				mp[ths.UserDeviceID] = ths
 			}
 
-			task := RewardsTask{
-				Logger:          &logger,
-				DataService:     Views{},
-				DefsClient:      &FakeDefClient{},
-				DevicesClient:   &FakeDevClient{},
-				DB:              conn,
-				TransferService: &FakeTransfer{},
-			}
+			transferService := NewTokenTransferService(&settings, nil, conn)
 
-			err = task.Calculate(1)
+			referralBonusService := NewBaselineRewardService(&settings, transferService, Views{}, &FakeDevClient{}, &FakeDefClient{}, 1, &logger)
+
+			err = referralBonusService.Calculate(1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -305,6 +307,6 @@ func (d *FakeDevClient) GetUserDevice(ctx context.Context, in *pb_devices.GetUse
 
 type FakeTransfer struct{}
 
-func (t *FakeTransfer) TransferUserTokens(ctx context.Context, week int) error {
+func (t *FakeTransfer) BaselineIssuance(ctx context.Context, week int) error {
 	return nil
 }

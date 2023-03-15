@@ -98,6 +98,19 @@ func AllMetaTransactionRequestStatus() []string {
 	}
 }
 
+// Enum values for ReferralsTransferFailureReason
+const (
+	ReferralsTransferFailureReasonReferralInvalid string = "ReferralInvalid"
+	ReferralsTransferFailureReasonTxReverted      string = "TxReverted"
+)
+
+func AllReferralsTransferFailureReason() []string {
+	return []string{
+		ReferralsTransferFailureReasonReferralInvalid,
+		ReferralsTransferFailureReasonTxReverted,
+	}
+}
+
 // Enum values for RewardsTransferFailureReason
 const (
 	RewardsTransferFailureReasonDidntQualify string = "DidntQualify"
