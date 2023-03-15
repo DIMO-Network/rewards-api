@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/lib/pq"
+
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"
@@ -297,6 +299,13 @@ func main() {
 				logger.Fatal().Err(err).Msg("Could not parse week number.")
 			}
 		}
+
+		logger := logger.With().Int("week", week).Logger()
+
+		addr := common.HexToAddress(settings.ReferralContractAddress)
+
+		logger.Info().Msgf("Running referral job with address %s.", addr)
+
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
 		totalTime := 0
 		for !pdb.IsReady() {
@@ -317,8 +326,6 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
 		}
 
-		addr := common.HexToAddress(settings.IssuanceContractAddress)
-
 		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
@@ -331,8 +338,10 @@ func main() {
 
 		refs, err := referralBonusService.CollectReferrals(ctx, week)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to collect weeks referrals.")
+			logger.Fatal().Err(err).Msg("Failed to collect week's referrals.")
 		}
+
+		logger.Info().Msgf("Sending transactions for %d referrals.", len(refs.Referees))
 
 		err = referralBonusService.TransferReferralBonuses(ctx, refs)
 		if err != nil {
