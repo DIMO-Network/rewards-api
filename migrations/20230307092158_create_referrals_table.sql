@@ -22,9 +22,6 @@ CREATE TABLE referrals (
 SET search_path = rewards_api, public;
 
 DROP TABLE referrals;
-<<<<<<< HEAD
-=======
 
 DROP TYPE referrals_transfer_failure_reason;
->>>>>>> main
 -- +goose StatementEnd

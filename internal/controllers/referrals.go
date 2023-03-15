@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"database/sql"
+
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb_users "github.com/DIMO-Network/shared/api/users"
@@ -8,6 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ReferralsController struct {
@@ -28,51 +32,52 @@ func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
 
 	user, err := r.UsersClient.GetUser(c.Context(), &pb_users.GetUserRequest{Id: userID})
 	if err != nil {
-		return fiber.NewError(fiber.StatusNotFound, "User unknown.")
-	}
-
-	var userRefHistory ReferralHistory
-
-	referredBy, err := models.Referrals(
-		models.ReferralWhere.Referred.EQ([]byte(*user.EthereumAddress)),
-	).One(c.Context(), r.DB.DBS().Reader)
-	if err != nil {
-		logger.Err(err).Msg("Database failure retrieving user referredBy history.")
-		return opaqueInternalError
-	}
-
-	referrer, err := models.Referrals(
-		models.ReferralWhere.Referrer.EQ([]byte(*user.EthereumAddress)),
-	).All(c.Context(), r.DB.DBS().Reader)
-	if err != nil {
-		logger.Err(err).Msg("Database failure retrieving user referral history.")
-		return opaqueInternalError
-	}
-
-	userRefHistory.ReferredBy = common.BytesToAddress(referredBy.Referrer)
-
-	for _, r := range referrer {
-
-		if !r.TransferSuccessful.Bool {
-			userRefHistory.Referrals.PendingReferrals = append(userRefHistory.Referrals.PendingReferrals, common.BytesToAddress(r.Referred))
-			continue
+		if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+			return fiber.NewError(fiber.StatusNotFound, "User not found.")
 		}
-		userRefHistory.Referrals.CompletedReferrals = append(userRefHistory.Referrals.CompletedReferrals, common.BytesToAddress(r.Referred))
+		return err
 	}
 
-	logger.Info().Interface("response", userRefHistory).Msg("User referral history response.")
+	out := ReferralHistory{
+		CompletedReferrals: []common.Address{},
+	}
 
-	return c.JSON(userRefHistory)
+	if user.EthereumAddress != nil {
+		userAddr := common.HexToAddress(*user.EthereumAddress)
+
+		referredBy, err := models.Referrals(models.ReferralWhere.Referee.EQ(userAddr.Bytes())).One(c.Context(), r.DB.DBS().Reader)
+		if err != nil {
+			if err != sql.ErrNoRows {
+				return err
+			}
+		} else {
+			referrer := common.BytesToAddress(referredBy.Referrer)
+			out.ReferredBy = &referrer
+		}
+
+		referralsMade, err := models.Referrals(
+			models.ReferralWhere.Referrer.EQ(userAddr.Bytes()),
+		).All(c.Context(), r.DB.DBS().Reader)
+		if err != nil {
+			logger.Err(err).Msg("Database failure retrieving user referral history.")
+			return opaqueInternalError
+		}
+
+		for _, r := range referralsMade {
+			if !r.TransferSuccessful.Valid || !r.TransferSuccessful.Bool {
+				continue
+			}
+			out.CompletedReferrals = append(out.CompletedReferrals, common.BytesToAddress(r.Referee))
+		}
+
+	}
+
+	return c.JSON(out)
 }
 
 type ReferralHistory struct {
 	// ReferredBy address of user that that account was referred by
-	ReferredBy common.Address `json:"referredBy,omitempty"`
-	// Referrals all referrals made by user
-	Referrals struct {
-		// CompletedReferrals referrals for which awards have already been sent
-		CompletedReferrals []common.Address `json:"completed"`
-		// PendingReferrals referrals where awards have not yet been sent
-		PendingReferrals []common.Address `json:"pending"`
-	} `json:"referrals,omitempty"`
+	ReferredBy *common.Address `json:"referredBy,omitempty"`
+	// CompletedReferrals referrals for which awards have already been sent
+	CompletedReferrals []common.Address `json:"completed"`
 }
