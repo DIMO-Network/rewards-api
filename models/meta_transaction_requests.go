@@ -111,19 +111,29 @@ var MetaTransactionRequestWhere = struct {
 
 // MetaTransactionRequestRels is where relationship names are stored.
 var MetaTransactionRequestRels = struct {
+	RequestReferrals                      string
 	TransferMetaTransactionRequestRewards string
 }{
+	RequestReferrals:                      "RequestReferrals",
 	TransferMetaTransactionRequestRewards: "TransferMetaTransactionRequestRewards",
 }
 
 // metaTransactionRequestR is where relationships are stored.
 type metaTransactionRequestR struct {
-	TransferMetaTransactionRequestRewards RewardSlice `boil:"TransferMetaTransactionRequestRewards" json:"TransferMetaTransactionRequestRewards" toml:"TransferMetaTransactionRequestRewards" yaml:"TransferMetaTransactionRequestRewards"`
+	RequestReferrals                      ReferralSlice `boil:"RequestReferrals" json:"RequestReferrals" toml:"RequestReferrals" yaml:"RequestReferrals"`
+	TransferMetaTransactionRequestRewards RewardSlice   `boil:"TransferMetaTransactionRequestRewards" json:"TransferMetaTransactionRequestRewards" toml:"TransferMetaTransactionRequestRewards" yaml:"TransferMetaTransactionRequestRewards"`
 }
 
 // NewStruct creates a new relationship struct
 func (*metaTransactionRequestR) NewStruct() *metaTransactionRequestR {
 	return &metaTransactionRequestR{}
+}
+
+func (r *metaTransactionRequestR) GetRequestReferrals() ReferralSlice {
+	if r == nil {
+		return nil
+	}
+	return r.RequestReferrals
 }
 
 func (r *metaTransactionRequestR) GetTransferMetaTransactionRequestRewards() RewardSlice {
@@ -422,6 +432,20 @@ func (q metaTransactionRequestQuery) Exists(ctx context.Context, exec boil.Conte
 	return count > 0, nil
 }
 
+// RequestReferrals retrieves all the referral's Referrals with an executor via request_id column.
+func (o *MetaTransactionRequest) RequestReferrals(mods ...qm.QueryMod) referralQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"rewards_api\".\"referrals\".\"request_id\"=?", o.ID),
+	)
+
+	return Referrals(queryMods...)
+}
+
 // TransferMetaTransactionRequestRewards retrieves all the reward's Rewards with an executor via transfer_meta_transaction_request_id column.
 func (o *MetaTransactionRequest) TransferMetaTransactionRequestRewards(mods ...qm.QueryMod) rewardQuery {
 	var queryMods []qm.QueryMod
@@ -434,6 +458,120 @@ func (o *MetaTransactionRequest) TransferMetaTransactionRequestRewards(mods ...q
 	)
 
 	return Rewards(queryMods...)
+}
+
+// LoadRequestReferrals allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (metaTransactionRequestL) LoadRequestReferrals(ctx context.Context, e boil.ContextExecutor, singular bool, maybeMetaTransactionRequest interface{}, mods queries.Applicator) error {
+	var slice []*MetaTransactionRequest
+	var object *MetaTransactionRequest
+
+	if singular {
+		var ok bool
+		object, ok = maybeMetaTransactionRequest.(*MetaTransactionRequest)
+		if !ok {
+			object = new(MetaTransactionRequest)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeMetaTransactionRequest)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeMetaTransactionRequest))
+			}
+		}
+	} else {
+		s, ok := maybeMetaTransactionRequest.(*[]*MetaTransactionRequest)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeMetaTransactionRequest)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeMetaTransactionRequest))
+			}
+		}
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &metaTransactionRequestR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &metaTransactionRequestR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`rewards_api.referrals`),
+		qm.WhereIn(`rewards_api.referrals.request_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load referrals")
+	}
+
+	var resultSlice []*Referral
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice referrals")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on referrals")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for referrals")
+	}
+
+	if len(referralAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.RequestReferrals = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &referralR{}
+			}
+			foreign.R.Request = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.RequestID {
+				local.R.RequestReferrals = append(local.R.RequestReferrals, foreign)
+				if foreign.R == nil {
+					foreign.R = &referralR{}
+				}
+				foreign.R.Request = local
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 // LoadTransferMetaTransactionRequestRewards allows an eager lookup of values, cached into the
@@ -547,6 +685,59 @@ func (metaTransactionRequestL) LoadTransferMetaTransactionRequestRewards(ctx con
 		}
 	}
 
+	return nil
+}
+
+// AddRequestReferrals adds the given related objects to the existing relationships
+// of the meta_transaction_request, optionally inserting them as new records.
+// Appends related to o.R.RequestReferrals.
+// Sets related.R.Request appropriately.
+func (o *MetaTransactionRequest) AddRequestReferrals(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Referral) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.RequestID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"rewards_api\".\"referrals\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"request_id"}),
+				strmangle.WhereClause("\"", "\"", 2, referralPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.Referee, rel.Referrer}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.RequestID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &metaTransactionRequestR{
+			RequestReferrals: related,
+		}
+	} else {
+		o.R.RequestReferrals = append(o.R.RequestReferrals, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &referralR{
+				Request: o,
+			}
+		} else {
+			rel.R.Request = o
+		}
+	}
 	return nil
 }
 

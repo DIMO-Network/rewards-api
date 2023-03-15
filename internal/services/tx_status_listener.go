@@ -241,6 +241,7 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB.DBS().Reader, cloudEvent.Data.RequestID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			// TODO(elffjs): This is probably a very bad scenario.
 			return nil
 		}
 		return err
@@ -257,27 +258,26 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 				success := false
 				txLog := convertLog(&log)
 
-				// need to change what these variables are called
-				var referrer common.Address
-				var referred common.Address
+				var referee, referrer common.Address
+
 				switch log.Topics[0] {
 				case s.ReferralsProcessor.ReferralComplete.ID:
 					success = true
-					event := contracts.ReferralsReferralComplete{}
+					var event contracts.ReferralsReferralComplete
 					err := s.parseLog(&event, s.ReferralsProcessor.ReferralComplete, *txLog, s.ReferralsProcessor.ABI)
 					if err != nil {
 						return err
 					}
-					referred = event.Referred
+					referee = event.Referred
 					referrer = event.Referrer
 
 				case s.ReferralsProcessor.ReferralInvalid.ID:
-					event := contracts.ReferralsReferralInvalid{}
+					var event contracts.ReferralsReferralInvalid
 					err := s.parseLog(&event, s.ReferralsProcessor.ReferralInvalid, *txLog, s.ReferralsProcessor.ABI)
 					if err != nil {
 						return err
 					}
-					referred = event.Referred
+					referee = event.Referred
 					referrer = event.Referrer
 
 				default:
@@ -285,9 +285,8 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 				}
 
 				rewardRow, err := models.Referrals(
-					models.ReferralWhere.ID.EQ(cloudEvent.Data.RequestID),
-					models.ReferralWhere.Referred.EQ(referred[:]),
-					models.ReferralWhere.Referrer.EQ(referrer[:]),
+					models.ReferralWhere.Referee.EQ(referee.Bytes()),
+					models.ReferralWhere.Referrer.EQ(referrer.Bytes()),
 				).One(context.Background(), tx)
 				if err != nil {
 					return err
@@ -304,13 +303,12 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 				}
 			}
 		} else {
-			_, err := models.Referrals(
-				models.ReferralWhere.ID.EQ(cloudEvent.Data.RequestID),
+			if _, err := models.Referrals(
+				models.ReferralWhere.RequestID.EQ(cloudEvent.Data.RequestID),
 			).UpdateAll(context.Background(), tx, models.M{
 				models.ReferralColumns.TransferSuccessful:    false,
-				models.ReferralColumns.TransferFailureReason: models.RewardsTransferFailureReasonTxReverted,
-			})
-			if err != nil {
+				models.ReferralColumns.TransferFailureReason: models.ReferralsTransferFailureReasonTxReverted,
+			}); err != nil {
 				return err
 			}
 		}
@@ -321,12 +319,7 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 		return err
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log eth_types.Log, ctrABI *abi.ABI) error {

@@ -121,27 +121,38 @@ func (rc *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 
 		referreesBatch := refs.Referees[i:j]
 		referrersBatch := refs.Referrers[i:j]
-		tx, err := rc.TransferService.db.DBS().Writer.BeginTx(context.Background(), nil)
+
+		tx, err := rc.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
 		if err != nil {
 			return err
 		}
 
+		mtr := models.MetaTransactionRequest{
+			ID:     reqID,
+			Status: models.MetaTransactionRequestStatusUnsubmitted,
+		}
+		if err := mtr.Insert(ctx, tx, boil.Infer()); err != nil {
+			return err
+		}
+
 		defer tx.Rollback() //nolint
-		for n, user := range referreesBatch {
+
+		for n := range referreesBatch {
 			r := models.Referral{
-				JobStatus: models.ReferralsJobStatusStarted,
-				Referred:  user[:],
-				Referrer:  referrersBatch[n][:],
+				Referee:   referreesBatch[n].Bytes(),
+				Referrer:  referrersBatch[n].Bytes(),
+				RequestID: reqID,
 			}
-			err := r.Insert(ctx, rc.TransferService.db.DBS().Writer, boil.Infer())
-			if err != nil {
+			if err := r.Insert(ctx, rc.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 				return err
 			}
 		}
-		err = rc.BatchTransferReferralBonuses(reqID, referreesBatch, referrersBatch)
-		if err != nil {
+
+		if err := rc.BatchTransferReferralBonuses(reqID, referreesBatch, referrersBatch); err != nil {
 			return err
 		}
+
+		tx.Commit()
 	}
 	return nil
 }
