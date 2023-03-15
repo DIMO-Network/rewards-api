@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -85,15 +86,38 @@ func main() {
 
 		dataClient := services.NewDeviceDataClient(&settings)
 
-		ethClient, err := ethclient.Dial(settings.EthereumRPCURL)
+		f, err := os.Open("config.yaml")
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create Ethereum client.")
+			logger.Fatal().Err(err).Msg("Couldn't load config.")
+		}
+		defer f.Close()
+
+		cs, err := io.ReadAll(f)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Couldn't load config file.")
 		}
 
-		tokenAddr := common.HexToAddress(settings.TokenAddress)
-		token, err := contracts.NewToken(tokenAddr, ethClient)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to instantiate token.")
+		rc := os.ExpandEnv(string(cs))
+
+		var tc services.TokenConfig
+		if err := yaml.Unmarshal([]byte(rc), &tc); err != nil {
+			logger.Fatal().Err(err).Msg("Couldn't load token config.")
+		}
+
+		var tks []*contracts.Token
+
+		for _, tkCopy := range tc.Tokens {
+			client, err := ethclient.Dial(tkCopy.RPCURL)
+			if err != nil {
+				logger.Fatal().Err(err).Msgf("Failed to create client for chain %d.", tkCopy.ChainID)
+			}
+
+			token, err := contracts.NewToken(tkCopy.Address, client)
+			if err != nil {
+				logger.Fatal().Err(err).Msgf("Failed to instantiate token for chain %d.", tkCopy.ChainID)
+			}
+
+			tks = append(tks, token)
 		}
 
 		rewardsController := controllers.RewardsController{
@@ -103,7 +127,7 @@ func main() {
 			DevicesClient:     deviceClient,
 			DataClient:        dataClient,
 			Settings:          &settings,
-			Token:             token,
+			Tokens:            tks,
 			UsersClient:       usersClient,
 		}
 
@@ -121,6 +145,7 @@ func main() {
 		v1.Get("/user", rewardsController.GetUserRewards)
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 		v1.Get("/user/history/transactions", rewardsController.GetTransactionHistory)
+		v1.Get("/user/history/balance", rewardsController.GetBalanceHistory)
 
 		go startGRPCServer(&settings, pdb, &logger)
 
@@ -163,17 +188,6 @@ func main() {
 		kclient2, err := createKafkaClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
-		}
-
-		f, err := os.Open("config.yaml")
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Couldn't load config.")
-		}
-		defer f.Close()
-
-		var tc services.TokenConfig
-		if err := yaml.NewDecoder(f).Decode(&tc); err != nil {
-			logger.Fatal().Err(err).Msg("Couldn't load token config.")
 		}
 
 		consumer2, err := sarama.NewConsumerGroupFromClient(settings.ConsumerGroup, kclient2)
@@ -285,6 +299,11 @@ func main() {
 				logger.Fatal().Err(err).Msg("Could not parse week number.")
 			}
 		}
+
+		logger := logger.With().Int("week", week).Logger()
+		addr := common.HexToAddress(settings.ReferralContractAddress)
+		logger.Info().Msgf("Running referral job with address %s.", addr)
+
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
 		totalTime := 0
 		for !pdb.IsReady() {
@@ -311,13 +330,12 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
 		}
-		defer usersConn.Close() //no lint
+		defer usersConn.Close()
 
 		usersClient := pb_users.NewUserServiceClient(usersConn)
 
 		referralsClient := services.NewReferralBonusService(&settings, transferService, week, &logger, usersClient)
 		err = referralsClient.ReferralsIssuance(ctx)
-    
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}

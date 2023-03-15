@@ -102,6 +102,8 @@ func (c *ReferralsClient) ReferralsIssuance(ctx context.Context) error {
 		return err
 	}
 
+	c.Logger.Info().Msgf("Sending transactions for %d referrals.", len(refs.Referees))
+
 	err = c.transfer(ctx, refs)
 	if err != nil {
 		return err

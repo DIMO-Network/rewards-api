@@ -29,7 +29,7 @@ type RewardsController struct {
 	DevicesClient     pb_devices.UserDeviceServiceClient
 	UsersClient       pb_users.UserServiceClient
 	Settings          *config.Settings
-	Token             *contracts.Token
+	Tokens            []*contracts.Token
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -62,13 +62,14 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	var addrBalance *big.Int
 
 	if addr := user.EthereumAddress; addr != nil {
-		ab, err := r.Token.BalanceOf(nil, common.HexToAddress(*addr))
-		if err != nil {
-			logger.Err(err).Str("address", *addr).Msg("Failed to retrieve token balance.")
-			return err
+		addrBalance = big.NewInt(0)
+		for _, tk := range r.Tokens {
+			val, err := tk.BalanceOf(nil, common.HexToAddress(*addr))
+			if err != nil {
+				return err
+			}
+			addrBalance = new(big.Int).Add(addrBalance, val)
 		}
-
-		addrBalance = ab
 	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
@@ -84,9 +85,11 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
-	intMap := make(map[string]string)
+	vendorToID := map[string]string{}
+	idToVendor := map[string]string{}
 	for _, intDesc := range intDescs.Integrations {
-		intMap[intDesc.Vendor] = intDesc.Id
+		vendorToID[intDesc.Vendor] = intDesc.Id
+		idToVendor[intDesc.Id] = intDesc.Vendor
 	}
 
 	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
@@ -117,9 +120,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					return opaqueInternalError
 				}
 
-				if slices.Contains(ints, intMap["AutoPi"]) {
+				if slices.Contains(ints, vendorToID["AutoPi"]) {
 					uriAP := UserResponseIntegration{
-						ID:                   intMap["AutoPi"],
+						ID:                   vendorToID["AutoPi"],
 						Vendor:               "AutoPi",
 						OnChainPairingStatus: "Unpaired",
 						DataThisWeek:         true,
@@ -135,9 +138,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 					outInts = append(outInts, uriAP)
 
-					if slices.Contains(ints, intMap["SmartCar"]) {
+					if slices.Contains(ints, vendorToID["SmartCar"]) {
 						uriSC := UserResponseIntegration{
-							ID:                   intMap["SmartCar"],
+							ID:                   vendorToID["SmartCar"],
 							Vendor:               "SmartCar",
 							OnChainPairingStatus: "NotApplicable",
 							DataThisWeek:         true,
@@ -150,9 +153,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 						outInts = append(outInts, uriSC)
 					}
-				} else if slices.Contains(ints, intMap["Tesla"]) {
+				} else if slices.Contains(ints, vendorToID["Tesla"]) {
 					uriTesla := UserResponseIntegration{
-						ID:                   intMap["Tesla"],
+						ID:                   vendorToID["Tesla"],
 						Vendor:               "Tesla",
 						OnChainPairingStatus: "NotApplicable",
 						DataThisWeek:         true,
@@ -164,10 +167,10 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					}
 
 					outInts = append(outInts, uriTesla)
-				} else if slices.Contains(ints, intMap["SmartCar"]) {
+				} else if slices.Contains(ints, vendorToID["SmartCar"]) {
 					eligibleThisWeek = true
 					uriSC := UserResponseIntegration{
-						ID:                   intMap["SmartCar"],
+						ID:                   vendorToID["SmartCar"],
 						Vendor:               "SmartCar",
 						OnChainPairingStatus: "NotApplicable",
 						DataThisWeek:         true,
@@ -183,10 +186,37 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			}
 		}
 
+		for _, i := range device.Integrations {
+			if slices.ContainsFunc(outInts, func(uri UserResponseIntegration) bool {
+				return uri.ID == i.Id
+			}) {
+				continue
+			}
+
+			stat := "NotApplicable"
+			if idToVendor[i.Id] == "AutoPi" {
+				if device.AftermarketDeviceTokenId != nil {
+					stat = "Paired"
+				} else {
+					stat = "Unpaired"
+				}
+			}
+
+			into := UserResponseIntegration{
+				ID:                   i.Id,
+				Vendor:               idToVendor[i.Id],
+				DataThisWeek:         false,
+				Points:               0,
+				OnChainPairingStatus: stat,
+			}
+
+			outInts = append(outInts, into)
+		}
+
 		rewards, err := models.Rewards(
 			models.RewardWhere.UserDeviceID.EQ(device.Id),
 			models.RewardWhere.UserID.EQ(userID),
-			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" desc"),
+			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
 		).All(c.Context(), r.DB.DBS().Reader.DB)
 		if err != nil {
 			dlog.Err(err).Msg("Failed to retrieve previously earned rewards.")
@@ -244,8 +274,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		},
 		Devices: outLi,
 	}
-
-	logger.Info().Interface("response", out).Msg("User rewards response.")
 
 	return c.JSON(out)
 }

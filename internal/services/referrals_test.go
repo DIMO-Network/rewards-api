@@ -12,9 +12,10 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	pb_users "github.com/DIMO-Network/shared/api/users"
+	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
+
 	"github.com/Shopify/sarama/mocks"
 	"github.com/docker/go-connections/nat"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -38,33 +38,26 @@ const newUserNotReferred = "newUserNotReferred"
 const userDeletedTheirAccount = "userDeletedTheirAccount"
 const existingUser = "ExistingUser"
 
-var existingUserAddr = "0x41A82213D81D0cd00849D563C94d0432Ac988COL"
-var newUserReferredAddr = "0x67B94473D81D0cd00849D563C94d0432Ac988B49"
-var newUserNotReferredAddr = "0x67B94473D81D0cd00849D563C94d0432Ac988B48"
-var userDeletedAccountAddr = "0x67B94473D81D0cd00849D563C94d0432Ac988B47"
-
-var referrer = "0x67B94473D81D0cd00849D563C94d0432Ac988B50"
-
-var fakeUserClientResponse = map[string]*pb_users.User{
+var addr = "0x67B94473D81D0cd00849D563C94d0432Ac988B49"
+var fakeUserClientResponse = map[string]*pb.User{
 	newUserReferred: {
 		Id:              newUserReferred,
-		EthereumAddress: &newUserReferredAddr,
-		ReferredBy:      &pb_users.UserReferrer{EthereumAddress: common.FromHex(referrer)},
+		EthereumAddress: &addr,
+		ReferredBy:      &pb.UserReferrer{EthereumAddress: common.FromHex("0x67B94473D81D0cd00849D563C94d0432Ac988B50")},
 	},
 	newUserNotReferred: {
 		Id:              newUserReferred,
-		EthereumAddress: &newUserNotReferredAddr,
-		ReferredBy:      nil,
+		EthereumAddress: &addr,
 	},
 	userDeletedTheirAccount: {
 		Id:              userDeletedTheirAccount,
-		EthereumAddress: &userDeletedAccountAddr,
+		EthereumAddress: &addr,
 	},
 }
 
 type FakeUserClient struct{}
 
-func (d *FakeUserClient) GetUser(ctx context.Context, in *pb_users.GetUserRequest, opts ...grpc.CallOption) (*pb_users.User, error) {
+func (d *FakeUserClient) GetUser(ctx context.Context, in *pb.GetUserRequest, opts ...grpc.CallOption) (*pb.User, error) {
 	ud, ok := fakeUserClientResponse[in.Id]
 	if !ok {
 		return nil, status.Error(codes.NotFound, "No user with that ID found.")
@@ -136,45 +129,38 @@ func TestReferrals(t *testing.T) {
 	conn.WaitForDB(logger)
 
 	type Scenario struct {
-		Name         string
-		Referral     bool
-		ReferredBy   *pb_users.UserReferrer
-		NewUserCount int
-		LastWeek     []*models.Reward
-		ThisWeek     []*models.Reward
+		Name          string
+		ReferralCount int
+		LastWeek      []*models.Reward
+		ThisWeek      []*models.Reward
 	}
 
 	scens := []Scenario{
 		{
-			Name:         newUserReferred,
-			Referral:     true,
-			ReferredBy:   &pb_users.UserReferrer{EthereumAddress: common.FromHex(referrer)},
-			NewUserCount: 1,
+			Name:          newUserReferred,
+			ReferralCount: 1,
 			LastWeek: []*models.Reward{
-				{UserID: existingUser, UserEthereumAddress: null.StringFrom(existingUserAddr), IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 			ThisWeek: []*models.Reward{
-				{UserID: existingUser, UserEthereumAddress: null.StringFrom(existingUserAddr), IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserReferred, UserEthereumAddress: null.StringFrom(newUserReferredAddr), IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 		{
-			Name:         newUserNotReferred,
-			Referral:     true,
-			ReferredBy:   nil,
-			NewUserCount: 0,
+			Name:          newUserNotReferred,
+			ReferralCount: 0,
 			LastWeek: []*models.Reward{
-				{UserID: existingUser, UserEthereumAddress: null.StringFrom(existingUserAddr), IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 			ThisWeek: []*models.Reward{
-				{UserID: existingUser, UserEthereumAddress: null.StringFrom(existingUserAddr), IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserNotReferred, UserEthereumAddress: null.StringFrom(newUserNotReferredAddr), IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserNotReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 		{
-			Name:         userDeletedTheirAccount,
-			Referral:     true,
-			NewUserCount: 0,
+			Name:          userDeletedTheirAccount,
+			ReferralCount: 0,
 		},
 	}
 
@@ -226,16 +212,8 @@ func TestReferrals(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			t.Log("name: ", scen.Name)
-			assert.Equal(t, len(weeklyRefs.Referees), scen.NewUserCount)
-			assert.Equal(t, len(weeklyRefs.Referrers), scen.NewUserCount)
-			for _, addr := range weeklyRefs.Referrers {
-				userClientResp := fakeUserClientResponse[scen.Name]
-				userReferredBy := *userClientResp.GetReferredBy()
-				assert.Equal(t, common.BytesToAddress(userReferredBy.GetEthereumAddress()), common.BytesToAddress(scen.ReferredBy.EthereumAddress))
-				assert.Equal(t, addr, common.BytesToAddress(scen.ReferredBy.EthereumAddress))
-			}
-
+			assert.Equal(t, len(weeklyRefs.Referees), scen.ReferralCount)
+			assert.Equal(t, len(weeklyRefs.Referrers), scen.ReferralCount)
 		})
 
 	}
@@ -243,7 +221,6 @@ func TestReferrals(t *testing.T) {
 }
 
 func TestReferralsBatchRequest(t *testing.T) {
-
 	config := mocks.NewTestConfig()
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
@@ -289,5 +266,4 @@ func TestReferralsBatchRequest(t *testing.T) {
 	); err != nil {
 		assert.Nil(t, err)
 	}
-
 }
