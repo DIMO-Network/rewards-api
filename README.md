@@ -1,4 +1,4 @@
-doc
+# rewards-api
 
 ## Background
 
