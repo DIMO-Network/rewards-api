@@ -113,46 +113,52 @@ func (c *ReferralsClient) ReferralsIssuance(ctx context.Context) error {
 
 func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 	for i := 0; i < len(refs.Referees); i += c.TransferService.batchSize {
-		reqID := ksuid.New().String()
-		j := i + c.TransferService.batchSize
-		if j > len(refs.Referees) {
-			j = len(refs.Referees)
-		}
-
-		referreesBatch := refs.Referees[i:j]
-		referrersBatch := refs.Referrers[i:j]
-
-		tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
-		if err != nil {
-			return err
-		}
-
-		mtr := models.MetaTransactionRequest{
-			ID:     reqID,
-			Status: models.MetaTransactionRequestStatusUnsubmitted,
-		}
-		if err := mtr.Insert(ctx, tx, boil.Infer()); err != nil {
-			return err
-		}
-
-		defer tx.Rollback() //nolint
-
-		for n := range referreesBatch {
-			r := models.Referral{
-				Referee:   referreesBatch[n].Bytes(),
-				Referrer:  referrersBatch[n].Bytes(),
-				RequestID: reqID,
+		if err := func() error {
+			reqID := ksuid.New().String()
+			j := i + c.TransferService.batchSize
+			if j > len(refs.Referees) {
+				j = len(refs.Referees)
 			}
-			if err := r.Insert(ctx, c.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
+
+			referreesBatch := refs.Referees[i:j]
+			referrersBatch := refs.Referrers[i:j]
+
+			tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
+			if err != nil {
 				return err
 			}
-		}
 
-		if err := c.BatchTransferReferralBonuses(reqID, referreesBatch, referrersBatch); err != nil {
-			return err
-		}
+			defer tx.Rollback() //nolint
 
-		if err := tx.Commit(); err != nil {
+			mtr := models.MetaTransactionRequest{
+				ID:     reqID,
+				Status: models.MetaTransactionRequestStatusUnsubmitted,
+			}
+			if err := mtr.Insert(ctx, tx, boil.Infer()); err != nil {
+				return err
+			}
+
+			for n := range referreesBatch {
+				r := models.Referral{
+					Referee:   referreesBatch[n].Bytes(),
+					Referrer:  referrersBatch[n].Bytes(),
+					RequestID: reqID,
+				}
+				if err := r.Insert(ctx, tx, boil.Infer()); err != nil {
+					return err
+				}
+			}
+
+			if err := c.BatchTransferReferralBonuses(reqID, referreesBatch, referrersBatch); err != nil {
+				return err
+			}
+
+			if err := tx.Commit(); err != nil {
+				return err
+			}
+
+			return nil
+		}(); err != nil {
 			return err
 		}
 	}
