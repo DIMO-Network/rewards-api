@@ -43,7 +43,7 @@ func NewReferralBonusService(
 
 	return &ReferralsClient{
 		TransferService: transferService,
-		ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
+		ContractAddress: common.HexToAddress(settings.ReferralContractAddress),
 		Week:            week,
 		Logger:          logger,
 		UsersClient:     userClient,
