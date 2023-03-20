@@ -99,6 +99,11 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			continue
 		}
 
+		if *user.EmailAddress == string(user.ReferredBy.EthereumAddress) {
+			c.Logger.Info().Str("userId", usr.UserID).Msg("Referred users ethereum address is same as referring users.")
+			continue
+		}
+
 		refs.Referees = append(refs.Referees, common.HexToAddress(*user.EthereumAddress))
 		refs.Referrers = append(refs.Referrers, common.BytesToAddress(user.ReferredBy.EthereumAddress))
 	}
