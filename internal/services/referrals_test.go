@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -37,6 +38,7 @@ const newUserReferred = "NewUserReferred"
 const newUserNotReferred = "newUserNotReferred"
 const userDeletedTheirAccount = "userDeletedTheirAccount"
 const existingUser = "ExistingUser"
+const diffAcccountSameEthAddr = "diffAcccountSameEthAddr"
 
 var addr = "0x67B94473D81D0cd00849D563C94d0432Ac988B49"
 var fakeUserClientResponse = map[string]*pb.User{
@@ -56,6 +58,17 @@ var fakeUserClientResponse = map[string]*pb.User{
 }
 
 type FakeUserClient struct{}
+
+func EthAddr(userType int) string {
+
+	switch userType {
+	case 1:
+		return "0x17B94473D81D0cd00849D563C94d0432Ac988B49"
+	case 2:
+		return "0x27B94473D81D0cd00849D563C94d0432Ac988B49"
+	}
+	return ""
+}
 
 func (d *FakeUserClient) GetUser(ctx context.Context, in *pb.GetUserRequest, opts ...grpc.CallOption) (*pb.User, error) {
 	ud, ok := fakeUserClientResponse[in.Id]
@@ -140,27 +153,37 @@ func TestReferrals(t *testing.T) {
 			Name:          newUserReferred,
 			ReferralCount: 1,
 			LastWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, UserEthereumAddress: null.StringFrom(EthAddr(1)), IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 			ThisWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, UserEthereumAddress: null.StringFrom(EthAddr(1)), IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserReferred, UserEthereumAddress: null.StringFrom(EthAddr(2)), IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 		{
 			Name:          newUserNotReferred,
 			ReferralCount: 0,
 			LastWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, UserEthereumAddress: null.StringFrom(EthAddr(1)), IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 			ThisWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserNotReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: existingUser, UserEthereumAddress: null.StringFrom(EthAddr(1)), IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+				{UserID: newUserNotReferred, UserEthereumAddress: null.StringFrom(EthAddr(2)), IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
 			},
 		},
 		{
 			Name:          userDeletedTheirAccount,
 			ReferralCount: 0,
+		},
+		{
+			Name:          diffAcccountSameEthAddr,
+			ReferralCount: 0,
+			LastWeek: []*models.Reward{
+				{UserID: diffAcccountSameEthAddr, UserEthereumAddress: null.StringFrom(EthAddr(0)), IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+			},
+			ThisWeek: []*models.Reward{
+				{UserID: diffAcccountSameEthAddr + "X", UserEthereumAddress: null.StringFrom(EthAddr(0)), IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+			},
 		},
 	}
 
