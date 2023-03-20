@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -59,11 +60,21 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 	var res []models.Reward
 
 	err := models.NewQuery(
-		qm.Distinct("r1."+models.RewardColumns.UserID+", r1."+models.RewardColumns.UserEthereumAddress),
-		qm.From(models.TableNames.Rewards+" r1"),
-		qm.LeftOuterJoin(models.TableNames.Rewards+" r2 ON r1."+models.RewardColumns.UserID+" = r2."+models.RewardColumns.UserID+" AND r2."+models.RewardColumns.IssuanceWeekID+" < ?", issuanceWeek),
-		qm.Where("r1."+models.RewardColumns.IssuanceWeekID+" = ?", issuanceWeek),
-		qm.Where("r2."+models.RewardColumns.UserID+" IS NULL"),
+		qm.With(fmt.Sprintf(`temp AS
+		(
+			SELECT r1.%s, r1.%s,
+			row_number() OVER(partition by r1.%s order by r1.%s)
+			FROM rewards_api.rewards r1
+			LEFT JOIN rewards_api.rewards r2 on r1.%s = r2.%s
+			AND r2.%s < $1
+			WHERE r1.%s = $1
+			AND r2.%s IS NULL
+		)`, models.RewardColumns.UserID, models.RewardColumns.UserEthereumAddress, models.RewardColumns.UserEthereumAddress,
+			models.RewardColumns.UserEthereumAddress, models.RewardColumns.UserEthereumAddress, models.RewardColumns.UserEthereumAddress,
+			models.RewardColumns.IssuanceWeekID, models.RewardColumns.IssuanceWeekID, models.RewardColumns.UserEthereumAddress), issuanceWeek),
+		qm.Select(`temp.user_id, temp.user_ethereum_address`),
+		qm.From(`temp`),
+		qm.Where(`temp.row_number = 1`),
 	).Bind(ctx, c.TransferService.db.DBS().Reader, &res)
 	if err != nil {
 		return refs, err
