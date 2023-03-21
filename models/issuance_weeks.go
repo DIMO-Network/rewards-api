@@ -109,19 +109,29 @@ var IssuanceWeekWhere = struct {
 
 // IssuanceWeekRels is where relationship names are stored.
 var IssuanceWeekRels = struct {
-	Rewards string
+	Referrals string
+	Rewards   string
 }{
-	Rewards: "Rewards",
+	Referrals: "Referrals",
+	Rewards:   "Rewards",
 }
 
 // issuanceWeekR is where relationships are stored.
 type issuanceWeekR struct {
-	Rewards RewardSlice `boil:"Rewards" json:"Rewards" toml:"Rewards" yaml:"Rewards"`
+	Referrals ReferralSlice `boil:"Referrals" json:"Referrals" toml:"Referrals" yaml:"Referrals"`
+	Rewards   RewardSlice   `boil:"Rewards" json:"Rewards" toml:"Rewards" yaml:"Rewards"`
 }
 
 // NewStruct creates a new relationship struct
 func (*issuanceWeekR) NewStruct() *issuanceWeekR {
 	return &issuanceWeekR{}
+}
+
+func (r *issuanceWeekR) GetReferrals() ReferralSlice {
+	if r == nil {
+		return nil
+	}
+	return r.Referrals
 }
 
 func (r *issuanceWeekR) GetRewards() RewardSlice {
@@ -420,6 +430,20 @@ func (q issuanceWeekQuery) Exists(ctx context.Context, exec boil.ContextExecutor
 	return count > 0, nil
 }
 
+// Referrals retrieves all the referral's Referrals with an executor.
+func (o *IssuanceWeek) Referrals(mods ...qm.QueryMod) referralQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"rewards_api\".\"referrals\".\"issuance_week_id\"=?", o.ID),
+	)
+
+	return Referrals(queryMods...)
+}
+
 // Rewards retrieves all the reward's Rewards with an executor.
 func (o *IssuanceWeek) Rewards(mods ...qm.QueryMod) rewardQuery {
 	var queryMods []qm.QueryMod
@@ -432,6 +456,120 @@ func (o *IssuanceWeek) Rewards(mods ...qm.QueryMod) rewardQuery {
 	)
 
 	return Rewards(queryMods...)
+}
+
+// LoadReferrals allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (issuanceWeekL) LoadReferrals(ctx context.Context, e boil.ContextExecutor, singular bool, maybeIssuanceWeek interface{}, mods queries.Applicator) error {
+	var slice []*IssuanceWeek
+	var object *IssuanceWeek
+
+	if singular {
+		var ok bool
+		object, ok = maybeIssuanceWeek.(*IssuanceWeek)
+		if !ok {
+			object = new(IssuanceWeek)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeIssuanceWeek)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeIssuanceWeek))
+			}
+		}
+	} else {
+		s, ok := maybeIssuanceWeek.(*[]*IssuanceWeek)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeIssuanceWeek)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeIssuanceWeek))
+			}
+		}
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &issuanceWeekR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &issuanceWeekR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`rewards_api.referrals`),
+		qm.WhereIn(`rewards_api.referrals.issuance_week_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load referrals")
+	}
+
+	var resultSlice []*Referral
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice referrals")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on referrals")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for referrals")
+	}
+
+	if len(referralAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.Referrals = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &referralR{}
+			}
+			foreign.R.IssuanceWeek = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.IssuanceWeekID {
+				local.R.Referrals = append(local.R.Referrals, foreign)
+				if foreign.R == nil {
+					foreign.R = &referralR{}
+				}
+				foreign.R.IssuanceWeek = local
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 // LoadRewards allows an eager lookup of values, cached into the
@@ -545,6 +683,59 @@ func (issuanceWeekL) LoadRewards(ctx context.Context, e boil.ContextExecutor, si
 		}
 	}
 
+	return nil
+}
+
+// AddReferrals adds the given related objects to the existing relationships
+// of the issuance_week, optionally inserting them as new records.
+// Appends related to o.R.Referrals.
+// Sets related.R.IssuanceWeek appropriately.
+func (o *IssuanceWeek) AddReferrals(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Referral) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.IssuanceWeekID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"rewards_api\".\"referrals\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"issuance_week_id"}),
+				strmangle.WhereClause("\"", "\"", 2, referralPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.Referee, rel.Referrer}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.IssuanceWeekID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &issuanceWeekR{
+			Referrals: related,
+		}
+	} else {
+		o.R.Referrals = append(o.R.Referrals, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &referralR{
+				IssuanceWeek: o,
+			}
+		} else {
+			rel.R.IssuanceWeek = o
+		}
+	}
 	return nil
 }
 
