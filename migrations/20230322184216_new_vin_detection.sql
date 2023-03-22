@@ -8,7 +8,7 @@ CREATE TABLE vins (
 );
 
 ALTER TABLE rewards
-    ADD COLUMN new_vin boolean NOT NULL DEFAULT FALSE
+    ADD COLUMN new_vin boolean NOT NULL DEFAULT FALSE;
 -- +goose StatementEnd
 
 -- +goose Down
