@@ -306,8 +306,7 @@ func (t *BaselineClient) Calculate(issuanceWeek int) error {
 				Vin:              *ud.Vin,
 				FirstWeekEarning: issuanceWeek,
 			}
-			err := vinRec.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer())
-			if err != nil {
+			if err := vinRec.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 				return err
 			}
 			thisWeek.NewVin = true
