@@ -42,6 +42,7 @@ type Reward struct {
 	TransferSuccessful               null.Bool         `boil:"transfer_successful" json:"transfer_successful,omitempty" toml:"transfer_successful" yaml:"transfer_successful,omitempty"`
 	TransferFailureReason            null.String       `boil:"transfer_failure_reason" json:"transfer_failure_reason,omitempty" toml:"transfer_failure_reason" yaml:"transfer_failure_reason,omitempty"`
 	AftermarketTokenID               types.NullDecimal `boil:"aftermarket_token_id" json:"aftermarket_token_id,omitempty" toml:"aftermarket_token_id" yaml:"aftermarket_token_id,omitempty"`
+	NewVin                           bool              `boil:"new_vin" json:"new_vin" toml:"new_vin" yaml:"new_vin"`
 
 	R *rewardR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L rewardL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -65,6 +66,7 @@ var RewardColumns = struct {
 	TransferSuccessful               string
 	TransferFailureReason            string
 	AftermarketTokenID               string
+	NewVin                           string
 }{
 	IssuanceWeekID:                   "issuance_week_id",
 	UserDeviceID:                     "user_device_id",
@@ -83,6 +85,7 @@ var RewardColumns = struct {
 	TransferSuccessful:               "transfer_successful",
 	TransferFailureReason:            "transfer_failure_reason",
 	AftermarketTokenID:               "aftermarket_token_id",
+	NewVin:                           "new_vin",
 }
 
 var RewardTableColumns = struct {
@@ -103,6 +106,7 @@ var RewardTableColumns = struct {
 	TransferSuccessful               string
 	TransferFailureReason            string
 	AftermarketTokenID               string
+	NewVin                           string
 }{
 	IssuanceWeekID:                   "rewards.issuance_week_id",
 	UserDeviceID:                     "rewards.user_device_id",
@@ -121,6 +125,7 @@ var RewardTableColumns = struct {
 	TransferSuccessful:               "rewards.transfer_successful",
 	TransferFailureReason:            "rewards.transfer_failure_reason",
 	AftermarketTokenID:               "rewards.aftermarket_token_id",
+	NewVin:                           "rewards.new_vin",
 }
 
 // Generated where
@@ -172,6 +177,15 @@ func (w whereHelpertypes_NullDecimal) IsNotNull() qm.QueryMod {
 	return qmhelper.WhereIsNotNull(w.field)
 }
 
+type whereHelperbool struct{ field string }
+
+func (w whereHelperbool) EQ(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperbool) NEQ(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperbool) LT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+
 var RewardWhere = struct {
 	IssuanceWeekID                   whereHelperint
 	UserDeviceID                     whereHelperstring
@@ -190,6 +204,7 @@ var RewardWhere = struct {
 	TransferSuccessful               whereHelpernull_Bool
 	TransferFailureReason            whereHelpernull_String
 	AftermarketTokenID               whereHelpertypes_NullDecimal
+	NewVin                           whereHelperbool
 }{
 	IssuanceWeekID:                   whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
 	UserDeviceID:                     whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
@@ -208,6 +223,7 @@ var RewardWhere = struct {
 	TransferSuccessful:               whereHelpernull_Bool{field: "\"rewards_api\".\"rewards\".\"transfer_successful\""},
 	TransferFailureReason:            whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_failure_reason\""},
 	AftermarketTokenID:               whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"aftermarket_token_id\""},
+	NewVin:                           whereHelperbool{field: "\"rewards_api\".\"rewards\".\"new_vin\""},
 }
 
 // RewardRels is where relationship names are stored.
@@ -248,9 +264,9 @@ func (r *rewardR) GetTransferMetaTransactionRequest() *MetaTransactionRequest {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "new_vin"}
 	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "new_vin"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )
