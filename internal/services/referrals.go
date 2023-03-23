@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -114,7 +113,6 @@ func (c *ReferralsClient) ReferralsIssuance(ctx context.Context) error {
 
 func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 	for i := 0; i < len(refs.Referees); i += c.TransferService.batchSize {
-		fmt.Println("XDD", c.TransferService.batchSize)
 		if err := func() error {
 			reqID := ksuid.New().String()
 			j := i + c.TransferService.batchSize
@@ -168,7 +166,6 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 }
 
 func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referrees []common.Address, referrers []common.Address) error {
-	fmt.Println("XDDGANG")
 	abi, err := contracts.ReferralMetaData.GetAbi()
 	if err != nil {
 		return err
@@ -181,7 +178,6 @@ func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referre
 }
 
 func (c *ReferralsClient) sendRequest(requestID string, data []byte) error {
-	fmt.Println("XFF")
 	event := shared.CloudEvent[transferData]{
 		ID:          requestID,
 		Source:      "rewards-api",

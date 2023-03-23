@@ -405,31 +405,12 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	abi, err := contracts.ReferralMetaData.GetAbi()
 	require.NoError(t, err)
-
-	args := common.Bytes2Hex(abi.Methods["sendReferralBonuses"].ID)
-	fmt.Println("SIGNATURE", args)
-	for i, a := range abi.Methods["sendReferralBonuses"].Inputs {
-		fmt.Println("A", i, a.Name, a.Type)
-	}
-
-	// type XL struct {
-	// 	Referees  []common.Address
-	// 	Referrers []common.Address
-	// }
-
 	var r []Referral
 
-	fmt.Println("OUT", len(out))
-
 	for i := range out {
-		fmt.Println(i)
-		xl := map[string]any{}
-		fmt.Println("DDX", string(out[i].Data.Data))
+
 		b := common.FromHex(out[i].Data.Data)
-		fmt.Println("L1", len(b), common.Bytes2Hex(b))
-		fmt.Println("L2", len(b[4:]), common.Bytes2Hex(b[4:]))
 		require.NoError(t, err)
-		fmt.Println("XPP", xl)
 		o, _ := abi.Methods["sendReferralBonuses"].Inputs.Unpack(b[4:])
 		referees := o[0].([]common.Address)
 		referrers := o[1].([]common.Address)
