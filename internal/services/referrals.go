@@ -98,7 +98,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 		referrerAddr := common.BytesToAddress(user.ReferredBy.EthereumAddress)
 
 		if refereeAddr == referrerAddr {
-			c.Logger.Info().Str("userId", usr.UserID).Msg("Referred users ethereum address is same as referring users.")
+			c.Logger.Info().Str("userId", r.UserID).Msg("Referred users ethereum address is same as referring users.")
 			continue
 		}
 
