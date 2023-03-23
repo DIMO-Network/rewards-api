@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/DIMO-Network/device-definitions-api v0.8.9
-	github.com/DIMO-Network/shared v0.8.7
+	github.com/DIMO-Network/shared v0.9.1
 	github.com/Shopify/sarama v1.37.2
 	github.com/aquasecurity/esquery v0.2.0
 	github.com/arsmn/fiber-swagger/v2 v2.31.1

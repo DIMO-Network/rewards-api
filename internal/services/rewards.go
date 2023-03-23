@@ -287,6 +287,20 @@ func (t *BaselineClient) Calculate(issuanceWeek int) error {
 		// This is a no-op if the device doesn't have a record from last week.
 		delete(lastWeekByDevice, deviceActivity.ID)
 
+		// If this VIN has never earned before, make note of that.
+		// Used by referrals, not this job. Have to be careful about VINs because
+		// people put garbage in there.
+		if ud.Vin != nil && len(*ud.Vin) == 17 {
+			vinRec := models.Vin{
+				Vin:                 *ud.Vin,
+				FirstEarningWeek:    issuanceWeek,
+				FirstEarningTokenID: types.NewDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
+			}
+			if err := vinRec.Upsert(ctx, t.TransferService.db.DBS().Writer, false, []string{models.VinColumns.Vin}, boil.Infer(), boil.Infer()); err != nil {
+				return err
+			}
+		}
+
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
