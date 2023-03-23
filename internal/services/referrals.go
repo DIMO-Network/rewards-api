@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -17,7 +16,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/queries"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -57,34 +56,30 @@ func NewReferralBonusService(
 func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
 	var refs Referrals
 
-	var res []models.Reward
-
-	err := models.NewQuery(
-		qm.With(fmt.Sprintf(`temp AS
-		(
-			SELECT r1.%s, r1.%s,
-			row_number() OVER(partition by r1.%s order by r1.%s)
-			FROM rewards_api.rewards r1
-			LEFT JOIN rewards_api.rewards r2 on r1.%s = r2.%s
-			AND r2.%s < $1
-			WHERE r1.%s = $1
-			AND r2.%s IS NULL
-		)`, models.RewardColumns.UserID, models.RewardColumns.UserEthereumAddress, models.RewardColumns.UserEthereumAddress,
-			models.RewardColumns.UserEthereumAddress, models.RewardColumns.UserEthereumAddress, models.RewardColumns.UserEthereumAddress,
-			models.RewardColumns.IssuanceWeekID, models.RewardColumns.IssuanceWeekID, models.RewardColumns.UserEthereumAddress), issuanceWeek),
-		qm.Select(`temp.user_id, temp.user_ethereum_address`),
-		qm.From(`temp`),
-		qm.Where(`temp.row_number = 1`),
-	).Bind(ctx, c.TransferService.db.DBS().Reader, &res)
-	if err != nil {
-		return refs, err
+	var res []struct {
+		UserID string `boil:"r1.user_id"`
 	}
 
-	for _, usr := range res {
-		user, err := c.UsersClient.GetUser(ctx, &pb.GetUserRequest{Id: usr.UserID})
+	var rCols = models.RewardColumns
+
+	err := queries.Raw(
+		"SELECT DISTINCT ON (r1."+rCols.UserEthereumAddress+")"+
+			" r1."+rCols.UserID+
+			" FROM "+models.TableNames.Rewards+" r1"+
+			" LEFT OUTER JOIN "+models.TableNames.Rewards+" r2 ON r1."+rCols.UserEthereumAddress+" = r2."+rCols.UserEthereumAddress+" AND r2."+rCols.IssuanceWeekID+" < $1"+
+			" WHERE r1."+rCols.IssuanceWeekID+" = $1 AND r1."+rCols.UserEthereumAddress+" IS NOT NULL AND r2."+rCols.UserDeviceID+" IS NULL"+
+			" ORDER BY r1."+rCols.UserEthereumAddress+", r1."+rCols.UserID,
+		issuanceWeek,
+	).Bind(ctx, c.TransferService.db.DBS().Reader, &res)
+	if err != nil {
+		return Referrals{}, err
+	}
+
+	for _, r := range res {
+		user, err := c.UsersClient.GetUser(ctx, &pb.GetUserRequest{Id: r.UserID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				c.Logger.Info().Str("userId", usr.UserID).Msg("User was new this week but deleted their account.")
+				c.Logger.Info().Str("userId", r.UserID).Msg("User was new this week but deleted their account.")
 				continue
 			}
 			return refs, err
@@ -95,7 +90,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 		}
 
 		if user.EthereumAddress == nil {
-			c.Logger.Info().Str("userId", usr.UserID).Msg("Referred user does not have a valid ethereum address.")
+			c.Logger.Info().Str("userId", r.UserID).Msg("Referred user does not have a valid ethereum address.")
 			continue
 		}
 
