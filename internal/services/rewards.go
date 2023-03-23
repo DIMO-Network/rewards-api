@@ -10,7 +10,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
-	"github.com/DIMO-Network/shared"
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -204,16 +203,6 @@ func (t *BaselineClient) Calculate(issuanceWeek int) error {
 		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
 
-	seenVINs, err := models.Vins().All(ctx, t.TransferService.db.DBS().Reader)
-	if err != nil {
-		return err
-	}
-
-	seenVINSet := shared.NewStringSet()
-	for _, vinRec := range seenVINs {
-		seenVINSet.Add(vinRec.Vin)
-	}
-
 	for _, deviceActivity := range deviceActivityRecords {
 		logger := t.Logger.With().Str("userDeviceId", deviceActivity.ID).Logger()
 
@@ -299,15 +288,15 @@ func (t *BaselineClient) Calculate(issuanceWeek int) error {
 		delete(lastWeekByDevice, deviceActivity.ID)
 
 		// If this VIN has never earned before, make note of that.
-		// Used by referrals, not this job.
-		if ud.Vin != nil && len(*ud.Vin) == 17 && !seenVINSet.Contains(*ud.Vin) {
-			seenVINSet.Add(*ud.Vin)
+		// Used by referrals, not this job. Have to be careful about VINs because
+		// people put garbage in there.
+		if ud.Vin != nil && len(*ud.Vin) == 17 {
 			vinRec := models.Vin{
 				Vin:                 *ud.Vin,
 				FirstEarningWeek:    issuanceWeek,
 				FirstEarningTokenID: types.NewDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
 			}
-			if err := vinRec.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
+			if err := vinRec.Upsert(ctx, t.TransferService.db.DBS().Writer, false, []string{models.VinColumns.Vin}, boil.Infer(), boil.Infer()); err != nil {
 				return err
 			}
 		}
