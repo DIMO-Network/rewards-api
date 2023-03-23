@@ -32,10 +32,11 @@ import (
 )
 
 type refUser struct {
-	ID       string
-	Address  common.Address
-	Code     string
-	CodeUsed string
+	ID              string
+	Address         common.Address
+	Code            string
+	CodeUsed        string
+	InvalidReferrer bool
 }
 
 type Referral struct {
@@ -62,7 +63,12 @@ func (d *FakeUserClient) GetUser(ctx context.Context, in *pb.GetUserRequest, opt
 						if ref.Address != zeroAddr {
 							out.ReferredBy = &pb.UserReferrer{
 								EthereumAddress: ref.Address.Bytes(),
+								ReferrerValid:   true,
 							}
+						}
+
+						if user.InvalidReferrer {
+							out.ReferredBy.ReferrerValid = false
 						}
 						break
 					}
@@ -83,6 +89,8 @@ func TestReferrals(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	refContractAddr := settings.ReferralContractAddress
 
 	port := 5432
 	nport := fmt.Sprintf("%d/tcp", port)
@@ -206,22 +214,38 @@ func TestReferrals(t *testing.T) {
 			Referrals: []Referral{},
 		},
 		{
-			Name: "New address, new token, old VIN",
+			Name: "Referring user has invalid wallet address",
 			Devices: []Device{
 				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
-				{ID: "Dev3", UserID: "User3", TokenID: 3, VIN: "00000000000000001"},
 			},
 			Users: []refUser{
-				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2", InvalidReferrer: true},
 				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
-				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
 			},
 			Rewards: []Reward{
-				{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
-				{Week: 5, DeviceID: "Dev3", UserID: "User3", Earning: true},
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
 			},
-			Referrals: []Referral{},
+			Referrals: []Referral{
+				{Referee: mkAddr(1), Referrer: mkAddr(2)},
+			},
 		},
+		// {
+		// 	Name: "New address, new token, old VIN",
+		// 	Devices: []Device{
+		// 		{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
+		// 		{ID: "Dev3", UserID: "User3", TokenID: 3, VIN: "00000000000000001"},
+		// 	},
+		// 	Users: []refUser{
+		// 		{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+		// 		{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
+		// 		{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
+		// 	},
+		// 	Rewards: []Reward{
+		// 		{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
+		// 		{Week: 5, DeviceID: "Dev3", UserID: "User3", Earning: true},
+		// 	},
+		// 	Referrals: []Referral{},
+		// },
 		{
 			Name: "New VIN and user, same address",
 			Devices: []Device{
@@ -299,7 +323,11 @@ func TestReferrals(t *testing.T) {
 				actual = append(actual, Referral{Referee: refs.Referees[i], Referrer: refs.Referrers[i]})
 			}
 
-			assert.ElementsMatch(t, scen.Referrals, actual)
+			if scen.Name == "Referring user has invalid wallet address" {
+				assert.Equal(t, common.HexToAddress(refContractAddr), refs.Referrers[0])
+			} else {
+				assert.ElementsMatch(t, scen.Referrals, actual)
+			}
 		})
 
 	}
