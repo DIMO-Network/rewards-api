@@ -174,10 +174,11 @@ func TestReferrals(t *testing.T) {
 		// ReferralCount int
 		// LastWeek      []*models.Reward
 		// ThisWeek      []*models.Reward
-		Users     []User
-		Devices   []Device
-		Rewards   []Reward
-		Referrals []Referral
+		Users         []User
+		Devices       []Device
+		Rewards       []Reward
+		Referrals     []Referral
+		ExpectedError string
 	}
 
 	scens := []Scenario{
@@ -222,7 +223,8 @@ func TestReferrals(t *testing.T) {
 			Rewards: []Reward{
 				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
 			},
-			Referrals: []Referral{},
+			Referrals:     []Referral{},
+			ExpectedError: "Referred users ethereum address is same as referring users.",
 		},
 		{
 			Name: "New address, new token, old VIN",
@@ -294,7 +296,11 @@ func TestReferrals(t *testing.T) {
 
 			refs, err := referralBonusService.CollectReferrals(ctx, 5)
 			if err != nil {
-				t.Fatal(err)
+				if scen.ExpectedError != "" {
+					assert.EqualError(t, err, "Referred users ethereum address is same as referring users.")
+				} else {
+					t.Fatal(err)
+				}
 			}
 
 			var actual []Referral
