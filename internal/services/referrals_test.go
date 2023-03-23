@@ -291,9 +291,7 @@ func TestReferrals(t *testing.T) {
 			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, &FakeUserClient{users: scen.Users})
 
 			refs, err := referralBonusService.CollectReferrals(ctx, 5)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			var actual []Referral
 
