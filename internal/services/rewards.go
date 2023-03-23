@@ -303,13 +303,13 @@ func (t *BaselineClient) Calculate(issuanceWeek int) error {
 		if ud.Vin != nil && len(*ud.Vin) == 17 && !seenVINSet.Contains(*ud.Vin) {
 			seenVINSet.Add(*ud.Vin)
 			vinRec := models.Vin{
-				Vin:              *ud.Vin,
-				FirstWeekEarning: issuanceWeek,
+				Vin:                 *ud.Vin,
+				FirstEarningWeek:    issuanceWeek,
+				FirstEarningTokenID: types.NewDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
 			}
 			if err := vinRec.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 				return err
 			}
-			thisWeek.NewVin = true
 		}
 
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {

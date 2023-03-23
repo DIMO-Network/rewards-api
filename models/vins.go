@@ -18,42 +18,50 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/queries/qmhelper"
+	"github.com/volatiletech/sqlboiler/v4/types"
 	"github.com/volatiletech/strmangle"
 )
 
 // Vin is an object representing the database table.
 type Vin struct {
-	Vin              string `boil:"vin" json:"vin" toml:"vin" yaml:"vin"`
-	FirstWeekEarning int    `boil:"first_week_earning" json:"first_week_earning" toml:"first_week_earning" yaml:"first_week_earning"`
+	Vin                 string        `boil:"vin" json:"vin" toml:"vin" yaml:"vin"`
+	FirstEarningWeek    int           `boil:"first_earning_week" json:"first_earning_week" toml:"first_earning_week" yaml:"first_earning_week"`
+	FirstEarningTokenID types.Decimal `boil:"first_earning_token_id" json:"first_earning_token_id" toml:"first_earning_token_id" yaml:"first_earning_token_id"`
 
 	R *vinR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L vinL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var VinColumns = struct {
-	Vin              string
-	FirstWeekEarning string
+	Vin                 string
+	FirstEarningWeek    string
+	FirstEarningTokenID string
 }{
-	Vin:              "vin",
-	FirstWeekEarning: "first_week_earning",
+	Vin:                 "vin",
+	FirstEarningWeek:    "first_earning_week",
+	FirstEarningTokenID: "first_earning_token_id",
 }
 
 var VinTableColumns = struct {
-	Vin              string
-	FirstWeekEarning string
+	Vin                 string
+	FirstEarningWeek    string
+	FirstEarningTokenID string
 }{
-	Vin:              "vins.vin",
-	FirstWeekEarning: "vins.first_week_earning",
+	Vin:                 "vins.vin",
+	FirstEarningWeek:    "vins.first_earning_week",
+	FirstEarningTokenID: "vins.first_earning_token_id",
 }
 
 // Generated where
 
 var VinWhere = struct {
-	Vin              whereHelperstring
-	FirstWeekEarning whereHelperint
+	Vin                 whereHelperstring
+	FirstEarningWeek    whereHelperint
+	FirstEarningTokenID whereHelpertypes_Decimal
 }{
-	Vin:              whereHelperstring{field: "\"rewards_api\".\"vins\".\"vin\""},
-	FirstWeekEarning: whereHelperint{field: "\"rewards_api\".\"vins\".\"first_week_earning\""},
+	Vin:                 whereHelperstring{field: "\"rewards_api\".\"vins\".\"vin\""},
+	FirstEarningWeek:    whereHelperint{field: "\"rewards_api\".\"vins\".\"first_earning_week\""},
+	FirstEarningTokenID: whereHelpertypes_Decimal{field: "\"rewards_api\".\"vins\".\"first_earning_token_id\""},
 }
 
 // VinRels is where relationship names are stored.
@@ -73,8 +81,8 @@ func (*vinR) NewStruct() *vinR {
 type vinL struct{}
 
 var (
-	vinAllColumns            = []string{"vin", "first_week_earning"}
-	vinColumnsWithoutDefault = []string{"vin", "first_week_earning"}
+	vinAllColumns            = []string{"vin", "first_earning_week", "first_earning_token_id"}
+	vinColumnsWithoutDefault = []string{"vin", "first_earning_week", "first_earning_token_id"}
 	vinColumnsWithDefault    = []string{}
 	vinPrimaryKeyColumns     = []string{"vin"}
 	vinGeneratedColumns      = []string{}
