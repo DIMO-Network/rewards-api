@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"testing"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -58,17 +57,6 @@ var fakeUserClientResponse = map[string]*pb.User{
 	},
 }
 
-type User struct {
-	ID       string
-	Address  common.Address
-	Code     string
-	CodeUsed string
-}
-
-var mkAddr = func(i int) common.Address {
-	return common.BigToAddress(big.NewInt(int64(i)))
-}
-
 type Referral struct {
 	Referee  common.Address
 	Referrer common.Address
@@ -77,8 +65,6 @@ type Referral struct {
 type FakeUserClient struct {
 	users []User
 }
-
-var zeroAddr common.Address
 
 func (d *FakeUserClient) GetUser(ctx context.Context, in *pb.GetUserRequest, opts ...grpc.CallOption) (*pb.User, error) {
 	for _, user := range d.users {
