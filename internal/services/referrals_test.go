@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama"
+	"github.com/ericlagergren/decimal"
 
 	"github.com/Shopify/sarama/mocks"
 	"github.com/docker/go-connections/nat"
@@ -25,6 +27,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -55,17 +58,46 @@ var fakeUserClientResponse = map[string]*pb.User{
 	},
 }
 
-type FakeUserClient struct{}
+type User struct {
+	ID       string
+	Address  common.Address
+	Code     string
+	CodeUsed string
+}
+
+type FakeUserClient struct {
+	users []User
+}
+
+var zeroAddr common.Address
 
 func (d *FakeUserClient) GetUser(ctx context.Context, in *pb.GetUserRequest, opts ...grpc.CallOption) (*pb.User, error) {
-	ud, ok := fakeUserClientResponse[in.Id]
-	if !ok {
-		return nil, status.Error(codes.NotFound, "No user with that ID found.")
+	for _, user := range d.users {
+		if user.ID == in.Id {
+			addr := user.Address.Hex()
+			out := &pb.User{
+				Id:              user.ID,
+				EthereumAddress: &addr,
+			}
+
+			if user.CodeUsed != "" {
+				for _, ref := range d.users {
+					if user.CodeUsed == ref.Code {
+						if ref.Address != zeroAddr {
+							out.ReferredBy = &pb.UserReferrer{
+								EthereumAddress: ref.Address.Bytes(),
+							}
+						}
+						break
+					}
+				}
+			}
+
+			return out, nil
+		}
 	}
-	if ud.Id == userDeletedTheirAccount {
-		return nil, nil
-	}
-	return ud, nil
+
+	return nil, status.Error(codes.NotFound, "No user with that ID found.")
 }
 
 func TestReferrals(t *testing.T) {
@@ -128,39 +160,83 @@ func TestReferrals(t *testing.T) {
 	conn := db.NewDbConnectionForTest(ctx, &dbset, true)
 	conn.WaitForDB(logger)
 
+	type Device struct {
+		ID      string
+		TokenID int
+		UserID  string
+		VIN     string
+	}
+
+	type Reward struct {
+		Week     int
+		DeviceID string
+		UserID   string
+		Earning  bool
+	}
+
+	type Referral struct {
+		Referee  common.Address
+		Referrer common.Address
+	}
+
 	type Scenario struct {
-		Name          string
-		ReferralCount int
-		LastWeek      []*models.Reward
-		ThisWeek      []*models.Reward
+		Name string
+		// ReferralCount int
+		// LastWeek      []*models.Reward
+		// ThisWeek      []*models.Reward
+		Users     []User
+		Devices   []Device
+		Rewards   []Reward
+		Referrals []Referral
+	}
+
+	mkAddr := func(i int) common.Address {
+		return common.BigToAddress(big.NewInt(int64(i)))
 	}
 
 	scens := []Scenario{
 		{
-			Name:          newUserReferred,
-			ReferralCount: 1,
-			LastWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+			Name: "New address, new car, referred by non-deleted user",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
 			},
-			ThisWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
+				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
 			},
-		},
-		{
-			Name:          newUserNotReferred,
-			ReferralCount: 0,
-			LastWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 0, UserDeviceID: existingUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+			Rewards: []Reward{
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
 			},
-			ThisWeek: []*models.Reward{
-				{UserID: existingUser, IssuanceWeekID: 1, UserDeviceID: existingUserDeviceID, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
-				{UserID: newUserNotReferred, IssuanceWeekID: 1, UserDeviceID: newUserDeviceID, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+			Referrals: []Referral{
+				{Referee: mkAddr(1), Referrer: mkAddr(2)},
 			},
 		},
 		{
-			Name:          userDeletedTheirAccount,
-			ReferralCount: 0,
+			Name: "New address, new car, not referred",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
+			},
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+			},
+			Rewards: []Reward{
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+			},
+			Referrals: []Referral{},
+		},
+		{
+			Name: "Referrer has same address",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
+			},
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
+				{ID: "User2", Address: mkAddr(1), Code: "2", CodeUsed: ""},
+			},
+			Rewards: []Reward{
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+			},
+			Referrals: []Referral{},
 		},
 	}
 
@@ -176,27 +252,23 @@ func TestReferrals(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			lastWk := models.IssuanceWeek{ID: 0, JobStatus: models.IssuanceWeeksJobStatusFinished}
-			err = lastWk.Insert(ctx, conn.DBS().Writer, boil.Infer())
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			for _, lst := range scen.LastWeek {
-				err := lst.Insert(ctx, conn.DBS().Writer, boil.Infer())
-				if err != nil {
-					t.Fatal(err)
+			for _, lst := range scen.Rewards {
+				wk := models.IssuanceWeek{
+					ID:        lst.Week,
+					JobStatus: models.IssuanceWeeksJobStatusFinished,
 				}
-			}
+				wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
 
-			thisWk := models.IssuanceWeek{ID: 1, JobStatus: models.IssuanceWeeksJobStatusFinished}
-			err = thisWk.Insert(ctx, conn.DBS().Writer, boil.Infer())
-			if err != nil {
-				t.Fatal(err)
-			}
+				r := models.Reward{
+					IssuanceWeekID: lst.Week,
+					UserDeviceID:   lst.DeviceID,
+					UserID:         lst.UserID,
+				}
+				if lst.Earning {
+					r.Tokens = types.NewNullDecimal(decimal.New(100, 0))
+				}
 
-			for _, lst := range scen.ThisWeek {
-				err := lst.Insert(ctx, conn.DBS().Writer, boil.Infer())
+				err := r.Insert(ctx, conn.DBS().Writer, boil.Infer())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -205,15 +277,20 @@ func TestReferrals(t *testing.T) {
 			producer := mocks.NewSyncProducer(t, nil)
 			transferService := NewTokenTransferService(&settings, producer, conn)
 
-			referralBonusService := NewReferralBonusService(&settings, transferService, 1, nil, &FakeUserClient{})
+			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, &FakeUserClient{users: scen.Users})
 
-			weeklyRefs, err := referralBonusService.CollectReferrals(ctx, 1)
+			refs, err := referralBonusService.CollectReferrals(ctx, 5)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			assert.Equal(t, len(weeklyRefs.Referees), scen.ReferralCount)
-			assert.Equal(t, len(weeklyRefs.Referrers), scen.ReferralCount)
+			var actual []Referral
+
+			for i := 0; i < len(refs.Referees); i++ {
+				actual = append(actual, Referral{Referee: refs.Referees[i], Referrer: refs.Referrers[i]})
+			}
+
+			assert.ElementsMatch(t, scen.Referrals, actual)
 		})
 
 	}
