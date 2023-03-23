@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
@@ -237,16 +238,19 @@ func TestReferrals(t *testing.T) {
 			Referrals: []Referral{},
 		},
 		{
-			Name: "Referrer has same address",
+			Name: "New address, new token, old VIN",
 			Devices: []Device{
 				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
+				{ID: "Dev3", UserID: "User3", TokenID: 3, VIN: "00000000000000001"},
 			},
 			Users: []User{
-				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
-				{ID: "User2", Address: mkAddr(1), Code: "2", CodeUsed: ""},
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
+				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
 			},
 			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev3", UserID: "User3", Earning: true},
 			},
 			Referrals: []Referral{},
 		},
@@ -278,6 +282,16 @@ func TestReferrals(t *testing.T) {
 				}
 				if lst.Earning {
 					r.Tokens = types.NewNullDecimal(decimal.New(100, 0))
+				}
+				for _, u := range scen.Users {
+					if u.ID == lst.UserID {
+						r.UserEthereumAddress = null.StringFrom(u.Address.Hex())
+					}
+				}
+				for _, d := range scen.Devices {
+					if d.ID == lst.DeviceID {
+						r.UserDeviceTokenID = types.NewNullDecimal(decimal.New(int64(d.TokenID), 0))
+					}
 				}
 
 				err := r.Insert(ctx, conn.DBS().Writer, boil.Infer())
@@ -390,7 +404,6 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	checker := func(b2 []byte) error {
 		var o shared.CloudEvent[transferData]
-		fmt.Println("XFFCUTE", string(b2))
 		err := json.Unmarshal(b2, &o)
 		require.NoError(t, err)
 		out = append(out, o)
