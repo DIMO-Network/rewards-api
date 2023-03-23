@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -96,7 +95,7 @@ func TestStreak(t *testing.T) {
 
 	defer cont.Terminate(ctx) //nolint
 
-	logger := zerolog.New(os.Stderr)
+	logger := zerolog.Nop()
 
 	host, err := cont.Host(ctx)
 	if err != nil {

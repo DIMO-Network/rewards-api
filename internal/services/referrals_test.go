@@ -31,30 +31,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const newUserDeviceID = "2LFD2qeDxWMf49jSdEGQ2Znde3l"
-const existingUserDeviceID = "2LFQTaaEzsUGyO2m1KtDIz4cgs0"
-
-const newUserReferred = "NewUserReferred"
-const newUserNotReferred = "newUserNotReferred"
-const userDeletedTheirAccount = "userDeletedTheirAccount"
-const existingUser = "ExistingUser"
-const diffAcccountSameEthAddr = "diffAcccountSameEthAddr"
-
-var addr = "0x67B94473D81D0cd00849D563C94d0432Ac988B49"
-var fakeUserClientResponse = map[string]*pb.User{
-	newUserReferred: {
-		Id:              newUserReferred,
-		EthereumAddress: &addr,
-		ReferredBy:      &pb.UserReferrer{EthereumAddress: common.FromHex("0x67B94473D81D0cd00849D563C94d0432Ac988B50")},
-	},
-	newUserNotReferred: {
-		Id:              newUserReferred,
-		EthereumAddress: &addr,
-	},
-	userDeletedTheirAccount: {
-		Id:              userDeletedTheirAccount,
-		EthereumAddress: &addr,
-	},
+type refUser struct {
+	ID       string
+	Address  common.Address
+	Code     string
+	CodeUsed string
 }
 
 type Referral struct {
@@ -63,7 +44,7 @@ type Referral struct {
 }
 
 type FakeUserClient struct {
-	users []User
+	users []refUser
 }
 
 func (d *FakeUserClient) GetUser(ctx context.Context, in *pb.GetUserRequest, opts ...grpc.CallOption) (*pb.User, error) {
@@ -174,11 +155,10 @@ func TestReferrals(t *testing.T) {
 		// ReferralCount int
 		// LastWeek      []*models.Reward
 		// ThisWeek      []*models.Reward
-		Users         []User
-		Devices       []Device
-		Rewards       []Reward
-		Referrals     []Referral
-		ExpectedError string
+		Users     []refUser
+		Devices   []Device
+		Rewards   []Reward
+		Referrals []Referral
 	}
 
 	scens := []Scenario{
@@ -187,7 +167,7 @@ func TestReferrals(t *testing.T) {
 			Devices: []Device{
 				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
 			},
-			Users: []User{
+			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
 				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
 			},
@@ -203,7 +183,7 @@ func TestReferrals(t *testing.T) {
 			Devices: []Device{
 				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
 			},
-			Users: []User{
+			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
 			},
 			Rewards: []Reward{
@@ -216,15 +196,14 @@ func TestReferrals(t *testing.T) {
 			Devices: []Device{
 				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
 			},
-			Users: []User{
+			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
 				{ID: "User2", Address: mkAddr(1), Code: "2", CodeUsed: ""},
 			},
 			Rewards: []Reward{
 				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
 			},
-			Referrals:     []Referral{},
-			ExpectedError: "Referred users ethereum address is same as referring users.",
+			Referrals: []Referral{},
 		},
 		{
 			Name: "New address, new token, old VIN",
@@ -232,7 +211,7 @@ func TestReferrals(t *testing.T) {
 				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
 				{ID: "Dev3", UserID: "User3", TokenID: 3, VIN: "00000000000000001"},
 			},
-			Users: []User{
+			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
 				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
 				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
@@ -240,6 +219,23 @@ func TestReferrals(t *testing.T) {
 			Rewards: []Reward{
 				{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
 				{Week: 5, DeviceID: "Dev3", UserID: "User3", Earning: true},
+			},
+			Referrals: []Referral{},
+		},
+		{
+			Name: "New VIN and user, same address",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
+				{ID: "Dev2", UserID: "User2", TokenID: 3, VIN: "00000000000000002"},
+			},
+			Users: []refUser{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+				{ID: "User2", Address: mkAddr(1), Code: "2", CodeUsed: "3"},
+				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: ""},
+			},
+			Rewards: []Reward{
+				{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
 			},
 			Referrals: []Referral{},
 		},
@@ -295,13 +291,7 @@ func TestReferrals(t *testing.T) {
 			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, &FakeUserClient{users: scen.Users})
 
 			refs, err := referralBonusService.CollectReferrals(ctx, 5)
-			if err != nil {
-				if scen.ExpectedError != "" {
-					assert.EqualError(t, err, "Referred users ethereum address is same as referring users.")
-				} else {
-					t.Fatal(err)
-				}
-			}
+			require.NoError(t, err)
 
 			var actual []Referral
 
