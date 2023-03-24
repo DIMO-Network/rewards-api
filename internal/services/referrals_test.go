@@ -90,8 +90,6 @@ func TestReferrals(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	refContractAddr := settings.ReferralContractAddress
-
 	port := 5432
 	nport := fmt.Sprintf("%d/tcp", port)
 
@@ -145,10 +143,11 @@ func TestReferrals(t *testing.T) {
 	conn.WaitForDB(logger)
 
 	type Device struct {
-		ID      string
-		TokenID int
-		UserID  string
-		VIN     string
+		ID               string
+		TokenID          int
+		UserID           string
+		Vin              string
+		FirstEarningWeek int
 	}
 
 	type Reward struct {
@@ -173,7 +172,7 @@ func TestReferrals(t *testing.T) {
 		{
 			Name: "New address, new car, referred by non-deleted user",
 			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
 			},
 			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
@@ -189,7 +188,7 @@ func TestReferrals(t *testing.T) {
 		{
 			Name: "New address, new car, not referred",
 			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
 			},
 			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
@@ -202,7 +201,7 @@ func TestReferrals(t *testing.T) {
 		{
 			Name: "Referrer has same address",
 			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
 			},
 			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
@@ -216,7 +215,7 @@ func TestReferrals(t *testing.T) {
 		{
 			Name: "Referring user has invalid wallet address",
 			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
 			},
 			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2", InvalidReferrer: true},
@@ -226,31 +225,31 @@ func TestReferrals(t *testing.T) {
 				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
 			},
 			Referrals: []Referral{
-				{Referee: mkAddr(1), Referrer: mkAddr(2)},
+				{Referee: mkAddr(1), Referrer: common.HexToAddress(settings.ReferralContractAddress)},
 			},
 		},
-		// {
-		// 	Name: "New address, new token, old VIN",
-		// 	Devices: []Device{
-		// 		{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
-		// 		{ID: "Dev3", UserID: "User3", TokenID: 3, VIN: "00000000000000001"},
-		// 	},
-		// 	Users: []refUser{
-		// 		{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
-		// 		{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
-		// 		{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
-		// 	},
-		// 	Rewards: []Reward{
-		// 		{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
-		// 		{Week: 5, DeviceID: "Dev3", UserID: "User3", Earning: true},
-		// 	},
-		// 	Referrals: []Referral{},
-		// },
 		{
-			Name: "New VIN and user, same address",
+			Name: "New address, new token, old Vin",
 			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, VIN: "00000000000000001"},
-				{ID: "Dev2", UserID: "User2", TokenID: 3, VIN: "00000000000000002"},
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 0},
+				{ID: "Dev3", UserID: "User3", TokenID: 3, Vin: "00000000000000001", FirstEarningWeek: 5},
+			},
+			Users: []refUser{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
+				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
+			},
+			Rewards: []Reward{
+				{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev3", UserID: "User3", Earning: true},
+			},
+			Referrals: []Referral{},
+		},
+		{
+			Name: "New Vin and user, same address",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
+				{ID: "Dev2", UserID: "User2", TokenID: 3, Vin: "00000000000000002", FirstEarningWeek: 5},
 			},
 			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
@@ -312,6 +311,19 @@ func TestReferrals(t *testing.T) {
 			producer := mocks.NewSyncProducer(t, nil)
 			transferService := NewTokenTransferService(&settings, producer, conn)
 
+			for _, ud := range scen.Devices {
+				if ud.Vin != "" && len(ud.Vin) == 17 {
+					vinRec := models.Vin{
+						Vin:                 ud.Vin,
+						FirstEarningWeek:    ud.FirstEarningWeek,
+						FirstEarningTokenID: types.NewDecimal(new(decimal.Big).SetUint64(uint64(ud.TokenID))),
+					}
+					if err := vinRec.Upsert(ctx, transferService.db.DBS().Writer, false, []string{models.VinColumns.Vin}, boil.Infer(), boil.Infer()); err != nil {
+						require.NoError(t, err)
+					}
+				}
+			}
+
 			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, &FakeUserClient{users: scen.Users})
 
 			refs, err := referralBonusService.CollectReferrals(ctx, 5)
@@ -323,11 +335,7 @@ func TestReferrals(t *testing.T) {
 				actual = append(actual, Referral{Referee: refs.Referees[i], Referrer: refs.Referrers[i]})
 			}
 
-			if scen.Name == "Referring user has invalid wallet address" {
-				assert.Equal(t, common.HexToAddress(refContractAddr), refs.Referrers[0])
-			} else {
-				assert.ElementsMatch(t, scen.Referrals, actual)
-			}
+			assert.ElementsMatch(t, scen.Referrals, actual)
 		})
 
 	}
