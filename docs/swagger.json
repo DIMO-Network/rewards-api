@@ -92,6 +92,24 @@
                     }
                 }
             }
+        },
+        "/user/referrals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "A summary of the user's referrals.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_controllers.UserResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -104,6 +122,7 @@
                     "example": 137
                 },
                 "description": {
+                    "description": "Description is a short elaboration of the Type or a generic, e.g., \"Incoming transfer\" message.",
                     "type": "string"
                 },
                 "from": {
@@ -122,7 +141,13 @@
                     "example": "0xc66d80f5063677425270013136ef9fa2bf1f9f1a"
                 },
                 "type": {
-                    "type": "string"
+                    "description": "Type is a transaction type.",
+                    "type": "string",
+                    "enum": [
+                        "Baseline",
+                        "Referrals",
+                        "Marketplace"
+                    ]
                 },
                 "value": {
                     "description": "Value is the amount of token being transferred. Divide by 10^18 to get what people\nnormally consider $DIMO.",

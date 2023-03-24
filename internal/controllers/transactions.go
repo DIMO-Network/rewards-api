@@ -77,13 +77,27 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	}
 
 	for _, tx := range txes {
+		to := common.BytesToAddress(tx.AddressTo)
+
+		var description string
+
+		if tx.Description.Valid {
+			description = tx.Description.String
+		} else {
+			if to == addr {
+				description = "Incoming transfer"
+			} else {
+				description = "Outgoing transfer"
+			}
+		}
+
 		apiTx := APITransaction{
 			ChainID:     tx.TokenTransfer.ChainID,
 			Time:        tx.BlockTimestamp,
 			From:        common.BytesToAddress(tx.AddressFrom),
-			To:          common.BytesToAddress(tx.AddressTo),
+			To:          to,
 			Value:       tx.Amount.Int(nil),
-			Description: tx.Description.Ptr(),
+			Description: description,
 			Type:        tx.Type.Ptr(),
 		}
 		txHistory.Transactions = append(txHistory.Transactions, apiTx)
@@ -108,7 +122,9 @@ type APITransaction struct {
 	To common.Address `json:"to" example:"0xc66d80f5063677425270013136ef9fa2bf1f9f1a" swaggertype:"string"`
 	// Value is the amount of token being transferred. Divide by 10^18 to get what people
 	// normally consider $DIMO.
-	Value       *big.Int `json:"value" example:"10000000000000000" swaggertype:"number"`
-	Description *string  `json:"description,omitempty"`
-	Type        *string  `json:"type,omitempty"`
+	Value *big.Int `json:"value" example:"10000000000000000" swaggertype:"number"`
+	// Type is a transaction type.
+	Type *string `json:"type,omitempty" enums:"Baseline,Referrals,Marketplace"`
+	// Description is a short elaboration of the Type or a generic, e.g., "Incoming transfer" message.
+	Description string `json:"description"`
 }
