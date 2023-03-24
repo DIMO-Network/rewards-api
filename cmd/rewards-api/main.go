@@ -155,7 +155,10 @@ func main() {
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 		v1.Get("/user/history/transactions", rewardsController.GetTransactionHistory)
 		v1.Get("/user/history/balance", rewardsController.GetBalanceHistory)
-		v1.Get("/user/referrals", referralsController.GetUserReferralHistory)
+
+		if settings.Environment != "prod" {
+			v1.Get("/user/referrals", referralsController.GetUserReferralHistory)
+		}
 
 		go startGRPCServer(&settings, pdb, &logger)
 
