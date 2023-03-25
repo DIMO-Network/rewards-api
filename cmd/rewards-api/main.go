@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var settingsPath = "settings.yaml"
+
 // @title                       DIMO Rewards API
 // @version                     1.0
 // @BasePath                    /v1
@@ -47,8 +50,17 @@ import (
 func main() {
 	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "rewards-api").Logger()
 
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" && len(s.Value) == 40 {
+				logger = logger.With().Str("commit", s.Value[:7]).Logger()
+				break
+			}
+		}
+	}
+
 	ctx := context.Background()
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := shared.LoadConfig[config.Settings](settingsPath)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to load settings.")
 	}
@@ -230,7 +242,6 @@ func main() {
 				command = command + " " + os.Args[3]
 			}
 		}
-		logger.Info().Msg("XDD")
 		if err := database.MigrateDatabase(logger, &settings.DB, command, "migrations"); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to run migration.")
 		}
