@@ -264,6 +264,60 @@ func TestReferrals(t *testing.T) {
 			},
 			Referrals: []Referral{},
 		},
+		{
+			Name: "Users with previously earning vins can refer",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
+				{ID: "Dev2", UserID: "User2", TokenID: 1, Vin: "00000000000000002", FirstEarningWeek: 1},
+			},
+			Users: []refUser{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
+				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
+			},
+			Rewards: []Reward{
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
+			},
+			Referrals: []Referral{
+				{Referee: mkAddr(1), Referrer: mkAddr(2)},
+			},
+		},
+		{
+			Name: "Users with new vins can referr",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
+				{ID: "Dev2", UserID: "User2", TokenID: 1, Vin: "00000000000000002", FirstEarningWeek: 5},
+			},
+			Users: []refUser{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
+				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
+			},
+			Rewards: []Reward{
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
+			},
+			Referrals: []Referral{
+				{Referee: mkAddr(1), Referrer: mkAddr(2)},
+			},
+		},
+		{
+			Name: "Users who did not earn in a given week can still refer",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
+				{ID: "Dev2", UserID: "User2", TokenID: 1, Vin: "00000000000000002", FirstEarningWeek: 1},
+			},
+			Users: []refUser{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
+				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
+			},
+			Rewards: []Reward{
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: false},
+			},
+			Referrals: []Referral{
+				{Referee: mkAddr(1), Referrer: mkAddr(2)},
+			},
+		},
 	}
 
 	for _, scen := range scens {
@@ -433,6 +487,15 @@ func TestReferralsBatchRequest(t *testing.T) {
 	}
 
 	producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
+
+	wk := models.IssuanceWeek{
+		ID:        referralBonusService.Week,
+		JobStatus: models.IssuanceWeeksJobStatusFinished,
+	}
+	err = wk.Insert(ctx, conn.DBS().Writer, boil.Infer())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	require.NoError(t, referralBonusService.transfer(ctx, refs))
 
