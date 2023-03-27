@@ -90,6 +90,8 @@ func TestReferrals(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	refContractAddr := common.HexToAddress("0xfF358a3dB687d9E80435a642bB3Ba8E64D4359A6")
+
 	port := 5432
 	nport := fmt.Sprintf("%d/tcp", port)
 
@@ -225,7 +227,7 @@ func TestReferrals(t *testing.T) {
 				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
 			},
 			Referrals: []Referral{
-				{Referee: mkAddr(1), Referrer: common.HexToAddress(settings.ReferralContractAddress)},
+				{Referee: mkAddr(1), Referrer: refContractAddr},
 			},
 		},
 		{
@@ -325,6 +327,7 @@ func TestReferrals(t *testing.T) {
 			}
 
 			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, &FakeUserClient{users: scen.Users})
+			referralBonusService.ContractAddress = refContractAddr
 
 			refs, err := referralBonusService.CollectReferrals(ctx, 5)
 			require.NoError(t, err)
@@ -441,7 +444,7 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	for i := range out {
 
-		b := common.FromHex(out[i].Data.Data)
+		b := out[i].Data.Data
 		require.NoError(t, err)
 		o, _ := abi.Methods["sendReferralBonuses"].Inputs.Unpack(b[4:])
 		referees := o[0].([]common.Address)

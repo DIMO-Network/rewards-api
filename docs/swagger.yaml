@@ -9,6 +9,8 @@ definitions:
         example: 137
         type: integer
       description:
+        description: Description is a short elaboration of the Type or a generic,
+          e.g., "Incoming transfer" message.
         type: string
       from:
         description: From is the address of the source of the value, in 0x-prefixed
@@ -26,6 +28,11 @@ definitions:
         example: 0xc66d80f5063677425270013136ef9fa2bf1f9f1a
         type: string
       type:
+        description: Type is a transaction type.
+        enum:
+        - Baseline
+        - Referrals
+        - Marketplace
         type: string
       value:
         description: |-
@@ -289,6 +296,16 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_controllers.TransactionHistory'
+      security:
+      - BearerAuth: []
+  /user/referrals:
+    get:
+      description: A summary of the user's referrals.
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_controllers.UserResponse'
       security:
       - BearerAuth: []
 securityDefinitions:

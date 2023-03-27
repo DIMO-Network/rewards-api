@@ -327,7 +327,7 @@ func TestStreak(t *testing.T) {
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
-			rwBonusService.Calculate(5)
+			rwBonusService.calculate()
 
 			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {

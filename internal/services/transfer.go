@@ -24,42 +24,37 @@ import (
 )
 
 type TransferService struct {
-	Producer        sarama.SyncProducer
-	Consumer        sarama.ConsumerGroup
-	RequestTopic    string
-	StatusTopic     string
-	db              db.Store
-	ContractAddress common.Address
-	batchSize       int
+	Producer      sarama.SyncProducer
+	RequestTopic  string
+	db            db.Store
+	batchSize     int
 }
 
 func NewTokenTransferService(
 	settings *config.Settings,
 	producer sarama.SyncProducer,
-	// settings config.Settings, producer sarama.SyncProducer, reqTopic string, contract Contract,
 	db db.Store) *TransferService {
 
 	return &TransferService{
-		Producer:     producer,
-		RequestTopic: settings.MetaTransactionSendTopic,
-		StatusTopic:  settings.MetaTransactionStatusTopic,
-		db:           db,
-		batchSize:    settings.TransferBatchSize,
+		Producer:        producer,
+		RequestTopic:    settings.MetaTransactionSendTopic,
+		db:              db,
+		batchSize:       settings.TransferBatchSize,
 	}
 }
 
 func (ts *TransferService) sendRequest(requestID string, addr common.Address, data []byte) error {
 	event := shared.CloudEvent[transferData]{
-		ID:          requestID,
+		ID:          ksuid.New().String(),
 		Source:      "rewards-api",
 		SpecVersion: "1.0",
-		Subject:     addr.String(),
+		Subject:     requestID,
 		Time:        time.Now(),
 		Type:        "zone.dimo.transaction.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   hexutil.Encode(ts.ContractAddress[:]),
-			Data: hexutil.Encode(data),
+			To:   addr,
+			Data: data,
 		},
 	}
 
@@ -80,9 +75,9 @@ func (ts *TransferService) sendRequest(requestID string, addr common.Address, da
 }
 
 type transferData struct {
-	ID   string `json:"id"`
-	To   string `json:"to"`
-	Data string `json:"data"`
+	ID   string         `json:"id"`
+	To   common.Address `json:"to"`
+	Data hexutil.Bytes  `json:"data"`
 }
 
 func (c *BaselineClient) transfer(ctx context.Context) error {

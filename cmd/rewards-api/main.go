@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var settingsPath = "settings.yaml"
+
 // @title                       DIMO Rewards API
 // @version                     1.0
 // @BasePath                    /v1
@@ -47,8 +50,17 @@ import (
 func main() {
 	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "rewards-api").Logger()
 
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" && len(s.Value) == 40 {
+				logger = logger.With().Str("commit", s.Value[:7]).Logger()
+				break
+			}
+		}
+	}
+
 	ctx := context.Background()
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := shared.LoadConfig[config.Settings](settingsPath)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to load settings.")
 	}
@@ -155,7 +167,10 @@ func main() {
 		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
 		v1.Get("/user/history/transactions", rewardsController.GetTransactionHistory)
 		v1.Get("/user/history/balance", rewardsController.GetBalanceHistory)
-		v1.Get("/user/referrals", referralsController.GetUserReferralHistory)
+
+		if settings.Environment != "prod" {
+			v1.Get("/user/referrals", referralsController.GetUserReferralHistory)
+		}
 
 		go startGRPCServer(&settings, pdb, &logger)
 
@@ -227,7 +242,6 @@ func main() {
 				command = command + " " + os.Args[3]
 			}
 		}
-		logger.Info().Msg("XDD")
 		if err := database.MigrateDatabase(logger, &settings.DB, command, "migrations"); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to run migration.")
 		}
@@ -283,7 +297,7 @@ func main() {
 
 		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, services.NewDeviceDataClient(&settings), deviceClient, definitionsClient, week, &logger)
 
-		if err := baselineRewardClient.Calculate(week); err != nil {
+		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
 		}
 	case "issue-referral-bonus":
