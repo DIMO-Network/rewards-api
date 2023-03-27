@@ -24,11 +24,10 @@ import (
 )
 
 type TransferService struct {
-	Producer        sarama.SyncProducer
-	RequestTopic    string
-	db              db.Store
-	ContractAddress common.Address
-	batchSize       int
+	Producer      sarama.SyncProducer
+	RequestTopic  string
+	db            db.Store
+	batchSize     int
 }
 
 func NewTokenTransferService(
@@ -37,7 +36,6 @@ func NewTokenTransferService(
 	db db.Store) *TransferService {
 
 	return &TransferService{
-		ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
 		Producer:        producer,
 		RequestTopic:    settings.MetaTransactionSendTopic,
 		db:              db,
@@ -55,7 +53,7 @@ func (ts *TransferService) sendRequest(requestID string, addr common.Address, da
 		Type:        "zone.dimo.transaction.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   ts.ContractAddress,
+			To:   addr,
 			Data: data,
 		},
 	}
