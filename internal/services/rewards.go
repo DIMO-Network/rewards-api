@@ -141,7 +141,8 @@ func (t *BaselineClient) createIntegrationPointsCalculator(resp *pb_defs.GetInte
 	return &calc
 }
 
-func (t *BaselineClient) Calculate(issuanceWeek int) error {
+func (t *BaselineClient) calculate() error {
+	issuanceWeek := t.Week
 	ctx := context.Background()
 
 	weekStart := NumToWeekStart(issuanceWeek)
@@ -338,10 +339,10 @@ func (t *BaselineClient) Calculate(issuanceWeek int) error {
 	return nil
 }
 
-func (t *BaselineClient) BaselineIssuance(issuanceWeek int) error {
+func (t *BaselineClient) BaselineIssuance() error {
 	ctx := context.Background()
 
-	err := t.Calculate(t.Week)
+	err := t.calculate(t.Week)
 	if err != nil {
 		return fmt.Errorf("failed to calculate and assign baseline tokens: %w", err)
 	}
@@ -351,7 +352,7 @@ func (t *BaselineClient) BaselineIssuance(issuanceWeek int) error {
 		return fmt.Errorf("failed to submit baseline token transfers: %w", err)
 	}
 
-	week, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.TransferService.db.DBS().Writer)
+	week, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(t.Week)).One(ctx, t.TransferService.db.DBS().Writer)
 	if err != nil {
 		return err
 	}
