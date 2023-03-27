@@ -342,7 +342,7 @@ func (t *BaselineClient) calculate() error {
 func (t *BaselineClient) BaselineIssuance() error {
 	ctx := context.Background()
 
-	err := t.calculate(t.Week)
+	err := t.calculate()
 	if err != nil {
 		return fmt.Errorf("failed to calculate and assign baseline tokens: %w", err)
 	}
