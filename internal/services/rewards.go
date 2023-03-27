@@ -141,7 +141,8 @@ func (t *BaselineClient) createIntegrationPointsCalculator(resp *pb_defs.GetInte
 	return &calc
 }
 
-func (t *BaselineClient) Calculate(issuanceWeek int) error {
+func (t *BaselineClient) calculate() error {
+	issuanceWeek := t.Week
 	ctx := context.Background()
 
 	weekStart := NumToWeekStart(issuanceWeek)
@@ -287,6 +288,20 @@ func (t *BaselineClient) Calculate(issuanceWeek int) error {
 		// This is a no-op if the device doesn't have a record from last week.
 		delete(lastWeekByDevice, deviceActivity.ID)
 
+		// If this VIN has never earned before, make note of that.
+		// Used by referrals, not this job. Have to be careful about VINs because
+		// people put garbage in there.
+		if ud.Vin != nil && len(*ud.Vin) == 17 {
+			vinRec := models.Vin{
+				Vin:                 *ud.Vin,
+				FirstEarningWeek:    issuanceWeek,
+				FirstEarningTokenID: types.NewDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
+			}
+			if err := vinRec.Upsert(ctx, t.TransferService.db.DBS().Writer, false, []string{models.VinColumns.Vin}, boil.Infer(), boil.Infer()); err != nil {
+				return err
+			}
+		}
+
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
@@ -324,10 +339,10 @@ func (t *BaselineClient) Calculate(issuanceWeek int) error {
 	return nil
 }
 
-func (t *BaselineClient) BaselineIssuance(issuanceWeek int) error {
+func (t *BaselineClient) BaselineIssuance() error {
 	ctx := context.Background()
 
-	err := t.Calculate(t.Week)
+	err := t.calculate()
 	if err != nil {
 		return fmt.Errorf("failed to calculate and assign baseline tokens: %w", err)
 	}
@@ -337,7 +352,7 @@ func (t *BaselineClient) BaselineIssuance(issuanceWeek int) error {
 		return fmt.Errorf("failed to submit baseline token transfers: %w", err)
 	}
 
-	week, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(issuanceWeek)).One(ctx, t.TransferService.db.DBS().Writer)
+	week, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(t.Week)).One(ctx, t.TransferService.db.DBS().Writer)
 	if err != nil {
 		return err
 	}

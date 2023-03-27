@@ -12,6 +12,7 @@ var TableNames = struct {
 	Referrals               string
 	Rewards                 string
 	TokenTransfers          string
+	Vins                    string
 }{
 	Blacklist:               "blacklist",
 	IssuanceWeeks:           "issuance_weeks",
@@ -21,4 +22,5 @@ var TableNames = struct {
 	Referrals:               "referrals",
 	Rewards:                 "rewards",
 	TokenTransfers:          "token_transfers",
+	Vins:                    "vins",
 }

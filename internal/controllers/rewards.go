@@ -403,7 +403,7 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	}
 
 	if len(rs) == 0 {
-		return c.JSON(HistoryResponse{})
+		return c.JSON(HistoryResponse{Weeks: []HistoryResponseWeek{}})
 	}
 
 	minWeek := rs[0].IssuanceWeekID

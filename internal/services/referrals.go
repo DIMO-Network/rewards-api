@@ -12,11 +12,10 @@ import (
 	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/queries"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -56,24 +55,32 @@ func NewReferralBonusService(
 func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
 	var refs Referrals
 
-	var res []models.Reward
-
-	err := models.NewQuery(
-		qm.Distinct("r1."+models.RewardColumns.UserID+", r1."+models.RewardColumns.UserEthereumAddress),
-		qm.From(models.TableNames.Rewards+" r1"),
-		qm.LeftOuterJoin(models.TableNames.Rewards+" r2 ON r1."+models.RewardColumns.UserID+" = r2."+models.RewardColumns.UserID+" AND r2."+models.RewardColumns.IssuanceWeekID+" < ?", issuanceWeek),
-		qm.Where("r1."+models.RewardColumns.IssuanceWeekID+" = ?", issuanceWeek),
-		qm.Where("r2."+models.RewardColumns.UserID+" IS NULL"),
-	).Bind(ctx, c.TransferService.db.DBS().Reader, &res)
-	if err != nil {
-		return refs, err
+	var res []struct {
+		UserID string `boil:"r1.user_id"`
 	}
 
-	for _, usr := range res {
-		user, err := c.UsersClient.GetUser(ctx, &pb.GetUserRequest{Id: usr.UserID})
+	var rCols = models.RewardColumns
+
+	err := queries.Raw(
+		"SELECT DISTINCT ON (r1."+rCols.UserEthereumAddress+")"+
+			" r1."+rCols.UserID+
+			" FROM "+models.TableNames.Rewards+" r1"+
+			" LEFT OUTER JOIN "+models.TableNames.Rewards+" r2 ON r1."+rCols.UserEthereumAddress+" = r2."+rCols.UserEthereumAddress+" AND r2."+rCols.IssuanceWeekID+" < $1"+
+			" LEFT JOIN "+models.TableNames.Vins+" v on r1."+rCols.UserDeviceTokenID+" = v."+models.VinColumns.FirstEarningTokenID+
+			" WHERE r1."+rCols.IssuanceWeekID+" = $1 AND r1."+rCols.UserEthereumAddress+" IS NOT NULL AND r2."+rCols.UserDeviceID+" IS NULL"+
+			" AND v."+models.VinColumns.FirstEarningWeek+" = $1"+
+			" ORDER BY r1."+rCols.UserEthereumAddress+", r1."+rCols.UserID,
+		issuanceWeek,
+	).Bind(ctx, c.TransferService.db.DBS().Reader, &res)
+	if err != nil {
+		return Referrals{}, err
+	}
+
+	for _, r := range res {
+		user, err := c.UsersClient.GetUser(ctx, &pb.GetUserRequest{Id: r.UserID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				c.Logger.Info().Str("userId", usr.UserID).Msg("User was new this week but deleted their account.")
+				c.Logger.Info().Str("userId", r.UserID).Msg("User was new this week but deleted their account.")
 				continue
 			}
 			return refs, err
@@ -84,12 +91,26 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 		}
 
 		if user.EthereumAddress == nil {
-			c.Logger.Info().Str("userId", usr.UserID).Msg("Referred user does not have a valid ethereum address.")
+			c.Logger.Info().Str("userId", r.UserID).Msg("Referred user does not have a valid ethereum address.")
 			continue
 		}
 
-		refs.Referees = append(refs.Referees, common.HexToAddress(*user.EthereumAddress))
-		refs.Referrers = append(refs.Referrers, common.BytesToAddress(user.ReferredBy.EthereumAddress))
+		if !user.ReferredBy.ReferrerValid {
+			c.Logger.Info().Str("userId", r.UserID).Msg("Referring user has deleted their account or no longer has a confirmed ethereum address.")
+			// referring eth addr is set to the referrals contract
+			user.ReferredBy.EthereumAddress = c.ContractAddress[:]
+		}
+
+		refereeAddr := common.HexToAddress(*user.EthereumAddress)
+		referrerAddr := common.BytesToAddress(user.ReferredBy.EthereumAddress)
+
+		if refereeAddr == referrerAddr {
+			c.Logger.Info().Str("userId", r.UserID).Msg("Referred users ethereum address is same as referring users.")
+			continue
+		}
+
+		refs.Referees = append(refs.Referees, refereeAddr)
+		refs.Referrers = append(refs.Referrers, referrerAddr)
 	}
 
 	return refs, nil
@@ -188,8 +209,8 @@ func (c *ReferralsClient) sendRequest(requestID string, data []byte) error {
 		Type:        "zone.dimo.referrals.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   c.ContractAddress.Hex(),
-			Data: hexutil.Encode(data),
+			To:   c.ContractAddress,
+			Data: data,
 		},
 	}
 

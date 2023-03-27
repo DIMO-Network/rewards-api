@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"testing"
 	"time"
 
@@ -14,18 +15,42 @@ import (
 	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/docker/go-connections/nat"
+	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+type User struct {
+	ID       string
+	Address  common.Address
+	Code     string
+	CodeUsed string
+}
+
+var mkID = func(i int) string {
+	return fmt.Sprintf("% 27d", i)
+}
+
+var mkAddr = func(i int) common.Address {
+	return common.BigToAddress(big.NewInt(int64(i)))
+}
+
+var mkVIN = func(i int) string {
+	s := fmt.Sprintf("%017d", i)
+	return s
+}
 
 func TestGetWeekNumForCron(t *testing.T) {
 	ti, _ := time.Parse(time.RFC3339, "2022-02-07T05:00:02Z")
@@ -99,64 +124,151 @@ func TestStreak(t *testing.T) {
 	conn := db.NewDbConnectionForTest(ctx, &dbset, true)
 	conn.WaitForDB(logger)
 
+	type OldReward struct {
+		Week       int
+		DeviceID   string
+		UserID     string
+		ConnStreak int
+		DiscStreak int
+	}
+
+	type NewReward struct {
+		DeviceID          string
+		TokenID           int
+		Address           common.Address
+		ConnStreak        int
+		DiscStreak        int
+		StreakPoints      int
+		IntegrationPoints int
+	}
+
+	type VIN struct {
+		VIN        string
+		FirstWeek  int
+		FirstToken int
+	}
+
 	type Scenario struct {
 		Name     string
-		LastWeek []*models.Reward
-		ThisWeek []*models.Reward
+		Previous []OldReward
+		Devices  []Device
+		Users    []User
+		New      []NewReward
+		PrevVIN  []VIN
+		NewVIN   []VIN
 	}
 
 	scens := []Scenario{
 		{
-			Name: "Level1Grow",
-			LastWeek: []*models.Reward{
-				{UserDeviceID: activeAutoPi, ConnectionStreak: 1, DisconnectionStreak: 0},
+			Name: "Level1SmartcarGrow",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
 			},
-			ThisWeek: []*models.Reward{
-				{UserDeviceID: activeAutoPi, ConnectionStreak: 2, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 6000},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}, Opted: true},
 			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, IntegrationPoints: 1000},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN: []VIN{},
 		},
 		{
-			Name: "Level1Disconnect",
-			LastWeek: []*models.Reward{
-				{UserDeviceID: inactive, ConnectionStreak: 1, DisconnectionStreak: 0},
+			Name: "Level1SmartcarDisconnected",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
 			},
-			ThisWeek: []*models.Reward{
-				{UserDeviceID: inactive, ConnectionStreak: 1, DisconnectionStreak: 1, StreakPoints: 0, IntegrationPoints: 0},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}, Opted: true},
 			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 1, StreakPoints: 0, IntegrationPoints: 0},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN: []VIN{},
 		},
 		{
-			Name: "JoinLevel2",
-			LastWeek: []*models.Reward{
-				{UserDeviceID: activeAutoPi, ConnectionStreak: 3, DisconnectionStreak: 0},
+			Name: "AutoPiJoinLevel2",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
 			},
-			ThisWeek: []*models.Reward{
-				{UserDeviceID: activeAutoPi, ConnectionStreak: 4, DisconnectionStreak: 0, StreakPoints: 1000, IntegrationPoints: 6000},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true},
 			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, IntegrationPoints: 6000},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN: []VIN{},
 		},
 		{
-			Name: "Level2Tesla",
-			LastWeek: []*models.Reward{
-				{UserDeviceID: activeTesla, ConnectionStreak: 5, DisconnectionStreak: 0},
+			Name: "LosingLevel3",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
 			},
-			ThisWeek: []*models.Reward{
-				{UserDeviceID: activeTesla, ConnectionStreak: 6, DisconnectionStreak: 0, StreakPoints: 1000, IntegrationPoints: 4000},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}, Opted: true},
 			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 22, DiscStreak: 2},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), ConnStreak: 4, DiscStreak: 3, StreakPoints: 0, IntegrationPoints: 0},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN: []VIN{},
 		},
 		{
-			Name: "LosingLevel",
-			LastWeek: []*models.Reward{
-				{UserDeviceID: inactive, ConnectionStreak: 22, DisconnectionStreak: 2},
+			Name: "BrandNewTesla",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
 			},
-			ThisWeek: []*models.Reward{
-				{UserDeviceID: inactive, ConnectionStreak: 4, DisconnectionStreak: 3, StreakPoints: 0, IntegrationPoints: 0},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, Opted: true},
 			},
+			Previous: []OldReward{},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 1, DiscStreak: 0, StreakPoints: 0, IntegrationPoints: 4000},
+			},
+			PrevVIN: []VIN{},
+			NewVIN:  []VIN{{VIN: mkVIN(1), FirstToken: 1}},
 		},
 		{
-			Name:     "NewSmartcar",
-			LastWeek: []*models.Reward{},
-			ThisWeek: []*models.Reward{
-				{UserDeviceID: activeSmartcar, ConnectionStreak: 1, DisconnectionStreak: 0, StreakPoints: 0, IntegrationPoints: 1000},
+			Name: "NewCopySameVIN",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+				{ID: "User2", Address: mkAddr(2)},
 			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}, Opted: true},
+				{ID: mkID(2), TokenID: 2, UserID: "User2", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, Opted: true},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 1, StreakPoints: 0, IntegrationPoints: 0},
+				{DeviceID: mkID(2), TokenID: 2, Address: mkAddr(2), ConnStreak: 1, DiscStreak: 0, StreakPoints: 0, IntegrationPoints: 4000},
+			},
+			PrevVIN: []VIN{{VIN: mkVIN(1), FirstToken: 1}},
+			NewVIN:  []VIN{},
 		},
 	}
 
@@ -166,6 +278,8 @@ func TestStreak(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			models.Vins().DeleteAll(ctx, conn.DBS().Writer)
 
 			_, err = models.IssuanceWeeks().DeleteAll(ctx, conn.DBS().Writer)
 			if err != nil {
@@ -178,84 +292,121 @@ func TestStreak(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			for _, lst := range scen.LastWeek {
-				err := lst.Insert(ctx, conn.DBS().Writer, boil.Infer())
+			for _, lst := range scen.Previous {
+
+				wk := models.IssuanceWeek{
+					ID:        lst.Week,
+					JobStatus: models.IssuanceWeeksJobStatusFinished,
+				}
+
+				wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+
+				rw := models.Reward{
+					IssuanceWeekID:      lst.Week,
+					UserDeviceID:        lst.DeviceID,
+					ConnectionStreak:    lst.ConnStreak,
+					DisconnectionStreak: lst.DiscStreak,
+				}
+				err := rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
 				if err != nil {
 					t.Fatal(err)
 				}
 			}
 
-			mp := map[string]*models.Reward{}
+			for _, v := range scen.PrevVIN {
+				vw := models.Vin{
+					Vin:                 v.VIN,
+					FirstEarningWeek:    v.FirstWeek,
+					FirstEarningTokenID: types.NewDecimal(decimal.New(int64(v.FirstToken), 0)),
+				}
 
-			for _, ths := range scen.ThisWeek {
-				mp[ths.UserDeviceID] = ths
+				vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
 			}
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
 
-			referralBonusService := NewBaselineRewardService(&settings, transferService, Views{}, &FakeDevClient{}, &FakeDefClient{}, 1, &logger)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
-			err = referralBonusService.Calculate(1)
+			rwBonusService.calculate()
+
+			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			rs, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(1), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
-			if err != nil {
-				t.Fatal(err)
+			var actual []NewReward
+
+			for _, c := range rw {
+				nr := NewReward{
+					DeviceID:          c.UserDeviceID,
+					ConnStreak:        c.ConnectionStreak,
+					DiscStreak:        c.DisconnectionStreak,
+					StreakPoints:      c.StreakPoints,
+					IntegrationPoints: c.IntegrationPoints,
+				}
+
+				if !c.UserDeviceTokenID.IsZero() {
+					n, _ := c.UserDeviceTokenID.Int64()
+					nr.TokenID = int(n)
+				}
+
+				if c.UserEthereumAddress.Valid {
+					nr.Address = common.HexToAddress(c.UserEthereumAddress.String)
+				}
+
+				actual = append(actual, nr)
 			}
 
-			mp2 := map[string]*models.Reward{}
-			for _, ths := range rs {
-				mp2[ths.UserDeviceID] = ths
+			assert.ElementsMatch(t, scen.New, actual)
+
+			vs, err := models.Vins(models.VinWhere.FirstEarningWeek.EQ(5)).All(ctx, conn.DBS().Reader.DB)
+			require.NoError(t, err)
+
+			actualv := []VIN{}
+
+			for _, v := range vs {
+				i, _ := v.FirstEarningTokenID.Int64()
+				actualv = append(actualv, VIN{VIN: v.Vin, FirstToken: int(i)})
 			}
 
-			for k, v1 := range mp {
-				v2, ok := mp2[k]
-				if !ok {
-					t.Errorf("Missing row for device %s", k)
-					continue
-				}
-				if v2.ConnectionStreak != v1.ConnectionStreak {
-					t.Errorf("Device %s should have streak %d but had streak %d", k, v1.ConnectionStreak, v2.ConnectionStreak)
-				}
-				if v2.DisconnectionStreak != v1.DisconnectionStreak {
-					t.Errorf("Device %s should have streak %d but had streak %d", k, v1.ConnectionStreak, v2.ConnectionStreak)
-				}
-				if v2.IntegrationPoints != v1.IntegrationPoints {
-					t.Errorf("Device %s should have %d integration points but had %d", k, v1.IntegrationPoints, v2.IntegrationPoints)
-				}
-				if v2.StreakPoints != v1.StreakPoints {
-					t.Errorf("Device %s should have %d streak points but had %d", k, v1.StreakPoints, v2.StreakPoints)
-				}
-			}
+			assert.ElementsMatch(t, scen.NewVIN, actualv)
 		})
-
 	}
+}
 
+type Device struct {
+	ID           string
+	TokenID      int
+	UserID       string
+	VIN          string
+	Opted        bool
+	IntsWithData []string
+	AMID         int
 }
 
 type Views struct {
+	devices []Device
 }
 
 const autoPiIntegration = "2LFD6DXuGRdVucJO1a779kEUiYi"
 const teslaIntegration = "2LFQOgsYd5MEmRNBnsYXKp0QHC3"
 const smartcarIntegration = "2LFSA81Oo4agy0y4NvP7f6hTdgs"
 
-const activeAutoPi = "2LFD2qeDxWMf49jSdEGQ2Znde3l"
-const activeTesla = "2LFQTaaEzsUGyO2m1KtDIz4cgs0"
-const activeSmartcar = "2LFSD4V6NcW88t3pdjPTNUJTPOu"
-const inactive = "2LFOozehPU5ntHkuqHSQbn93seV"
-
 func (v Views) DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error) {
-	return []*DeviceData{
-		{ID: activeAutoPi, Integrations: []string{autoPiIntegration}},
-		{ID: activeTesla, Integrations: []string{teslaIntegration}},
-		{ID: activeSmartcar, Integrations: []string{smartcarIntegration}},
-	}, nil
+	var out []*DeviceData
+	for _, d := range v.devices {
+		if len(d.IntsWithData) == 0 {
+			continue
+		}
+		out = append(out, &DeviceData{
+			ID: d.ID, Integrations: d.IntsWithData,
+		})
+	}
+	return out, nil
 }
 
-type FakeDefClient struct{}
+type FakeDefClient struct {
+}
 
 func (d *FakeDefClient) GetIntegrations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error) {
 	return &pb_defs.GetIntegrationResponse{Integrations: []*pb_defs.Integration{
@@ -265,44 +416,62 @@ func (d *FakeDefClient) GetIntegrations(ctx context.Context, in *emptypb.Empty, 
 	}}, nil
 }
 
-type FakeDevClient struct{}
-
-var rewards = map[string]*pb_devices.UserDevice{
-	activeAutoPi: {
-		Id:                       activeAutoPi,
-		UserId:                   "USER1",
-		TokenId:                  ref(uint64(1)),
-		OptedInAt:                timestamppb.Now(),
-		OwnerAddress:             common.FromHex("0x67B94473D81D0cd00849D563C94d0432Ac988B49"),
-		AftermarketDeviceTokenId: ref(uint64(2)),
-	},
-	inactive: {},
-	activeTesla: {
-		Id:           activeTesla,
-		UserId:       "USER1",
-		TokenId:      ref(uint64(2)),
-		OptedInAt:    timestamppb.Now(),
-		OwnerAddress: common.FromHex("0x67B94473D81D0cd00849D563C94d0432Ac988B49"),
-	},
-	activeSmartcar: {
-		Id:           activeSmartcar,
-		UserId:       "USER1",
-		TokenId:      ref(uint64(3)),
-		OptedInAt:    timestamppb.Now(),
-		OwnerAddress: common.FromHex("0x67B94473D81D0cd00849D563C94d0432Ac988B49"),
-	},
+type FakeDevClient struct {
+	users   []User
+	devices []Device
 }
 
-func ref[A any](a A) *A {
-	return &a
-}
+var zeroAddr common.Address
 
 func (d *FakeDevClient) GetUserDevice(ctx context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error) {
-	ud, ok := rewards[in.Id]
-	if !ok {
-		return nil, status.Error(codes.NotFound, "No device with that ID found.")
+	for _, ud := range d.devices {
+		if ud.ID != in.Id {
+			continue
+		}
+
+		var tk *uint64
+		if ud.TokenID != 0 {
+			t := uint64(ud.TokenID)
+			tk = &t
+		}
+
+		var t *timestamppb.Timestamp
+		if ud.Opted {
+			t = timestamppb.New(time.Now())
+		}
+
+		var owner []byte
+		for _, u := range d.users {
+			if u.ID == ud.UserID {
+				if u.Address != zeroAddr {
+					owner = u.Address.Bytes()
+				}
+				break
+			}
+		}
+
+		var vin *string
+		if ud.VIN != "" {
+			vin = &ud.VIN
+		}
+
+		ud2 := &pb_devices.UserDevice{
+			Id:           ud.ID,
+			TokenId:      tk,
+			OptedInAt:    t,
+			Vin:          vin,
+			OwnerAddress: owner,
+		}
+
+		if ud.AMID != 0 {
+			u1 := uint64(ud.AMID)
+			ud2.AftermarketDeviceTokenId = &u1
+		}
+
+		return ud2, nil
 	}
-	return ud, nil
+
+	return nil, status.Error(codes.NotFound, "No user with that ID found.")
 }
 
 type FakeTransfer struct{}
