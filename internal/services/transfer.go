@@ -45,10 +45,10 @@ func NewTokenTransferService(
 
 func (ts *TransferService) sendRequest(requestID string, addr common.Address, data []byte) error {
 	event := shared.CloudEvent[transferData]{
-		ID:          requestID,
+		ID:          ksuid.New().String(),
 		Source:      "rewards-api",
 		SpecVersion: "1.0",
-		Subject:     addr.String(),
+		Subject:     requestID,
 		Time:        time.Now(),
 		Type:        "zone.dimo.transaction.request",
 		Data: transferData{
