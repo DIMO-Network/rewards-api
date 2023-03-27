@@ -201,8 +201,8 @@ func (c *ReferralsClient) sendRequest(requestID string, data []byte) error {
 		Type:        "zone.dimo.referrals.request",
 		Data: transferData{
 			ID:   requestID,
-			To:   c.ContractAddress.Hex(),
-			Data: hexutil.Encode(data),
+			To:   c.ContractAddress,
+			Data: data,
 		},
 	}
 
