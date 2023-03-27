@@ -12,7 +12,6 @@ import (
 	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/sqlboiler/v4/boil"
