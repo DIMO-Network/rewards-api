@@ -297,7 +297,7 @@ func main() {
 
 		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, services.NewDeviceDataClient(&settings), deviceClient, definitionsClient, week, &logger)
 
-		if err := baselineRewardClient.BaselineIssuance(week); err != nil {
+		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
 		}
 	case "issue-referral-bonus":
