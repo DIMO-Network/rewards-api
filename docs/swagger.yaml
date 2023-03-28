@@ -1,5 +1,267 @@
 basePath: /v1
 definitions:
+  github.com_DIMO-Network_rewards-api_internal_controllers.APITransaction:
+    properties:
+      chainId:
+        description: |-
+          ChainID is the chain id of the chain on which the transaction took place. Important
+          values are 137 for Polygon, 1 for Ethereum.
+        example: 137
+        type: integer
+      description:
+        description: Description is a short elaboration of the Type or a generic,
+          e.g., "Incoming transfer" message.
+        type: string
+      from:
+        description: From is the address of the source of the value, in 0x-prefixed
+          hex.
+        example: 0xf316832fbfe49f90df09eee019c2ece87fad3fac
+        type: string
+      time:
+        description: Time is the timestamp of the block in which the transaction took
+          place, in RFC-3999 format.
+        example: "2023-01-22T09:00:12Z"
+        type: string
+      to:
+        description: To is the address of the recipient of the value, in 0x-prefixed
+          hex.
+        example: 0xc66d80f5063677425270013136ef9fa2bf1f9f1a
+        type: string
+      type:
+        description: Type is a transaction type.
+        enum:
+        - Baseline
+        - Referrals
+        - Marketplace
+        type: string
+      value:
+        description: |-
+          Value is the amount of token being transferred. Divide by 10^18 to get what people
+          normally consider $DIMO.
+        example: 10000000000000000
+        type: number
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.Balance:
+    properties:
+      balance:
+        description: Balance is the total amount of $DIMO held at this time, across
+          all chains.
+        example: 2.3727721709254885e+20
+        type: number
+      time:
+        description: Time is the block timestamp of this balance update.
+        example: "2023-03-06T09:11:00Z"
+        type: string
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.BalanceHistory:
+    properties:
+      balanceHistory:
+        items:
+          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.Balance'
+        type: array
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponse:
+    properties:
+      weeks:
+        items:
+          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponseWeek'
+        type: array
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponseWeek:
+    properties:
+      end:
+        description: End is the starting time of the issuance week after this one.
+        example: "2022-04-18T05:00:00Z"
+        type: string
+      points:
+        description: Points is the number of points the user earned this week.
+        example: 4000
+        type: integer
+      start:
+        description: Start is the starting time of the issuance week.
+        example: "2022-04-11T05:00:00Z"
+        type: string
+      tokens:
+        description: Tokens is the number of tokens the user earned this week.
+        example: 4000
+        type: number
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.ReferralHistory:
+    properties:
+      completed:
+        description: CompletedReferrals referrals for which awards have already been
+          sent
+        items:
+          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.referral'
+        type: array
+      referredBy:
+        $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.referral'
+        description: ReferredBy address of user that that account was referred by
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.TransactionHistory:
+    properties:
+      transactions:
+        items:
+          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.APITransaction'
+        type: array
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse:
+    properties:
+      devices:
+        description: |-
+          Devices is a list of the user's devices, together with some information about their
+          connectivity.
+        items:
+          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseDevice'
+        type: array
+      points:
+        description: Points is the user's total number of points, across all devices
+          and issuance weeks.
+        example: 5000
+        type: integer
+      thisWeek:
+        $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek'
+        description: ThisWeek describes the current issuance week.
+      tokens:
+        description: |-
+          Tokens is the number of tokens the user has earned, across all devices and issuance
+          weeks.
+        example: 1.105e+24
+        type: number
+      walletBalance:
+        description: |-
+          WalletBalance is the number of tokens held in the users's wallet, if he has a wallet
+          attached to the present account.
+        example: 1.105e+24
+        type: number
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseDevice:
+    properties:
+      connectedThisWeek:
+        description: |-
+          ConnectedThisWeek is true if we've seen activity from the device during the current issuance
+          week.
+        example: true
+        type: boolean
+      connectionStreak:
+        description: |-
+          ConnectionStreak is what we consider the streak of the device to be. This may not literally
+          be the number of consecutive connected weeks, because the user may disconnect for a week
+          without penalty, or have the connection streak reduced after three weeks of inactivity.
+        example: 4
+        type: integer
+      disconnectionStreak:
+        description: |-
+          DisconnectionStreak is the number of consecutive issuance weeks that the device has been
+          disconnected. This number resets to 0 as soon as a device earns rewards for a certain week.
+        example: 0
+        type: integer
+      id:
+        description: ID is the user device ID used across all services.
+        example: 27cv7gVTh9h4RJuTsmJHpBcr4I9
+        type: string
+      integrationsThisWeek:
+        description: IntegrationsThisWeek details the integrations we've seen active
+          this week.
+        items:
+          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration'
+        type: array
+      lastActive:
+        description: LastActive is the last time we saw activity from the vehicle.
+        example: "2022-04-12T09:23:01Z"
+        type: string
+      level:
+        $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel'
+        description: Level is the level 1-4 of the device. This is fully determined
+          by ConnectionStreak.
+      minted:
+        description: Minted is true if the device has been minted on-chain.
+        type: boolean
+      optedIn:
+        description: OptedIn is true if the user has agreed to the terms of service.
+        type: boolean
+      points:
+        description: Points is the total number of points that the device has earned
+          across all weeks.
+        example: 5000
+        type: integer
+      tokens:
+        description: Tokens is the total number of tokens that the device has earned
+          across all weeks.
+        example: 5000
+        type: number
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration:
+    properties:
+      dataThisWeek:
+        type: boolean
+      id:
+        description: ID is the integration ID.
+        example: 27egBSLazAT7njT2VBjcISPIpiU
+        type: string
+      onChainPairingStatus:
+        description: OnChainPairingStatus is the on-chain pairing status of the integration.
+        enum:
+        - Paired
+        - Unpaired
+        - NotApplicable
+        example: Paired
+        type: string
+      points:
+        description: |-
+          Points is the number of points a user earns for being connected with this integration
+          for a week.
+        example: 1000
+        type: integer
+      vendor:
+        description: |-
+          Vendor is the name of the integration vendor. At present, this uniquely determines the
+          integration.
+        example: SmartCar
+        type: string
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseLevel:
+    properties:
+      maxWeeks:
+        description: MaxWeeks is the last streak week at this level. In the next week,
+          we enter the next level.
+        example: 20
+        type: integer
+      minWeeks:
+        description: MinWeeks is the minimum streak of weeks needed to enter this
+          level.
+        example: 4
+        type: integer
+      number:
+        description: Number is the level number 1-4
+        example: 2
+        type: integer
+      streakPoints:
+        description: StreakPoints is the number of points you earn per week at this
+          level.
+        example: 1000
+        type: integer
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseThisWeek:
+    properties:
+      end:
+        description: End is the timestamp of the start of the next issuance week.
+        example: "2022-04-18T05:00:00Z"
+        type: string
+      start:
+        description: Start is the timestamp of the start of the issuance week.
+        example: "2022-04-11T05:00:00Z"
+        type: string
+    type: object
+  github.com_DIMO-Network_rewards-api_internal_controllers.referral:
+    properties:
+      issued:
+        type: string
+      user:
+        items:
+          type: integer
+        type: array
+    type: object
   internal_controllers.APITransaction:
     properties:
       chainId:
@@ -86,6 +348,18 @@ definitions:
         example: 4000
         type: number
     type: object
+  internal_controllers.ReferralHistory:
+    properties:
+      completed:
+        description: CompletedReferrals referrals for which awards have already been
+          sent
+        items:
+          $ref: '#/definitions/internal_controllers.referral'
+        type: array
+      referredBy:
+        $ref: '#/definitions/internal_controllers.referral'
+        description: ReferredBy address of user that that account was referred by
+    type: object
   internal_controllers.TransactionHistory:
     properties:
       transactions:
@@ -108,8 +382,7 @@ definitions:
         example: 5000
         type: integer
       thisWeek:
-        allOf:
-        - $ref: '#/definitions/internal_controllers.UserResponseThisWeek'
+        $ref: '#/definitions/internal_controllers.UserResponseThisWeek'
         description: ThisWeek describes the current issuance week.
       tokens:
         description: |-
@@ -160,8 +433,7 @@ definitions:
         example: "2022-04-12T09:23:01Z"
         type: string
       level:
-        allOf:
-        - $ref: '#/definitions/internal_controllers.UserResponseLevel'
+        $ref: '#/definitions/internal_controllers.UserResponseLevel'
         description: Level is the level 1-4 of the device. This is fully determined
           by ConnectionStreak.
       minted:
@@ -243,6 +515,15 @@ definitions:
         example: "2022-04-11T05:00:00Z"
         type: string
     type: object
+  internal_controllers.referral:
+    properties:
+      issued:
+        type: string
+      user:
+        items:
+          type: integer
+        type: array
+    type: object
 info:
   contact: {}
   title: DIMO Rewards API
@@ -255,7 +536,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.UserResponse'
+            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse'
       security:
       - BearerAuth: []
   /user/history:
@@ -265,7 +546,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.HistoryResponse'
+            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.HistoryResponse'
       security:
       - BearerAuth: []
   /user/history/balance:
@@ -275,7 +556,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.BalanceHistory'
+            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.BalanceHistory'
       security:
       - BearerAuth: []
   /user/history/transactions:
@@ -295,7 +576,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.TransactionHistory'
+            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.TransactionHistory'
       security:
       - BearerAuth: []
   /user/referrals:
@@ -305,7 +586,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.UserResponse'
+            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.ReferralHistory'
       security:
       - BearerAuth: []
 securityDefinitions:
