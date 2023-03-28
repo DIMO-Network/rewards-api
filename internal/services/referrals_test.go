@@ -237,6 +237,23 @@ func TestReferrals(t *testing.T) {
 				{ID: "Dev3", UserID: "User3", TokenID: 3, Vin: "00000000000000001", FirstEarningWeek: 5},
 			},
 			Users: []refUser{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2", InvalidReferrer: true},
+				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
+			},
+			Rewards: []Reward{
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+			},
+			Referrals: []Referral{
+				{Referee: mkAddr(1), Referrer: refContractAddr},
+			},
+		},
+		{
+			Name: "New address, new token, old VIN",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001"},
+				{ID: "Dev3", UserID: "User3", TokenID: 3, Vin: "00000000000000003"},
+			},
+			Users: []refUser{
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
 				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
 				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
