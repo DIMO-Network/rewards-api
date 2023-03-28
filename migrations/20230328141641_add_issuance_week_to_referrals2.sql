@@ -11,7 +11,6 @@ ALTER TABLE referrals ADD CONSTRAINT referrals_issuance_week_id_fkey FOREIGN KEY
 
 
 
-
 -- +goose StatementEnd
 
 -- +goose Down
