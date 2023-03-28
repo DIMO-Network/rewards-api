@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -39,24 +40,28 @@ func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
 	}
 
 	out := ReferralHistory{
-		CompletedReferrals: []common.Address{},
+		CompletedReferrals: []referral{},
 	}
 
 	if user.EthereumAddress != nil {
 		userAddr := common.HexToAddress(*user.EthereumAddress)
 
-		referredBy, err := models.Referrals(models.ReferralWhere.Referee.EQ(userAddr.Bytes())).One(c.Context(), r.DB.DBS().Reader)
+		referredBy, err := models.Referrals(
+			models.ReferralWhere.Referee.EQ(userAddr.Bytes()),
+			qm.Load(models.ReferralRels.IssuanceWeek),
+		).One(c.Context(), r.DB.DBS().Reader)
 		if err != nil {
 			if err != sql.ErrNoRows {
 				return err
 			}
 		} else {
 			referrer := common.BytesToAddress(referredBy.Referrer)
-			out.ReferredBy = &referrer
+			out.ReferredBy = &referral{User: referrer, Issued: referredBy.R.IssuanceWeek.EndsAt.Format("2006-01-02")}
 		}
 
 		referralsMade, err := models.Referrals(
 			models.ReferralWhere.Referrer.EQ(userAddr.Bytes()),
+			qm.Load(models.ReferralRels.IssuanceWeek),
 		).All(c.Context(), r.DB.DBS().Reader)
 		if err != nil {
 			logger.Err(err).Msg("Database failure retrieving user referral history.")
@@ -67,7 +72,7 @@ func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
 			if !r.TransferSuccessful.Valid || !r.TransferSuccessful.Bool {
 				continue
 			}
-			out.CompletedReferrals = append(out.CompletedReferrals, common.BytesToAddress(r.Referee))
+			out.CompletedReferrals = append(out.CompletedReferrals, referral{User: common.BytesToAddress(r.Referee), Issued: r.R.IssuanceWeek.EndsAt.Format("2006-01-02")})
 		}
 
 	}
@@ -77,7 +82,12 @@ func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
 
 type ReferralHistory struct {
 	// ReferredBy address of user that that account was referred by
-	ReferredBy *common.Address `json:"referredBy"`
+	ReferredBy *referral `json:"referredBy"`
 	// CompletedReferrals referrals for which awards have already been sent
-	CompletedReferrals []common.Address `json:"completed"`
+	CompletedReferrals []referral `json:"completed"`
+}
+
+type referral struct {
+	User   common.Address `json:"user"`
+	Issued string         `json:"issued"`
 }

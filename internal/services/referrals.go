@@ -161,9 +161,10 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 
 			for n := range referreesBatch {
 				r := models.Referral{
-					Referee:   referreesBatch[n].Bytes(),
-					Referrer:  referrersBatch[n].Bytes(),
-					RequestID: reqID,
+					Referee:        referreesBatch[n].Bytes(),
+					Referrer:       referrersBatch[n].Bytes(),
+					RequestID:      reqID,
+					IssuanceWeekID: c.Week,
 				}
 				if err := r.Insert(ctx, tx, boil.Infer()); err != nil {
 					return err

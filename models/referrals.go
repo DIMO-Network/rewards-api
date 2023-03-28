@@ -29,6 +29,7 @@ type Referral struct {
 	TransferSuccessful    null.Bool   `boil:"transfer_successful" json:"transfer_successful,omitempty" toml:"transfer_successful" yaml:"transfer_successful,omitempty"`
 	TransferFailureReason null.String `boil:"transfer_failure_reason" json:"transfer_failure_reason,omitempty" toml:"transfer_failure_reason" yaml:"transfer_failure_reason,omitempty"`
 	RequestID             string      `boil:"request_id" json:"request_id" toml:"request_id" yaml:"request_id"`
+	IssuanceWeekID        int         `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
 
 	R *referralR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L referralL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -40,12 +41,14 @@ var ReferralColumns = struct {
 	TransferSuccessful    string
 	TransferFailureReason string
 	RequestID             string
+	IssuanceWeekID        string
 }{
 	Referee:               "referee",
 	Referrer:              "referrer",
 	TransferSuccessful:    "transfer_successful",
 	TransferFailureReason: "transfer_failure_reason",
 	RequestID:             "request_id",
+	IssuanceWeekID:        "issuance_week_id",
 }
 
 var ReferralTableColumns = struct {
@@ -54,12 +57,14 @@ var ReferralTableColumns = struct {
 	TransferSuccessful    string
 	TransferFailureReason string
 	RequestID             string
+	IssuanceWeekID        string
 }{
 	Referee:               "referrals.referee",
 	Referrer:              "referrals.referrer",
 	TransferSuccessful:    "referrals.transfer_successful",
 	TransferFailureReason: "referrals.transfer_failure_reason",
 	RequestID:             "referrals.request_id",
+	IssuanceWeekID:        "referrals.issuance_week_id",
 }
 
 // Generated where
@@ -70,29 +75,41 @@ var ReferralWhere = struct {
 	TransferSuccessful    whereHelpernull_Bool
 	TransferFailureReason whereHelpernull_String
 	RequestID             whereHelperstring
+	IssuanceWeekID        whereHelperint
 }{
 	Referee:               whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referee\""},
 	Referrer:              whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referrer\""},
 	TransferSuccessful:    whereHelpernull_Bool{field: "\"rewards_api\".\"referrals\".\"transfer_successful\""},
 	TransferFailureReason: whereHelpernull_String{field: "\"rewards_api\".\"referrals\".\"transfer_failure_reason\""},
 	RequestID:             whereHelperstring{field: "\"rewards_api\".\"referrals\".\"request_id\""},
+	IssuanceWeekID:        whereHelperint{field: "\"rewards_api\".\"referrals\".\"issuance_week_id\""},
 }
 
 // ReferralRels is where relationship names are stored.
 var ReferralRels = struct {
-	Request string
+	IssuanceWeek string
+	Request      string
 }{
-	Request: "Request",
+	IssuanceWeek: "IssuanceWeek",
+	Request:      "Request",
 }
 
 // referralR is where relationships are stored.
 type referralR struct {
-	Request *MetaTransactionRequest `boil:"Request" json:"Request" toml:"Request" yaml:"Request"`
+	IssuanceWeek *IssuanceWeek           `boil:"IssuanceWeek" json:"IssuanceWeek" toml:"IssuanceWeek" yaml:"IssuanceWeek"`
+	Request      *MetaTransactionRequest `boil:"Request" json:"Request" toml:"Request" yaml:"Request"`
 }
 
 // NewStruct creates a new relationship struct
 func (*referralR) NewStruct() *referralR {
 	return &referralR{}
+}
+
+func (r *referralR) GetIssuanceWeek() *IssuanceWeek {
+	if r == nil {
+		return nil
+	}
+	return r.IssuanceWeek
 }
 
 func (r *referralR) GetRequest() *MetaTransactionRequest {
@@ -106,8 +123,8 @@ func (r *referralR) GetRequest() *MetaTransactionRequest {
 type referralL struct{}
 
 var (
-	referralAllColumns            = []string{"referee", "referrer", "transfer_successful", "transfer_failure_reason", "request_id"}
-	referralColumnsWithoutDefault = []string{"referee", "referrer", "request_id"}
+	referralAllColumns            = []string{"referee", "referrer", "transfer_successful", "transfer_failure_reason", "request_id", "issuance_week_id"}
+	referralColumnsWithoutDefault = []string{"referee", "referrer", "request_id", "issuance_week_id"}
 	referralColumnsWithDefault    = []string{"transfer_successful", "transfer_failure_reason"}
 	referralPrimaryKeyColumns     = []string{"referee", "referrer"}
 	referralGeneratedColumns      = []string{}
@@ -391,6 +408,17 @@ func (q referralQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (b
 	return count > 0, nil
 }
 
+// IssuanceWeek pointed to by the foreign key.
+func (o *Referral) IssuanceWeek(mods ...qm.QueryMod) issuanceWeekQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.IssuanceWeekID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return IssuanceWeeks(queryMods...)
+}
+
 // Request pointed to by the foreign key.
 func (o *Referral) Request(mods ...qm.QueryMod) metaTransactionRequestQuery {
 	queryMods := []qm.QueryMod{
@@ -400,6 +428,126 @@ func (o *Referral) Request(mods ...qm.QueryMod) metaTransactionRequestQuery {
 	queryMods = append(queryMods, mods...)
 
 	return MetaTransactionRequests(queryMods...)
+}
+
+// LoadIssuanceWeek allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (referralL) LoadIssuanceWeek(ctx context.Context, e boil.ContextExecutor, singular bool, maybeReferral interface{}, mods queries.Applicator) error {
+	var slice []*Referral
+	var object *Referral
+
+	if singular {
+		var ok bool
+		object, ok = maybeReferral.(*Referral)
+		if !ok {
+			object = new(Referral)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeReferral)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeReferral))
+			}
+		}
+	} else {
+		s, ok := maybeReferral.(*[]*Referral)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeReferral)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeReferral))
+			}
+		}
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &referralR{}
+		}
+		args = append(args, object.IssuanceWeekID)
+
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &referralR{}
+			}
+
+			for _, a := range args {
+				if a == obj.IssuanceWeekID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.IssuanceWeekID)
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`rewards_api.issuance_weeks`),
+		qm.WhereIn(`rewards_api.issuance_weeks.id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load IssuanceWeek")
+	}
+
+	var resultSlice []*IssuanceWeek
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice IssuanceWeek")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for issuance_weeks")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for issuance_weeks")
+	}
+
+	if len(issuanceWeekAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.IssuanceWeek = foreign
+		if foreign.R == nil {
+			foreign.R = &issuanceWeekR{}
+		}
+		foreign.R.Referrals = append(foreign.R.Referrals, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.IssuanceWeekID == foreign.ID {
+				local.R.IssuanceWeek = foreign
+				if foreign.R == nil {
+					foreign.R = &issuanceWeekR{}
+				}
+				foreign.R.Referrals = append(foreign.R.Referrals, local)
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 // LoadRequest allows an eager lookup of values, cached into the
@@ -517,6 +665,53 @@ func (referralL) LoadRequest(ctx context.Context, e boil.ContextExecutor, singul
 				break
 			}
 		}
+	}
+
+	return nil
+}
+
+// SetIssuanceWeek of the referral to the related item.
+// Sets o.R.IssuanceWeek to related.
+// Adds o to related.R.Referrals.
+func (o *Referral) SetIssuanceWeek(ctx context.Context, exec boil.ContextExecutor, insert bool, related *IssuanceWeek) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"rewards_api\".\"referrals\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"issuance_week_id"}),
+		strmangle.WhereClause("\"", "\"", 2, referralPrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.Referee, o.Referrer}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.IssuanceWeekID = related.ID
+	if o.R == nil {
+		o.R = &referralR{
+			IssuanceWeek: related,
+		}
+	} else {
+		o.R.IssuanceWeek = related
+	}
+
+	if related.R == nil {
+		related.R = &issuanceWeekR{
+			Referrals: ReferralSlice{o},
+		}
+	} else {
+		related.R.Referrals = append(related.R.Referrals, o)
 	}
 
 	return nil
