@@ -93,6 +93,12 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			continue
 		}
 
+		if !user.ReferredBy.ReferrerValid {
+			c.Logger.Info().Str("userId", r.UserID).Msg("Referring user has deleted their account or no longer has a confirmed ethereum address.")
+			// referring eth addr is set to the referrals contract
+			user.ReferredBy.EthereumAddress = c.ContractAddress[:]
+		}
+
 		refereeAddr := common.HexToAddress(*user.EthereumAddress)
 		referrerAddr := common.BytesToAddress(user.ReferredBy.EthereumAddress)
 
