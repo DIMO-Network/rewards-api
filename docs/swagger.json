@@ -87,7 +87,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.TransactionHistory"
+                            "$ref": "#/definitions/internal_controllers.TransactionHistory"
                         }
                     }
                 }
@@ -105,7 +105,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.ReferralHistory"
+                            "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse"
                         }
                     }
                 }
@@ -215,22 +215,6 @@
                     "description": "Tokens is the number of tokens the user earned this week.",
                     "type": "number",
                     "example": 4000
-                }
-            }
-        },
-        "github.com_DIMO-Network_rewards-api_internal_controllers.ReferralHistory": {
-            "type": "object",
-            "properties": {
-                "completed": {
-                    "description": "CompletedReferrals referrals for which awards have already been sent",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.referral"
-                    }
-                },
-                "referredBy": {
-                    "description": "ReferredBy address of user that that account was referred by",
-                    "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.referral"
                 }
             }
         },
@@ -408,20 +392,6 @@
                 }
             }
         },
-        "github.com_DIMO-Network_rewards-api_internal_controllers.referral": {
-            "type": "object",
-            "properties": {
-                "issued": {
-                    "type": "string"
-                },
-                "user": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
         "internal_controllers.APITransaction": {
             "type": "object",
             "properties": {
@@ -524,22 +494,6 @@
                     "description": "Tokens is the number of tokens the user earned this week.",
                     "type": "number",
                     "example": 4000
-                }
-            }
-        },
-        "internal_controllers.ReferralHistory": {
-            "type": "object",
-            "properties": {
-                "completed": {
-                    "description": "CompletedReferrals referrals for which awards have already been sent",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/internal_controllers.referral"
-                    }
-                },
-                "referredBy": {
-                    "description": "ReferredBy address of user that that account was referred by",
-                    "$ref": "#/definitions/internal_controllers.referral"
                 }
             }
         },
@@ -714,20 +668,6 @@
                     "description": "Start is the timestamp of the start of the issuance week.",
                     "type": "string",
                     "example": "2022-04-11T05:00:00Z"
-                }
-            }
-        },
-        "internal_controllers.referral": {
-            "type": "object",
-            "properties": {
-                "issued": {
-                    "type": "string"
-                },
-                "user": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
                 }
             }
         }

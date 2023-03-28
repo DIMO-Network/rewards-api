@@ -86,18 +86,6 @@ definitions:
         example: 4000
         type: number
     type: object
-  github.com_DIMO-Network_rewards-api_internal_controllers.ReferralHistory:
-    properties:
-      completed:
-        description: CompletedReferrals referrals for which awards have already been
-          sent
-        items:
-          $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.referral'
-        type: array
-      referredBy:
-        $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.referral'
-        description: ReferredBy address of user that that account was referred by
-    type: object
   github.com_DIMO-Network_rewards-api_internal_controllers.TransactionHistory:
     properties:
       transactions:
@@ -253,15 +241,6 @@ definitions:
         example: "2022-04-11T05:00:00Z"
         type: string
     type: object
-  github.com_DIMO-Network_rewards-api_internal_controllers.referral:
-    properties:
-      issued:
-        type: string
-      user:
-        items:
-          type: integer
-        type: array
-    type: object
   internal_controllers.APITransaction:
     properties:
       chainId:
@@ -347,18 +326,6 @@ definitions:
         description: Tokens is the number of tokens the user earned this week.
         example: 4000
         type: number
-    type: object
-  internal_controllers.ReferralHistory:
-    properties:
-      completed:
-        description: CompletedReferrals referrals for which awards have already been
-          sent
-        items:
-          $ref: '#/definitions/internal_controllers.referral'
-        type: array
-      referredBy:
-        $ref: '#/definitions/internal_controllers.referral'
-        description: ReferredBy address of user that that account was referred by
     type: object
   internal_controllers.TransactionHistory:
     properties:
@@ -515,15 +482,6 @@ definitions:
         example: "2022-04-11T05:00:00Z"
         type: string
     type: object
-  internal_controllers.referral:
-    properties:
-      issued:
-        type: string
-      user:
-        items:
-          type: integer
-        type: array
-    type: object
 info:
   contact: {}
   title: DIMO Rewards API
@@ -576,7 +534,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.TransactionHistory'
+            $ref: '#/definitions/internal_controllers.TransactionHistory'
       security:
       - BearerAuth: []
   /user/referrals:
@@ -586,7 +544,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.ReferralHistory'
+            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.UserResponse'
       security:
       - BearerAuth: []
 securityDefinitions:

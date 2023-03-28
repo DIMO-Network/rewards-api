@@ -24,7 +24,7 @@ type ReferralsController struct {
 
 // GetUserReferralHistory godoc
 // @Description  A summary of the user's referrals.
-// @Success      200 {object} controllers.ReferralHistory
+// @Success      200 {object} controllers.UserResponse
 // @Security     BearerAuth
 // @Router       /user/referrals [get]
 func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
