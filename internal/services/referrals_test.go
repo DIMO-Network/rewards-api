@@ -434,6 +434,15 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
 
+	wk := models.IssuanceWeek{
+		ID:        referralBonusService.Week,
+		JobStatus: models.IssuanceWeeksJobStatusFinished,
+	}
+	err = wk.Insert(ctx, conn.DBS().Writer, boil.Infer())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	require.NoError(t, referralBonusService.transfer(ctx, refs))
 
 	producer.Close()
