@@ -66,7 +66,9 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			" r1."+rCols.UserID+
 			" FROM "+models.TableNames.Rewards+" r1"+
 			" LEFT OUTER JOIN "+models.TableNames.Rewards+" r2 ON r1."+rCols.UserEthereumAddress+" = r2."+rCols.UserEthereumAddress+" AND r2."+rCols.IssuanceWeekID+" < $1"+
+			" LEFT JOIN "+models.TableNames.Vins+" v on r1."+rCols.UserDeviceTokenID+" = v."+models.VinColumns.FirstEarningTokenID+
 			" WHERE r1."+rCols.IssuanceWeekID+" = $1 AND r1."+rCols.UserEthereumAddress+" IS NOT NULL AND r2."+rCols.UserDeviceID+" IS NULL"+
+			" AND v."+models.VinColumns.FirstEarningWeek+" = $1"+
 			" ORDER BY r1."+rCols.UserEthereumAddress+", r1."+rCols.UserID,
 		issuanceWeek,
 	).Bind(ctx, c.TransferService.db.DBS().Reader, &res)
