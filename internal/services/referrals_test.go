@@ -283,7 +283,7 @@ func TestReferrals(t *testing.T) {
 			},
 		},
 		{
-			Name: "Users with new vins can referr",
+			Name: "Users with new vins can refer",
 			Devices: []Device{
 				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
 				{ID: "Dev2", UserID: "User2", TokenID: 1, Vin: "00000000000000002", FirstEarningWeek: 5},
