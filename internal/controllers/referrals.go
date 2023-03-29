@@ -62,6 +62,7 @@ func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
 		referralsMade, err := models.Referrals(
 			models.ReferralWhere.Referrer.EQ(userAddr.Bytes()),
 			qm.Load(models.ReferralRels.IssuanceWeek),
+			qm.OrderBy(models.ReferralColumns.IssuanceWeekID+" DESC"),
 		).All(c.Context(), r.DB.DBS().Reader)
 		if err != nil {
 			logger.Err(err).Msg("Database failure retrieving user referral history.")
