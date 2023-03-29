@@ -2,8 +2,6 @@ package controllers
 
 import (
 	"database/sql"
-	"fmt"
-	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -12,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -62,26 +59,21 @@ func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
 			out.ReferredBy = &referral{User: referrer, Issued: referredBy.R.IssuanceWeek.EndsAt.Format("2006-01-02")}
 		}
 
-		var refsMade []referralsMade
-
-		err = queries.Raw(
-			`SELECT r.`+models.ReferralColumns.Referee+`, r.`+models.ReferralColumns.Referrer+
-				`, wk.`+models.IssuanceWeekColumns.EndsAt+`,  r.`+models.ReferralColumns.TransferSuccessful+`
-			 FROM `+models.TableNames.Referrals+` r
-			 INNER JOIN `+models.TableNames.IssuanceWeeks+` wk on wk.id = r.issuance_week_id
-			 WHERE r.Referrer = `+fmt.Sprintf(`decode('%+v', 'hex')`, common.Bytes2Hex(userAddr[:]))+
-				`ORDER BY wk.ends_at DESC`,
-		).Bind(c.Context(), r.DB.DBS().Reader, &refsMade)
+		referralsMade, err := models.Referrals(
+			models.ReferralWhere.Referrer.EQ(userAddr.Bytes()),
+			qm.Load(models.ReferralRels.IssuanceWeek),
+			qm.OrderBy(models.ReferralColumns.IssuanceWeekID+" DESC"),
+		).All(c.Context(), r.DB.DBS().Reader)
 		if err != nil {
 			logger.Err(err).Msg("Database failure retrieving user referral history.")
 			return opaqueInternalError
 		}
 
-		for _, r := range refsMade {
-			if !r.TransferSuccessful {
+		for _, r := range referralsMade {
+			if !r.TransferSuccessful.Valid || !r.TransferSuccessful.Bool {
 				continue
 			}
-			out.CompletedReferrals = append(out.CompletedReferrals, referral{User: r.Referee, Issued: r.IssuanceDate.Format("2006-01-02")})
+			out.CompletedReferrals = append(out.CompletedReferrals, referral{User: common.BytesToAddress(r.Referee), Issued: r.R.IssuanceWeek.EndsAt.Format("2006-01-02")})
 		}
 
 	}
@@ -99,11 +91,4 @@ type ReferralHistory struct {
 type referral struct {
 	User   common.Address `json:"user"`
 	Issued string         `json:"issued"`
-}
-
-type referralsMade struct {
-	Referee            common.Address `boil:"referee"`
-	Referrals          common.Address `boil:"referrer"`
-	IssuanceDate       time.Time      `boil:"ends_at"`
-	TransferSuccessful bool           `boil:"transfer_successful"`
 }
