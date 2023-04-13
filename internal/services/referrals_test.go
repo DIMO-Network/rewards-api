@@ -272,16 +272,36 @@ func TestReferrals(t *testing.T) {
 				{ID: "Dev2", UserID: "User3", TokenID: 3, Vin: "00000000000000002", FirstEarningWeek: 5},
 			},
 			Users: []refUser{
-				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "3"},
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
 				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
-				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: ""},
+				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "1"},
 			},
 			Rewards: []Reward{
 				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
 				{Week: 5, DeviceID: "Dev2", UserID: "User3", Earning: true},
 			},
 			Referrals: []Referral{
-				{Referee: mkAddr(1), Referrer: mkAddr(3)},
+				{Referee: mkAddr(3), Referrer: mkAddr(1)},
+			},
+		},
+		{
+			Name: "New user, two vehicles, only one genuinely new",
+			Devices: []Device{
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 3},
+				{ID: "Dev2", UserID: "User2", TokenID: 2, Vin: "00000000000000002", FirstEarningWeek: 3},
+				{ID: "Dev3", UserID: "User2", TokenID: 3, Vin: "00000000000000003", FirstEarningWeek: 5},
+			},
+			Users: []refUser{
+				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: "1"},
+			},
+			Rewards: []Reward{
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
+				{Week: 5, DeviceID: "Dev3", UserID: "User2", Earning: true},
+			},
+			Referrals: []Referral{
+				{Referee: mkAddr(2), Referrer: mkAddr(1)},
 			},
 		},
 		{
