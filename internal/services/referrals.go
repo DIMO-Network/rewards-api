@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"google.golang.org/grpc/codes"
@@ -29,8 +30,10 @@ type ReferralsClient struct {
 }
 
 type Referrals struct {
-	Referees  []common.Address
-	Referrers []common.Address
+	Referees        []common.Address
+	Referrers       []common.Address
+	RefereeUserIDs  []string
+	ReferrerUserIDs []string
 }
 
 func NewReferralBonusService(
@@ -111,6 +114,8 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 
 		refs.Referees = append(refs.Referees, refereeAddr)
 		refs.Referrers = append(refs.Referrers, referrerAddr)
+		refs.RefereeUserIDs = append(refs.RefereeUserIDs, user.Id)
+		refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, user.ReferredBy.Id)
 	}
 
 	return refs, nil
@@ -143,6 +148,8 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 
 			referreesBatch := refs.Referees[i:j]
 			referrersBatch := refs.Referrers[i:j]
+			referreeIDsBatch := refs.RefereeUserIDs[i:j]
+			referrerIDsBatch := refs.ReferrerUserIDs[i:j]
 
 			tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
 			if err != nil {
@@ -165,6 +172,8 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 					Referrer:       referrersBatch[n].Bytes(),
 					RequestID:      reqID,
 					IssuanceWeekID: c.Week,
+					ReferreeUserID: null.StringFrom(referreeIDsBatch[n]),
+					ReferrerUserID: null.StringFrom(referrerIDsBatch[n]),
 				}
 				if err := r.Insert(ctx, tx, boil.Infer()); err != nil {
 					return err
