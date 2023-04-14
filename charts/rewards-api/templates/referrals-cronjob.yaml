@@ -1,4 +1,4 @@
-{{- if .Values.cronJob.enabled }}
+{{- if .Values.referralsCronJob.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -7,7 +7,7 @@ metadata:
   labels:
     {{- include "rewards-api.labels" . | nindent 4 }}
 spec:
-  schedule: {{ .Values.cronJob.schedule | quote}}
+  schedule: {{ .Values.referralsCronJob.schedule | quote}}
   concurrencyPolicy: "Forbid"
   jobTemplate:
     spec:
@@ -24,7 +24,7 @@ spec:
               {{- toYaml .Values.securityContext | nindent 14 }}
             image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
             command: ['/bin/sh']
-            args: ['-c', '/rewards-api calculate; CODE=$?; echo "weekly rewards calculation completed"; wget -q --post-data "hello=shutdown" http://localhost:4191/shutdown &> /dev/null; exit $CODE;']
+            args: ['-c', '/rewards-api issue-referral-bonus; CODE=$?; echo "weekly referrals calculation completed"; wget -q --post-data "hello=shutdown" http://localhost:4191/shutdown &> /dev/null; exit $CODE;']
             envFrom:
             - configMapRef:
                 name: {{ include "rewards-api.fullname" . }}-config
