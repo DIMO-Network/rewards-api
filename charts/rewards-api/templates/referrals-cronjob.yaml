@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "rewards-api.fullname" . }}-calculate-rewards
+  name: {{ include "rewards-api.fullname" . }}-issue-referral-bonus
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "rewards-api.labels" . | nindent 4 }}
