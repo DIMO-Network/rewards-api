@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"google.golang.org/grpc/codes"
@@ -172,8 +171,8 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 					Referrer:       referrersBatch[n].Bytes(),
 					RequestID:      reqID,
 					IssuanceWeekID: c.Week,
-					ReferreeUserID: null.StringFrom(referreeIDsBatch[n]),
-					ReferrerUserID: null.StringFrom(referrerIDsBatch[n]),
+					ReferreeUserID: referreeIDsBatch[n],
+					ReferrerUserID: referrerIDsBatch[n],
 				}
 				if err := r.Insert(ctx, tx, boil.Infer()); err != nil {
 					return err
