@@ -6,6 +6,7 @@ require (
 	github.com/DIMO-Network/device-definitions-api v0.9.9
 	github.com/DIMO-Network/devices-api v1.13.28
 	github.com/DIMO-Network/shared v0.9.3
+	github.com/DIMO-Network/users-api v0.6.3
 	github.com/Shopify/sarama v1.38.1
 	github.com/aquasecurity/esquery v0.2.0
 	github.com/burdiyan/kafkautil v0.0.0-20190131162249-eaf83ed22d5b
@@ -37,7 +38,6 @@ require (
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
-	github.com/DIMO-Network/users-api v0.6.3 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
@@ -48,7 +48,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.24 // indirect
 	github.com/aws/aws-sdk-go-v2/service/kms v1.20.7 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
-	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/containerd/containerd v1.6.19 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
