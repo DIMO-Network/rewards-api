@@ -30,7 +30,7 @@ type Referral struct {
 	TransferFailureReason null.String `boil:"transfer_failure_reason" json:"transfer_failure_reason,omitempty" toml:"transfer_failure_reason" yaml:"transfer_failure_reason,omitempty"`
 	RequestID             string      `boil:"request_id" json:"request_id" toml:"request_id" yaml:"request_id"`
 	IssuanceWeekID        int         `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
-	ReferrerUserID        string      `boil:"referrer_user_id" json:"referrer_user_id" toml:"referrer_user_id" yaml:"referrer_user_id"`
+	ReferrerUserID        null.String `boil:"referrer_user_id" json:"referrer_user_id,omitempty" toml:"referrer_user_id" yaml:"referrer_user_id,omitempty"`
 	ReferreeUserID        string      `boil:"referree_user_id" json:"referree_user_id" toml:"referree_user_id" yaml:"referree_user_id"`
 
 	R *referralR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -86,7 +86,7 @@ var ReferralWhere = struct {
 	TransferFailureReason whereHelpernull_String
 	RequestID             whereHelperstring
 	IssuanceWeekID        whereHelperint
-	ReferrerUserID        whereHelperstring
+	ReferrerUserID        whereHelpernull_String
 	ReferreeUserID        whereHelperstring
 }{
 	Referee:               whereHelper__byte{field: "\"rewards_api\".\"referrals\".\"referee\""},
@@ -95,7 +95,7 @@ var ReferralWhere = struct {
 	TransferFailureReason: whereHelpernull_String{field: "\"rewards_api\".\"referrals\".\"transfer_failure_reason\""},
 	RequestID:             whereHelperstring{field: "\"rewards_api\".\"referrals\".\"request_id\""},
 	IssuanceWeekID:        whereHelperint{field: "\"rewards_api\".\"referrals\".\"issuance_week_id\""},
-	ReferrerUserID:        whereHelperstring{field: "\"rewards_api\".\"referrals\".\"referrer_user_id\""},
+	ReferrerUserID:        whereHelpernull_String{field: "\"rewards_api\".\"referrals\".\"referrer_user_id\""},
 	ReferreeUserID:        whereHelperstring{field: "\"rewards_api\".\"referrals\".\"referree_user_id\""},
 }
 
@@ -138,8 +138,8 @@ type referralL struct{}
 
 var (
 	referralAllColumns            = []string{"referee", "referrer", "transfer_successful", "transfer_failure_reason", "request_id", "issuance_week_id", "referrer_user_id", "referree_user_id"}
-	referralColumnsWithoutDefault = []string{"referee", "referrer", "request_id", "issuance_week_id", "referrer_user_id", "referree_user_id"}
-	referralColumnsWithDefault    = []string{"transfer_successful", "transfer_failure_reason"}
+	referralColumnsWithoutDefault = []string{"referee", "referrer", "request_id", "issuance_week_id", "referree_user_id"}
+	referralColumnsWithDefault    = []string{"transfer_successful", "transfer_failure_reason", "referrer_user_id"}
 	referralPrimaryKeyColumns     = []string{"referee", "referrer"}
 	referralGeneratedColumns      = []string{}
 )
