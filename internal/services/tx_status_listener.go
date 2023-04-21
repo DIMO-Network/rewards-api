@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	eth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
@@ -174,7 +173,6 @@ func (s *TransferStatusProcessor) processBaselineEvent(event shared.CloudEvent[c
 		if *event.Data.Transaction.Successful {
 			for _, log := range event.Data.Transaction.Logs {
 				success := false
-				txLog := convertLog(&log)
 
 				var userDeviceTokenID *big.Int
 
@@ -182,14 +180,14 @@ func (s *TransferStatusProcessor) processBaselineEvent(event shared.CloudEvent[c
 				case s.BaselineProcessor.TokensTransferredEvent.ID:
 					success = true
 					event := contracts.RewardTokensTransferred{}
-					err := s.parseLog(&event, s.BaselineProcessor.TokensTransferredEvent, *txLog, s.BaselineProcessor.ABI)
+					err := s.parseLog(&event, s.BaselineProcessor.TokensTransferredEvent, log, s.BaselineProcessor.ABI)
 					if err != nil {
 						return err
 					}
 					userDeviceTokenID = event.VehicleNodeId
 				case s.BaselineProcessor.DidntQualifyEvent.ID:
 					event := contracts.RewardDidntQualify{}
-					err := s.parseLog(&event, s.BaselineProcessor.DidntQualifyEvent, *txLog, s.BaselineProcessor.ABI)
+					err := s.parseLog(&event, s.BaselineProcessor.DidntQualifyEvent, log, s.BaselineProcessor.ABI)
 					if err != nil {
 						return err
 					}
@@ -269,7 +267,6 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 		if *cloudEvent.Data.Transaction.Successful {
 			for _, log := range cloudEvent.Data.Transaction.Logs {
 				success := false
-				txLog := convertLog(&log)
 
 				var referee, referrer common.Address
 
@@ -277,14 +274,14 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 				case s.ReferralsProcessor.ReferralComplete.ID:
 					success = true
 					var event contracts.ReferralReferralComplete
-					err := s.parseLog(&event, s.ReferralsProcessor.ReferralComplete, *txLog, s.ReferralsProcessor.ABI)
+					err := s.parseLog(&event, s.ReferralsProcessor.ReferralComplete, log, s.ReferralsProcessor.ABI)
 					if err != nil {
 						return err
 					}
 					referee, referrer = event.Referee, event.Referrer
 				case s.ReferralsProcessor.ReferralInvalid.ID:
 					var event contracts.ReferralReferralInvalid
-					err := s.parseLog(&event, s.ReferralsProcessor.ReferralInvalid, *txLog, s.ReferralsProcessor.ABI)
+					err := s.parseLog(&event, s.ReferralsProcessor.ReferralInvalid, log, s.ReferralsProcessor.ABI)
 					if err != nil {
 						return err
 					}
@@ -332,7 +329,7 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 	return tx.Commit()
 }
 
-func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log eth_types.Log, ctrABI *abi.ABI) error {
+func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log ceLog, ctrABI *abi.ABI) error {
 	if len(log.Data) > 0 {
 		err := ctrABI.UnpackIntoInterface(out, event.Name, log.Data)
 		if err != nil {
@@ -353,13 +350,6 @@ func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log eth_typ
 	}
 
 	return nil
-}
-
-func convertLog(logIn *ceLog) *eth_types.Log {
-	return &eth_types.Log{
-		Topics: logIn.Topics,
-		Data:   logIn.Data,
-	}
 }
 
 type ceLog struct {
