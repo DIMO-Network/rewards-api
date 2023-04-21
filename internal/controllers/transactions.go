@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/models"
-	pb_users "github.com/DIMO-Network/shared/api/users"
+	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/null/v8"
