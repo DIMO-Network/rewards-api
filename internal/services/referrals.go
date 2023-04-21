@@ -146,9 +146,9 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 				j = len(refs.Referees)
 			}
 
-			referreesBatch := refs.Referees[i:j]
+			refereesBatch := refs.Referees[i:j]
 			referrersBatch := refs.Referrers[i:j]
-			referreeIDsBatch := refs.RefereeUserIDs[i:j]
+			refereeIDsBatch := refs.RefereeUserIDs[i:j]
 			referrerIDsBatch := refs.ReferrerUserIDs[i:j]
 
 			tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
@@ -166,17 +166,17 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 				return err
 			}
 
-			for n := range referreesBatch {
+			for n := range refereesBatch {
 				referrerID := null.StringFrom(referrerIDsBatch[n])
 				if referrerID.String == "" {
 					referrerID.Valid = false
 				}
 				r := models.Referral{
-					Referee:        referreesBatch[n].Bytes(),
+					Referee:        refereesBatch[n].Bytes(),
 					Referrer:       referrersBatch[n].Bytes(),
 					RequestID:      reqID,
 					IssuanceWeekID: c.Week,
-					ReferreeUserID: referreeIDsBatch[n],
+					RefereeUserID:  refereeIDsBatch[n],
 					ReferrerUserID: referrerID,
 				}
 				if err := r.Insert(ctx, tx, boil.Infer()); err != nil {
@@ -184,7 +184,7 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 				}
 			}
 
-			if err := c.BatchTransferReferralBonuses(reqID, referreesBatch, referrersBatch); err != nil {
+			if err := c.BatchTransferReferralBonuses(reqID, refereesBatch, referrersBatch); err != nil {
 				return err
 			}
 
