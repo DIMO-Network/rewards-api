@@ -8,11 +8,11 @@ import (
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/docker/go-connections/nat"
 	"github.com/ericlagergren/decimal"

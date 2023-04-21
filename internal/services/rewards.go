@@ -7,10 +7,10 @@ import (
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
-	pb_devices "github.com/DIMO-Network/shared/api/devices"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"

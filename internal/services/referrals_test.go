@@ -11,8 +11,8 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	pb "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
+	pb "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ericlagergren/decimal"
 
 	"github.com/Shopify/sarama/mocks"
@@ -418,8 +418,10 @@ func TestReferralsBatchRequest(t *testing.T) {
 	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, &FakeUserClient{})
 
 	refs := Referrals{
-		Referees:  []common.Address{mkAddr(1)},
-		Referrers: []common.Address{mkAddr(2)},
+		Referees:        []common.Address{mkAddr(1)},
+		Referrers:       []common.Address{mkAddr(2)},
+		RefereeUserIDs:  []string{"xdd"},
+		ReferrerUserIDs: []string{""},
 	}
 
 	var out []shared.CloudEvent[transferData]
