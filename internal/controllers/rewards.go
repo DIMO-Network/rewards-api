@@ -80,6 +80,16 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
+	walletDevices, err := r.DevicesClient.ListDevicesForWalletAddress(c.Context(), &pb_devices.ListDevicesForWalletAddressRequest{
+		UserAddress: *user.EthereumAddress,
+	})
+	if err != nil {
+		logger.Err(err).Msg("Failed to retrieve user's devices.")
+		return opaqueInternalError
+	}
+
+	allUserDevices := append(devices.UserDevices, walletDevices.UserDevices...)
+
 	intDescs, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
 	if err != nil {
 		return opaqueInternalError
@@ -92,11 +102,11 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		idToVendor[intDesc.Id] = intDesc.Vendor
 	}
 
-	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
+	outLi := make([]*UserResponseDevice, len(allUserDevices))
 	userPts := 0
 	userTokens := big.NewInt(0)
 
-	for i, device := range devices.UserDevices {
+	for i, device := range allUserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
 
 		var maybeLastActive *time.Time
@@ -379,6 +389,11 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	userID := getUserID(c)
 	logger := r.Logger.With().Str("userId", userID).Logger()
 
+	user, err := r.UsersClient.GetUser(c.Context(), &pb_users.GetUserRequest{Id: userID})
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "User unknown.")
+	}
+
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
 		UserId: userID,
 	})
@@ -387,13 +402,22 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
-	deviceIDs := make([]string, len(devices.UserDevices))
-	for i := range devices.UserDevices {
-		deviceIDs[i] = devices.UserDevices[i].Id
+	walletDevices, err := r.DevicesClient.ListDevicesForWalletAddress(c.Context(), &pb_devices.ListDevicesForWalletAddressRequest{
+		UserAddress: *user.EthereumAddress,
+	})
+	if err != nil {
+		logger.Err(err).Msg("Failed to retrieve user's devices.")
+		return opaqueInternalError
+	}
+
+	allUserDevices := append(devices.UserDevices, walletDevices.UserDevices...)
+
+	deviceIDs := make([]string, len(allUserDevices))
+	for i := range allUserDevices {
+		deviceIDs[i] = allUserDevices[i].Id
 	}
 
 	rs, err := models.Rewards(
-		models.RewardWhere.UserID.EQ(userID),
 		models.RewardWhere.UserDeviceID.IN(deviceIDs),
 		qm.OrderBy(models.RewardColumns.IssuanceWeekID+" asc"),
 	).All(c.Context(), r.DB.DBS().Reader)
