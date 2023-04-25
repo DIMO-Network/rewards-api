@@ -72,10 +72,14 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
-		UserId:          userID,
-		EthereumAddress: *user.EthereumAddress,
-	})
+	devicesQuery := &pb_devices.ListUserDevicesForUserRequest{
+		UserId: userID,
+	}
+	if user.EthereumAddress != nil {
+		devicesQuery.EthereumAddress = user.EthereumAddress
+	}
+
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesQuery)
 	if err != nil {
 		logger.Err(err).Msg("Failed to retrieve user's devices.")
 		return opaqueInternalError
@@ -385,10 +389,14 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "User unknown.")
 	}
 
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
-		UserId:          userID,
-		EthereumAddress: *user.EthereumAddress,
-	})
+	devicesQuery := &pb_devices.ListUserDevicesForUserRequest{
+		UserId: userID,
+	}
+	if user.EthereumAddress != nil {
+		devicesQuery.EthereumAddress = user.EthereumAddress
+	}
+
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesQuery)
 	if err != nil {
 		logger.Err(err).Msg("Failed to retrieve user's devices.")
 		return opaqueInternalError
