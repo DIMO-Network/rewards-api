@@ -76,7 +76,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		UserId: userID,
 	}
 	if user.EthereumAddress != nil {
-		devicesQuery.EthereumAddress = user.EthereumAddress
+		devicesQuery.EthereumAddress = *user.EthereumAddress
 	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesQuery)
@@ -393,7 +393,7 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		UserId: userID,
 	}
 	if user.EthereumAddress != nil {
-		devicesQuery.EthereumAddress = user.EthereumAddress
+		devicesQuery.EthereumAddress = *user.EthereumAddress
 	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesQuery)
