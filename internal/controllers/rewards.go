@@ -73,22 +73,13 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
-		UserId: userID,
+		UserId:          userID,
+		EthereumAddress: *user.EthereumAddress,
 	})
 	if err != nil {
 		logger.Err(err).Msg("Failed to retrieve user's devices.")
 		return opaqueInternalError
 	}
-
-	walletDevices, err := r.DevicesClient.ListDevicesForWalletAddress(c.Context(), &pb_devices.ListDevicesForWalletAddressRequest{
-		UserAddress: *user.EthereumAddress,
-	})
-	if err != nil {
-		logger.Err(err).Msg("Failed to retrieve user's devices.")
-		return opaqueInternalError
-	}
-
-	allUserDevices := append(devices.UserDevices, walletDevices.UserDevices...)
 
 	intDescs, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
 	if err != nil {
@@ -102,11 +93,11 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		idToVendor[intDesc.Id] = intDesc.Vendor
 	}
 
-	outLi := make([]*UserResponseDevice, len(allUserDevices))
+	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
 	userPts := 0
 	userTokens := big.NewInt(0)
 
-	for i, device := range allUserDevices {
+	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
 
 		var maybeLastActive *time.Time
@@ -395,26 +386,17 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
-		UserId: userID,
+		UserId:          userID,
+		EthereumAddress: *user.EthereumAddress,
 	})
 	if err != nil {
 		logger.Err(err).Msg("Failed to retrieve user's devices.")
 		return opaqueInternalError
 	}
 
-	walletDevices, err := r.DevicesClient.ListDevicesForWalletAddress(c.Context(), &pb_devices.ListDevicesForWalletAddressRequest{
-		UserAddress: *user.EthereumAddress,
-	})
-	if err != nil {
-		logger.Err(err).Msg("Failed to retrieve user's devices.")
-		return opaqueInternalError
-	}
-
-	allUserDevices := append(devices.UserDevices, walletDevices.UserDevices...)
-
-	deviceIDs := make([]string, len(allUserDevices))
-	for i := range allUserDevices {
-		deviceIDs[i] = allUserDevices[i].Id
+	deviceIDs := make([]string, len(devices.UserDevices))
+	for i := range devices.UserDevices {
+		deviceIDs[i] = devices.UserDevices[i].Id
 	}
 
 	rs, err := models.Rewards(
