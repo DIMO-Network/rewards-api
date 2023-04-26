@@ -72,17 +72,15 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	devicesQuery := &pb_devices.ListUserDevicesForUserRequest{
-		UserId: userID,
-	}
-	if user.EthereumAddress != nil {
-		devicesQuery.EthereumAddress = *user.EthereumAddress
+	devicesReq := &pb_devices.ListUserDevicesForUserRequest{UserId: userID}
+
+	if r.Settings.Environment != "prod" && user.EthereumAddress != nil {
+		devicesReq.EthereumAddress = *user.EthereumAddress
 	}
 
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesQuery)
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesReq)
 	if err != nil {
-		logger.Err(err).Msg("Failed to retrieve user's devices.")
-		return opaqueInternalError
+		return err
 	}
 
 	intDescs, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
