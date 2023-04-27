@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math/big"
@@ -254,6 +255,9 @@ func (t *BaselineClient) calculate() error {
 				}
 			} else {
 				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
+				if len(ud.AftermarketDeviceBeneficiaryAddress) != 0 && !bytes.Equal(ud.OwnerAddress, ud.AftermarketDeviceBeneficiaryAddress) {
+					thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(common.BytesToAddress(ud.AftermarketDeviceBeneficiaryAddress).Hex())
+				}
 			}
 		}
 

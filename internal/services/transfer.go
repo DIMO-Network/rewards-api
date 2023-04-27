@@ -24,10 +24,10 @@ import (
 )
 
 type TransferService struct {
-	Producer      sarama.SyncProducer
-	RequestTopic  string
-	db            db.Store
-	batchSize     int
+	Producer     sarama.SyncProducer
+	RequestTopic string
+	db           db.Store
+	batchSize    int
 }
 
 func NewTokenTransferService(
@@ -36,10 +36,10 @@ func NewTokenTransferService(
 	db db.Store) *TransferService {
 
 	return &TransferService{
-		Producer:        producer,
-		RequestTopic:    settings.MetaTransactionSendTopic,
-		db:              db,
-		batchSize:       settings.TransferBatchSize,
+		Producer:     producer,
+		RequestTopic: settings.MetaTransactionSendTopic,
+		db:           db,
+		batchSize:    settings.TransferBatchSize,
 	}
 }
 
@@ -122,7 +122,7 @@ func (c *BaselineClient) transfer(ctx context.Context) error {
 		}
 
 		for i, row := range transfer {
-			userAddr[i] = common.HexToAddress(row.UserEthereumAddress.String)
+			userAddr[i] = common.HexToAddress(row.RewardsReceiverEthereumAddress.String)
 			tknValues[i] = row.Tokens.Int(nil)
 			vehicleIds[i] = row.UserDeviceTokenID.Int(nil)
 
