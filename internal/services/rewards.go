@@ -235,15 +235,15 @@ func (t *BaselineClient) calculate() error {
 		}
 
 		thisWeek := &models.Reward{
-			UserDeviceID:        deviceActivity.ID,
-			IssuanceWeekID:      issuanceWeek,
-			UserID:              ud.UserId,
-			UserDeviceTokenID:   types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
-			UserEthereumAddress: null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex()),
+			UserDeviceID:                   deviceActivity.ID,
+			IssuanceWeekID:                 issuanceWeek,
+			UserID:                         ud.UserId,
+			UserDeviceTokenID:              types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
+			UserEthereumAddress:            null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex()),
+			RewardsReceiverEthereumAddress: null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex()),
 		}
 
 		validIntegrations := deviceActivity.Integrations // Guaranteed to be non-empty at this point.
-
 		if ind := slices.Index(validIntegrations, integCalc.AutoPiID); ind != -1 {
 			if ud.AftermarketDeviceTokenId == nil {
 				if len(validIntegrations) == 1 {

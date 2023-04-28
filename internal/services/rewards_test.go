@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
 	"testing"
 	"time"
@@ -10,10 +12,12 @@ import (
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/Shopify/sarama/mocks"
 	"github.com/docker/go-connections/nat"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -37,6 +41,48 @@ type User struct {
 	Address  common.Address
 	Code     string
 	CodeUsed string
+}
+
+type OldReward struct {
+	Week       int
+	DeviceID   string
+	UserID     string
+	ConnStreak int
+	DiscStreak int
+}
+
+type NewReward struct {
+	DeviceID                       string
+	TokenID                        int
+	Address                        common.Address
+	ConnStreak                     int
+	DiscStreak                     int
+	StreakPoints                   int
+	IntegrationPoints              int
+	RewardsReceiverEthereumAddress common.Address
+}
+
+type VIN struct {
+	VIN        string
+	FirstWeek  int
+	FirstToken int
+}
+
+type Scenario struct {
+	Name        string
+	Previous    []OldReward
+	Devices     []Device
+	Users       []User
+	New         []NewReward
+	PrevVIN     []VIN
+	NewVIN      []VIN
+	Description string
+}
+
+type RewardEvent struct {
+	User      common.Address
+	Value     *big.Int
+	VehicleId *big.Int
 }
 
 var mkID = func(i int) string {
@@ -72,91 +118,10 @@ func TestStreak(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	port := 5432
-	nport := fmt.Sprintf("%d/tcp", port)
-
-	req := testcontainers.ContainerRequest{
-		Image:        "postgres:12.11-alpine",
-		ExposedPorts: []string{nport},
-		AutoRemove:   true,
-		Env: map[string]string{
-			"POSTGRES_DB":       "rewards_api",
-			"POSTGRES_PASSWORD": "postgres",
-		},
-		WaitingFor: wait.ForListeningPort(nat.Port(nport)),
-	}
-	cont, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer cont.Terminate(ctx) //nolint
-
 	logger := zerolog.Nop()
 
-	host, err := cont.Host(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	mport, err := cont.MappedPort(ctx, nat.Port(nport))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dbset := db.Settings{
-		User:               "postgres",
-		Password:           "postgres",
-		Port:               mport.Port(),
-		Host:               host,
-		Name:               "rewards_api",
-		MaxOpenConnections: 10,
-		MaxIdleConnections: 10,
-	}
-
-	if err := database.MigrateDatabase(logger, &dbset, "", "../../migrations"); err != nil {
-		t.Fatal(err)
-	}
-
-	conn := db.NewDbConnectionForTest(ctx, &dbset, true)
-	conn.WaitForDB(logger)
-
-	type OldReward struct {
-		Week       int
-		DeviceID   string
-		UserID     string
-		ConnStreak int
-		DiscStreak int
-	}
-
-	type NewReward struct {
-		DeviceID          string
-		TokenID           int
-		Address           common.Address
-		ConnStreak        int
-		DiscStreak        int
-		StreakPoints      int
-		IntegrationPoints int
-	}
-
-	type VIN struct {
-		VIN        string
-		FirstWeek  int
-		FirstToken int
-	}
-
-	type Scenario struct {
-		Name     string
-		Previous []OldReward
-		Devices  []Device
-		Users    []User
-		New      []NewReward
-		PrevVIN  []VIN
-		NewVIN   []VIN
-	}
+	cont, conn := GetDbConnection(ctx, t, logger)
+	defer cont.Terminate(ctx)
 
 	scens := []Scenario{
 		{
@@ -374,14 +339,422 @@ func TestStreak(t *testing.T) {
 	}
 }
 
+func TestBeneficiaryAddressSetForRewards(t *testing.T) {
+	ctx := context.Background()
+
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	logger := zerolog.Nop()
+
+	cont, conn := GetDbConnection(ctx, t, logger)
+	defer cont.Terminate(ctx)
+
+	scens := []Scenario{
+		{
+			Name: "AutoPiJoinLevel1",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true, AftermarketDeviceBeneficiaryAddress: mkAddr(2).Bytes()},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, IntegrationPoints: 6000, RewardsReceiverEthereumAddress: mkAddr(2)},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN:      []VIN{},
+			Description: "Should set beneficiary as rewards receiver",
+		},
+		{
+			Name: "AutoPiJoinLevel2",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, IntegrationPoints: 6000, RewardsReceiverEthereumAddress: mkAddr(1)},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN:      []VIN{},
+			Description: "Should leave owner as rewards receiver if beneficiary is not set",
+		},
+		{
+			Name: "AutoPiJoinLevel3",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true, AftermarketDeviceBeneficiaryAddress: mkAddr(1).Bytes()},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, IntegrationPoints: 6000, RewardsReceiverEthereumAddress: mkAddr(1)},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN:      []VIN{},
+			Description: "Should leave reward receiver as owner if beneficiary address is same as owner",
+		},
+	}
+
+	for _, scen := range scens {
+		t.Run(scen.Name, func(t *testing.T) {
+			_, err = models.Rewards().DeleteAll(ctx, conn.DBS().Writer)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			models.Vins().DeleteAll(ctx, conn.DBS().Writer)
+
+			_, err = models.IssuanceWeeks().DeleteAll(ctx, conn.DBS().Writer)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			lastWk := models.IssuanceWeek{ID: 0, JobStatus: models.IssuanceWeeksJobStatusFinished}
+			err = lastWk.Insert(ctx, conn.DBS().Writer, boil.Infer())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, lst := range scen.Previous {
+
+				wk := models.IssuanceWeek{
+					ID:        lst.Week,
+					JobStatus: models.IssuanceWeeksJobStatusFinished,
+				}
+
+				wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+
+				rw := models.Reward{
+					IssuanceWeekID:      lst.Week,
+					UserDeviceID:        lst.DeviceID,
+					ConnectionStreak:    lst.ConnStreak,
+					DisconnectionStreak: lst.DiscStreak,
+				}
+				err := rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			for _, v := range scen.PrevVIN {
+				vw := models.Vin{
+					Vin:                 v.VIN,
+					FirstEarningWeek:    v.FirstWeek,
+					FirstEarningTokenID: types.NewDecimal(decimal.New(int64(v.FirstToken), 0)),
+				}
+
+				vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
+			}
+
+			transferService := NewTokenTransferService(&settings, nil, conn)
+
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
+
+			rwBonusService.calculate()
+
+			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var actual []NewReward
+
+			for _, c := range rw {
+				nr := NewReward{
+					DeviceID:          c.UserDeviceID,
+					ConnStreak:        c.ConnectionStreak,
+					DiscStreak:        c.DisconnectionStreak,
+					StreakPoints:      c.StreakPoints,
+					IntegrationPoints: c.IntegrationPoints,
+				}
+
+				if !c.UserDeviceTokenID.IsZero() {
+					n, _ := c.UserDeviceTokenID.Int64()
+					nr.TokenID = int(n)
+				}
+
+				if c.UserEthereumAddress.Valid {
+					nr.Address = common.HexToAddress(c.UserEthereumAddress.String)
+				}
+
+				if c.RewardsReceiverEthereumAddress.Valid {
+					nr.RewardsReceiverEthereumAddress = common.HexToAddress(c.RewardsReceiverEthereumAddress.String)
+				}
+
+				actual = append(actual, nr)
+			}
+			assert.ElementsMatch(t, scen.New, actual, scen.Description)
+
+			vs, err := models.Vins(models.VinWhere.FirstEarningWeek.EQ(5)).All(ctx, conn.DBS().Reader.DB)
+			require.NoError(t, err)
+
+			actualv := []VIN{}
+
+			for _, v := range vs {
+				i, _ := v.FirstEarningTokenID.Int64()
+				actualv = append(actualv, VIN{VIN: v.Vin, FirstToken: int(i)})
+			}
+
+			assert.ElementsMatch(t, scen.NewVIN, actualv)
+			log.Println(scen.Description)
+		})
+	}
+}
+
+func TestBaselineIssuance(t *testing.T) {
+	ctx := context.Background()
+
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings.TransferBatchSize = 2
+
+	logger := zerolog.Nop()
+
+	cont, conn := GetDbConnection(ctx, t, logger)
+	defer cont.Terminate(ctx)
+
+	scens := []Scenario{
+		{
+			Name: "AutoPiJoinLevel1",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true, AftermarketDeviceBeneficiaryAddress: mkAddr(2).Bytes()},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, IntegrationPoints: 6000, RewardsReceiverEthereumAddress: mkAddr(2)},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN:      []VIN{},
+			Description: "Should transfer to beneficiary set on the device",
+		},
+		{
+			Name: "AutoPiJoinLevel2",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, IntegrationPoints: 6000},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN:      []VIN{},
+			Description: "Should transfer to owner when beneficiary is not set on the device",
+		},
+	}
+
+	for _, scen := range scens {
+		t.Run(scen.Name, func(t *testing.T) {
+			_, err = models.Rewards().DeleteAll(ctx, conn.DBS().Writer)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			models.Vins().DeleteAll(ctx, conn.DBS().Writer)
+
+			_, err = models.IssuanceWeeks().DeleteAll(ctx, conn.DBS().Writer)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			lastWk := models.IssuanceWeek{ID: 0, JobStatus: models.IssuanceWeeksJobStatusFinished}
+			err = lastWk.Insert(ctx, conn.DBS().Writer, boil.Infer())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, lst := range scen.Previous {
+
+				wk := models.IssuanceWeek{
+					ID:        lst.Week,
+					JobStatus: models.IssuanceWeeksJobStatusFinished,
+				}
+
+				wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+
+				rw := models.Reward{
+					IssuanceWeekID:      lst.Week,
+					UserDeviceID:        lst.DeviceID,
+					ConnectionStreak:    lst.ConnStreak,
+					DisconnectionStreak: lst.DiscStreak,
+				}
+				err := rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			for _, v := range scen.PrevVIN {
+				vw := models.Vin{
+					Vin:                 v.VIN,
+					FirstEarningWeek:    v.FirstWeek,
+					FirstEarningTokenID: types.NewDecimal(decimal.New(int64(v.FirstToken), 0)),
+				}
+
+				vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
+			}
+
+			config := mocks.NewTestConfig()
+			config.Producer.Return.Successes = true
+			config.Producer.Return.Errors = true
+			producer := mocks.NewSyncProducer(t, config)
+
+			var out []shared.CloudEvent[transferData]
+
+			checker := func(b2 []byte) error {
+				var o shared.CloudEvent[transferData]
+				err := json.Unmarshal(b2, &o)
+				require.NoError(t, err)
+				out = append(out, o)
+				return nil
+			}
+			producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
+
+			transferService := NewTokenTransferService(&settings, producer, conn)
+
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
+
+			rwBonusService.BaselineIssuance()
+
+			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			producer.Close()
+
+			abi, err := contracts.RewardMetaData.GetAbi()
+			require.NoError(t, err)
+
+			rewards := []RewardEvent{}
+
+			for i := range out {
+				b := out[i].Data.Data
+				require.NoError(t, err)
+				o, _ := abi.Methods["batchTransfer"].Inputs.Unpack(b[4:])
+				users := o[0].([]common.Address)
+				values := o[1].([]*big.Int)
+				vehicleIds := o[2].([]*big.Int)
+				for y := range users {
+					rewards = append(rewards, RewardEvent{
+						User:      users[y],
+						Value:     values[y],
+						VehicleId: vehicleIds[y],
+					})
+				}
+			}
+
+			user := common.HexToAddress(rw[0].RewardsReceiverEthereumAddress.String)
+
+			if rw[0].RewardsReceiverEthereumAddress.String == "" {
+				user = common.HexToAddress(rw[0].UserEthereumAddress.String)
+			}
+
+			assert.ElementsMatch(t, []RewardEvent{{
+				User:      user,
+				Value:     rw[0].Tokens.Int(nil),
+				VehicleId: rw[0].UserDeviceTokenID.Int(nil),
+			}}, rewards)
+		})
+	}
+}
+
+func GetDbConnection(ctx context.Context, t *testing.T, logger zerolog.Logger) (testcontainers.Container, db.Store) {
+	port := 5432
+	nport := fmt.Sprintf("%d/tcp", port)
+
+	req := testcontainers.ContainerRequest{
+		Image:        "postgres:12.11-alpine",
+		ExposedPorts: []string{nport},
+		AutoRemove:   true,
+		Env: map[string]string{
+			"POSTGRES_DB":       "rewards_api",
+			"POSTGRES_PASSWORD": "postgres",
+		},
+		WaitingFor: wait.ForListeningPort(nat.Port(nport)),
+	}
+	cont, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	host, err := cont.Host(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mport, err := cont.MappedPort(ctx, nat.Port(nport))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbset := db.Settings{
+		User:               "postgres",
+		Password:           "postgres",
+		Port:               mport.Port(),
+		Host:               host,
+		Name:               "rewards_api",
+		MaxOpenConnections: 10,
+		MaxIdleConnections: 10,
+	}
+
+	if err := database.MigrateDatabase(logger, &dbset, "", "../../migrations"); err != nil {
+		t.Fatal(err)
+	}
+
+	conn := db.NewDbConnectionForTest(ctx, &dbset, true)
+	conn.WaitForDB(logger)
+
+	return cont, conn
+}
+
 type Device struct {
-	ID           string
-	TokenID      int
-	UserID       string
-	VIN          string
-	Opted        bool
-	IntsWithData []string
-	AMID         int
+	ID                                  string
+	TokenID                             int
+	UserID                              string
+	VIN                                 string
+	Opted                               bool
+	IntsWithData                        []string
+	AMID                                int
+	AftermarketDeviceBeneficiaryAddress []byte
 }
 
 type Views struct {
@@ -461,6 +834,10 @@ func (d *FakeDevClient) GetUserDevice(ctx context.Context, in *pb_devices.GetUse
 			OptedInAt:    t,
 			Vin:          vin,
 			OwnerAddress: owner,
+		}
+
+		if len(ud.AftermarketDeviceBeneficiaryAddress) != 0 {
+			ud2.AftermarketDeviceBeneficiaryAddress = ud.AftermarketDeviceBeneficiaryAddress
 		}
 
 		if ud.AMID != 0 {
