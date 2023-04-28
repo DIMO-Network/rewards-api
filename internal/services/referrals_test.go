@@ -265,9 +265,9 @@ func TestReferrals(t *testing.T) {
 			Referrals: []Referral{},
 		},
 		{
-			Name: "New address with both a previously earning VIN can earn",
+			Name: "New user joins and connects a car that has previously been connected to DIMO",
 			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
+				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 3},
 				{ID: "Dev2", UserID: "User2", TokenID: 2, Vin: "00000000000000002", FirstEarningWeek: 3},
 				{ID: "Dev2", UserID: "User3", TokenID: 3, Vin: "00000000000000002", FirstEarningWeek: 5},
 			},
