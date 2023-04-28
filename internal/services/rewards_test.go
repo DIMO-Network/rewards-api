@@ -82,7 +82,7 @@ type Scenario struct {
 type RewardEvent struct {
 	User      common.Address
 	Value     *big.Int
-	VehicleId *big.Int
+	VehicleID *big.Int
 }
 
 var mkID = func(i int) string {
@@ -121,7 +121,10 @@ func TestStreak(t *testing.T) {
 	logger := zerolog.Nop()
 
 	cont, conn := GetDbConnection(ctx, t, logger)
-	defer cont.Terminate(ctx)
+	defer func() {
+		err := cont.Terminate(ctx)
+		assert.NoError(t, err)
+	}()
 
 	scens := []Scenario{
 		{
@@ -244,7 +247,8 @@ func TestStreak(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			models.Vins().DeleteAll(ctx, conn.DBS().Writer)
+			_, err := models.Vins().DeleteAll(ctx, conn.DBS().Writer)
+			assert.NoError(t, err)
 
 			_, err = models.IssuanceWeeks().DeleteAll(ctx, conn.DBS().Writer)
 			if err != nil {
@@ -264,7 +268,8 @@ func TestStreak(t *testing.T) {
 					JobStatus: models.IssuanceWeeksJobStatusFinished,
 				}
 
-				wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+				err := wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+				assert.NoError(t, err)
 
 				rw := models.Reward{
 					IssuanceWeekID:      lst.Week,
@@ -272,7 +277,7 @@ func TestStreak(t *testing.T) {
 					ConnectionStreak:    lst.ConnStreak,
 					DisconnectionStreak: lst.DiscStreak,
 				}
-				err := rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
+				err = rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -285,7 +290,8 @@ func TestStreak(t *testing.T) {
 					FirstEarningTokenID: types.NewDecimal(decimal.New(int64(v.FirstToken), 0)),
 				}
 
-				vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
+				err := vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
+				assert.NoError(t, err)
 			}
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
@@ -350,7 +356,10 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 	logger := zerolog.Nop()
 
 	cont, conn := GetDbConnection(ctx, t, logger)
-	defer cont.Terminate(ctx)
+	defer func() {
+		err := cont.Terminate(ctx)
+		assert.NoError(t, err)
+	}()
 
 	scens := []Scenario{
 		{
@@ -422,7 +431,8 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			models.Vins().DeleteAll(ctx, conn.DBS().Writer)
+			_, err := models.Vins().DeleteAll(ctx, conn.DBS().Writer)
+			assert.NoError(t, err)
 
 			_, err = models.IssuanceWeeks().DeleteAll(ctx, conn.DBS().Writer)
 			if err != nil {
@@ -442,7 +452,8 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 					JobStatus: models.IssuanceWeeksJobStatusFinished,
 				}
 
-				wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+				err := wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+				assert.NoError(t, err)
 
 				rw := models.Reward{
 					IssuanceWeekID:      lst.Week,
@@ -450,7 +461,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 					ConnectionStreak:    lst.ConnStreak,
 					DisconnectionStreak: lst.DiscStreak,
 				}
-				err := rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
+				err = rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -463,14 +474,16 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 					FirstEarningTokenID: types.NewDecimal(decimal.New(int64(v.FirstToken), 0)),
 				}
 
-				vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
+				err := vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
+				assert.NoError(t, err)
 			}
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
-			rwBonusService.calculate()
+			err = rwBonusService.calculate()
+			assert.NoError(t, err)
 
 			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
@@ -533,7 +546,10 @@ func TestBaselineIssuance(t *testing.T) {
 	logger := zerolog.Nop()
 
 	cont, conn := GetDbConnection(ctx, t, logger)
-	defer cont.Terminate(ctx)
+	defer func() {
+		err := cont.Terminate(ctx)
+		assert.NoError(t, err)
+	}()
 
 	scens := []Scenario{
 		{
@@ -581,11 +597,10 @@ func TestBaselineIssuance(t *testing.T) {
 	for _, scen := range scens {
 		t.Run(scen.Name, func(t *testing.T) {
 			_, err = models.Rewards().DeleteAll(ctx, conn.DBS().Writer)
-			if err != nil {
-				t.Fatal(err)
-			}
+			assert.NoError(t, err)
 
-			models.Vins().DeleteAll(ctx, conn.DBS().Writer)
+			_, err := models.Vins().DeleteAll(ctx, conn.DBS().Writer)
+			assert.NoError(t, err)
 
 			_, err = models.IssuanceWeeks().DeleteAll(ctx, conn.DBS().Writer)
 			if err != nil {
@@ -605,7 +620,8 @@ func TestBaselineIssuance(t *testing.T) {
 					JobStatus: models.IssuanceWeeksJobStatusFinished,
 				}
 
-				wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+				err := wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+				assert.NoError(t, err)
 
 				rw := models.Reward{
 					IssuanceWeekID:      lst.Week,
@@ -613,7 +629,7 @@ func TestBaselineIssuance(t *testing.T) {
 					ConnectionStreak:    lst.ConnStreak,
 					DisconnectionStreak: lst.DiscStreak,
 				}
-				err := rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
+				err = rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -626,7 +642,8 @@ func TestBaselineIssuance(t *testing.T) {
 					FirstEarningTokenID: types.NewDecimal(decimal.New(int64(v.FirstToken), 0)),
 				}
 
-				vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
+				err := vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
+				assert.NoError(t, err)
 			}
 
 			config := mocks.NewTestConfig()
@@ -649,7 +666,8 @@ func TestBaselineIssuance(t *testing.T) {
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
-			rwBonusService.BaselineIssuance()
+			err = rwBonusService.BaselineIssuance()
+			assert.NoError(t, err)
 
 			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
@@ -674,7 +692,7 @@ func TestBaselineIssuance(t *testing.T) {
 					rewards = append(rewards, RewardEvent{
 						User:      users[y],
 						Value:     values[y],
-						VehicleId: vehicleIds[y],
+						VehicleID: vehicleIds[y],
 					})
 				}
 			}
@@ -688,7 +706,7 @@ func TestBaselineIssuance(t *testing.T) {
 			assert.ElementsMatch(t, []RewardEvent{{
 				User:      user,
 				Value:     rw[0].Tokens.Int(nil),
-				VehicleId: rw[0].UserDeviceTokenID.Int(nil),
+				VehicleID: rw[0].UserDeviceTokenID.Int(nil),
 			}}, rewards)
 		})
 	}
@@ -766,7 +784,7 @@ const teslaIntegration = "2LFQOgsYd5MEmRNBnsYXKp0QHC3"
 const smartcarIntegration = "2LFSA81Oo4agy0y4NvP7f6hTdgs"
 
 func (v Views) DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error) {
-	var out []*DeviceData
+	out := []*DeviceData{}
 	for _, d := range v.devices {
 		if len(d.IntsWithData) == 0 {
 			continue
