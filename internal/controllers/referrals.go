@@ -5,8 +5,8 @@ import (
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/models"
-	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
+	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
@@ -62,6 +62,7 @@ func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
 		referralsMade, err := models.Referrals(
 			models.ReferralWhere.Referrer.EQ(userAddr.Bytes()),
 			qm.Load(models.ReferralRels.IssuanceWeek),
+			qm.OrderBy(models.ReferralColumns.IssuanceWeekID+" DESC"),
 		).All(c.Context(), r.DB.DBS().Reader)
 		if err != nil {
 			logger.Err(err).Msg("Database failure retrieving user referral history.")

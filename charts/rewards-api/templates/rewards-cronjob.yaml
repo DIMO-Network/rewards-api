@@ -1,4 +1,4 @@
-{{- if .Values.cronJob.enabled }}
+{{- if .Values.rewardsCronJob.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -7,7 +7,7 @@ metadata:
   labels:
     {{- include "rewards-api.labels" . | nindent 4 }}
 spec:
-  schedule: {{ .Values.cronJob.schedule | quote}}
+  schedule: {{ .Values.rewardsCronJob.schedule | quote}}
   concurrencyPolicy: "Forbid"
   jobTemplate:
     spec:

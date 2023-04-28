@@ -9,11 +9,12 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	pb "github.com/DIMO-Network/shared/api/users"
+	pb "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"google.golang.org/grpc/codes"
@@ -29,8 +30,10 @@ type ReferralsClient struct {
 }
 
 type Referrals struct {
-	Referees  []common.Address
-	Referrers []common.Address
+	Referees        []common.Address
+	Referrers       []common.Address
+	RefereeUserIDs  []string
+	ReferrerUserIDs []string
 }
 
 func NewReferralBonusService(
@@ -111,6 +114,8 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 
 		refs.Referees = append(refs.Referees, refereeAddr)
 		refs.Referrers = append(refs.Referrers, referrerAddr)
+		refs.RefereeUserIDs = append(refs.RefereeUserIDs, user.Id)
+		refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, user.ReferredBy.Id)
 	}
 
 	return refs, nil
@@ -141,8 +146,10 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 				j = len(refs.Referees)
 			}
 
-			referreesBatch := refs.Referees[i:j]
+			refereesBatch := refs.Referees[i:j]
 			referrersBatch := refs.Referrers[i:j]
+			refereeIDsBatch := refs.RefereeUserIDs[i:j]
+			referrerIDsBatch := refs.ReferrerUserIDs[i:j]
 
 			tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
 			if err != nil {
@@ -159,19 +166,25 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 				return err
 			}
 
-			for n := range referreesBatch {
+			for n := range refereesBatch {
+				referrerID := null.StringFrom(referrerIDsBatch[n])
+				if referrerID.String == "" {
+					referrerID.Valid = false
+				}
 				r := models.Referral{
-					Referee:        referreesBatch[n].Bytes(),
+					Referee:        refereesBatch[n].Bytes(),
 					Referrer:       referrersBatch[n].Bytes(),
 					RequestID:      reqID,
 					IssuanceWeekID: c.Week,
+					RefereeUserID:  refereeIDsBatch[n],
+					ReferrerUserID: referrerID,
 				}
 				if err := r.Insert(ctx, tx, boil.Infer()); err != nil {
 					return err
 				}
 			}
 
-			if err := c.BatchTransferReferralBonuses(reqID, referreesBatch, referrersBatch); err != nil {
+			if err := c.BatchTransferReferralBonuses(reqID, refereesBatch, referrersBatch); err != nil {
 				return err
 			}
 

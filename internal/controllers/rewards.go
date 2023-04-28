@@ -5,13 +5,13 @@ import (
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
-	pb_devices "github.com/DIMO-Network/shared/api/devices"
-	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/db"
+	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -72,12 +72,15 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
-		UserId: userID,
-	})
+	devicesReq := &pb_devices.ListUserDevicesForUserRequest{UserId: userID}
+
+	if r.Settings.Environment != "prod" && user.EthereumAddress != nil {
+		devicesReq.EthereumAddress = *user.EthereumAddress
+	}
+
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesReq)
 	if err != nil {
-		logger.Err(err).Msg("Failed to retrieve user's devices.")
-		return opaqueInternalError
+		return err
 	}
 
 	intDescs, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
@@ -379,9 +382,18 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	userID := getUserID(c)
 	logger := r.Logger.With().Str("userId", userID).Logger()
 
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
-		UserId: userID,
-	})
+	user, err := r.UsersClient.GetUser(c.Context(), &pb_users.GetUserRequest{Id: userID})
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "User unknown.")
+	}
+
+	devicesReq := &pb_devices.ListUserDevicesForUserRequest{UserId: userID}
+
+	if r.Settings.Environment != "prod" && user.EthereumAddress != nil {
+		devicesReq.EthereumAddress = *user.EthereumAddress
+	}
+
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesReq)
 	if err != nil {
 		logger.Err(err).Msg("Failed to retrieve user's devices.")
 		return opaqueInternalError
@@ -393,7 +405,6 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	}
 
 	rs, err := models.Rewards(
-		models.RewardWhere.UserID.EQ(userID),
 		models.RewardWhere.UserDeviceID.IN(deviceIDs),
 		qm.OrderBy(models.RewardColumns.IssuanceWeekID+" asc"),
 	).All(c.Context(), r.DB.DBS().Reader)

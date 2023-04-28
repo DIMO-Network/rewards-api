@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/models"
-	pb_users "github.com/DIMO-Network/shared/api/users"
+	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
@@ -57,17 +57,17 @@ func (r *RewardsController) GetBalanceHistory(c *fiber.Ctx) error {
 	runningBalance := big.NewInt(0)
 
 	for _, tf := range tfs {
-		delta := tf.Amount.Int(tf.Amount.Int(nil))
+		value := tf.Amount.Int(nil)
 		if common.BytesToAddress(tf.AddressFrom) == addr {
-			delta = new(big.Int).Mul(delta, big.NewInt(-1))
+			runningBalance = new(big.Int).Sub(runningBalance, value)
+		} else {
+			runningBalance = new(big.Int).Add(runningBalance, value)
 		}
 
-		runningBalance = new(big.Int).Add(runningBalance, delta)
-
-		if len(balanceHistory.BalanceHistory) == 0 || balanceHistory.BalanceHistory[len(balanceHistory.BalanceHistory)-1].Time != tf.BlockTimestamp {
+		if l := len(balanceHistory.BalanceHistory); l == 0 || balanceHistory.BalanceHistory[l-1].Time != tf.BlockTimestamp {
 			balanceHistory.BalanceHistory = append(balanceHistory.BalanceHistory, Balance{Time: tf.BlockTimestamp, Balance: runningBalance})
 		} else {
-			balanceHistory.BalanceHistory[len(balanceHistory.BalanceHistory)-1].Balance = new(big.Int).Add(balanceHistory.BalanceHistory[len(balanceHistory.BalanceHistory)-1].Balance, delta)
+			balanceHistory.BalanceHistory[l-1].Balance = runningBalance
 		}
 	}
 
