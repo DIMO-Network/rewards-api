@@ -341,7 +341,8 @@ func TestReferrals(t *testing.T) {
 					ID:        lst.Week,
 					JobStatus: models.IssuanceWeeksJobStatusFinished,
 				}
-				wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+				err := wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+				assert.NoError(t, err)
 
 				r := models.Reward{
 					IssuanceWeekID: lst.Week,
@@ -362,7 +363,7 @@ func TestReferrals(t *testing.T) {
 					}
 				}
 
-				err := r.Insert(ctx, conn.DBS().Writer, boil.Infer())
+				err = r.Insert(ctx, conn.DBS().Writer, boil.Infer())
 				if err != nil {
 					t.Fatal(err)
 				}

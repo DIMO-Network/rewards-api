@@ -33,13 +33,14 @@ var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 var weekDuration = 7 * 24 * time.Hour
 
 type BaselineClient struct {
-	TransferService *TransferService
-	DataService     DeviceActivityClient
-	DevicesClient   DevicesClient
-	DefsClient      IntegrationsGetter
-	ContractAddress common.Address
-	Week            int
-	Logger          *zerolog.Logger
+	TransferService     *TransferService
+	DataService         DeviceActivityClient
+	DevicesClient       DevicesClient
+	DefsClient          IntegrationsGetter
+	ContractAddress     common.Address
+	Week                int
+	Logger              *zerolog.Logger
+	HandleBeneficiaries bool
 }
 
 type DeviceActivityClient interface {
@@ -68,17 +69,17 @@ func NewBaselineRewardService(
 	defsClient IntegrationsGetter,
 	week int,
 	logger *zerolog.Logger,
-
+	handleBeneficiaries bool,
 ) *BaselineClient {
-
 	return &BaselineClient{
-		TransferService: transferService,
-		DataService:     dataService,
-		DevicesClient:   devicesClient,
-		DefsClient:      defsClient,
-		ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
-		Week:            week,
-		Logger:          logger,
+		TransferService:     transferService,
+		DataService:         dataService,
+		DevicesClient:       devicesClient,
+		DefsClient:          defsClient,
+		ContractAddress:     common.HexToAddress(settings.IssuanceContractAddress),
+		Week:                week,
+		Logger:              logger,
+		HandleBeneficiaries: handleBeneficiaries,
 	}
 }
 
@@ -234,15 +235,15 @@ func (t *BaselineClient) calculate() error {
 		}
 
 		thisWeek := &models.Reward{
-			UserDeviceID:        deviceActivity.ID,
-			IssuanceWeekID:      issuanceWeek,
-			UserID:              ud.UserId,
-			UserDeviceTokenID:   types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
-			UserEthereumAddress: null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex()),
+			UserDeviceID:                   deviceActivity.ID,
+			IssuanceWeekID:                 issuanceWeek,
+			UserID:                         ud.UserId,
+			UserDeviceTokenID:              types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
+			UserEthereumAddress:            null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex()),
+			RewardsReceiverEthereumAddress: null.StringFrom(common.BytesToAddress(ud.OwnerAddress).Hex()),
 		}
 
 		validIntegrations := deviceActivity.Integrations // Guaranteed to be non-empty at this point.
-
 		if ind := slices.Index(validIntegrations, integCalc.AutoPiID); ind != -1 {
 			if ud.AftermarketDeviceTokenId == nil {
 				if len(validIntegrations) == 1 {
@@ -254,6 +255,15 @@ func (t *BaselineClient) calculate() error {
 				}
 			} else {
 				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
+
+				if t.HandleBeneficiaries {
+					if len(ud.AftermarketDeviceBeneficiaryAddress) == 20 {
+						// This may be the same as the device owner, above; that's fine.
+						thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(common.BytesToAddress(ud.AftermarketDeviceBeneficiaryAddress).Hex())
+					} else {
+						logger.Warn().Msgf("Minted device %d has no beneficiary.", *ud.AftermarketDeviceTokenId)
+					}
+				}
 			}
 		}
 
