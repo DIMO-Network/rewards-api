@@ -234,6 +234,13 @@ func (t *BaselineClient) calculate() error {
 			continue
 		}
 
+		if vc := ud.LatestActiveVinCredential; vc != nil {
+			exp := vc.Expiration.AsTime()
+			if exp.Before(time.Now().Add(-weekDuration)) {
+				continue
+			}
+		}
+
 		thisWeek := &models.Reward{
 			UserDeviceID:                   deviceActivity.ID,
 			IssuanceWeekID:                 issuanceWeek,
