@@ -234,7 +234,7 @@ func (t *BaselineClient) calculate() error {
 			continue
 		}
 
-		if vc := ud.LatestActiveVinCredential; vc != nil {
+		if vc := ud.LatestVinCredential; vc != nil {
 			exp := vc.Expiration.AsTime()
 			if exp.Before(time.Now().Add(-weekDuration)) {
 				continue
