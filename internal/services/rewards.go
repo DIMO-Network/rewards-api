@@ -234,13 +234,6 @@ func (t *BaselineClient) calculate() error {
 			continue
 		}
 
-		if vc := ud.LatestVinCredential; vc != nil {
-			exp := vc.Expiration.AsTime()
-			if exp.Before(time.Now().Add(-weekDuration)) {
-				continue
-			}
-		}
-
 		thisWeek := &models.Reward{
 			UserDeviceID:                   deviceActivity.ID,
 			IssuanceWeekID:                 issuanceWeek,
@@ -271,6 +264,13 @@ func (t *BaselineClient) calculate() error {
 						logger.Warn().Msgf("Minted device %d has no beneficiary.", *ud.AftermarketDeviceTokenId)
 					}
 				}
+			}
+		}
+
+		if vc := ud.LatestVinCredential; vc != nil {
+			exp := vc.Expiration.AsTime()
+			if exp.Before(time.Now().Add(-weekDuration)) {
+				logger.Info().Str("vc-id", vc.Id).Str("vin", *ud.Vin).Msg("user does not have valid vc, would not recieve tokens based on this logic")
 			}
 		}
 
