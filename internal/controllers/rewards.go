@@ -389,7 +389,7 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 
 	devicesReq := &pb_devices.ListUserDevicesForUserRequest{UserId: userID}
 
-	if r.Settings.Environment != "prod" && user.EthereumAddress != nil {
+	if user.EthereumAddress != nil {
 		devicesReq.EthereumAddress = *user.EthereumAddress
 	}
 
