@@ -218,7 +218,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		rewards, err := models.Rewards(
 			models.RewardWhere.UserDeviceID.EQ(device.Id),
-			models.RewardWhere.UserID.EQ(userID),
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
 		).All(c.Context(), r.DB.DBS().Reader.DB)
 		if err != nil {
