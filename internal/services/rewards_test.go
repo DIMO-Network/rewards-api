@@ -296,7 +296,7 @@ func TestStreak(t *testing.T) {
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger, false)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
 			rwBonusService.calculate()
 
@@ -480,7 +480,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger, true)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
 			err = rwBonusService.calculate()
 			assert.NoError(t, err)
@@ -664,7 +664,7 @@ func TestBaselineIssuance(t *testing.T) {
 
 			transferService := NewTokenTransferService(&settings, producer, conn)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger, false)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
 			err = rwBonusService.BaselineIssuance()
 			assert.NoError(t, err)
