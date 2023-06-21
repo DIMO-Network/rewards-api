@@ -111,7 +111,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		outInts := []UserResponseIntegration{}
 
-		otherChecklist := device.TokenId != nil && device.OptedInAt != nil
+		otherChecklist := device.TokenId != nil
 
 		eligibleThisWeek := false
 
