@@ -221,11 +221,6 @@ func (t *BaselineClient) calculate() error {
 			continue
 		}
 
-		if ud.OptedInAt == nil {
-			logger.Info().Msg("User has not opted in for this device.")
-			continue
-		}
-
 		if len(ud.OwnerAddress) != 20 {
 			logger.Info().Msg("User has minted a car but has no owner address?")
 			continue
