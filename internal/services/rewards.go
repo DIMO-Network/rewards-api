@@ -262,6 +262,12 @@ func (t *BaselineClient) calculate() error {
 			}
 		}
 
+		if vc := ud.LatestVinCredential; vc == nil {
+			logger.Warn().Msg("Earning vehicle has never had a VIN credential.")
+		} else if !vc.Expiration.AsTime().After(weekEnd) {
+			logger.Warn().Msgf("Earning vehicle's VIN credential expired on %s.", vc.Expiration.AsTime())
+		}
+
 		// At this point we are certain that the owner should receive tokens.
 		thisWeek.IntegrationIds = validIntegrations
 		thisWeek.IntegrationPoints = integCalc.Calculate(validIntegrations)
