@@ -267,11 +267,10 @@ func (t *BaselineClient) calculate() error {
 			}
 		}
 
-		if vc := ud.LatestVinCredential; vc != nil {
-			exp := vc.Expiration.AsTime()
-			if exp.Before(time.Now().Add(-weekDuration)) {
-				logger.Info().Str("vc-id", vc.Id).Str("vin", *ud.Vin).Msg("user does not have valid vc, would not recieve tokens based on this logic")
-			}
+		if vc := ud.LatestVinCredential; vc == nil {
+			logger.Warn().Msg("Earning vehicle has never had a VIN credential.")
+		} else if vc.Expiration.AsTime().Before(weekEnd) {
+			logger.Warn().Msgf("Earning vehicle's VIN credential expired on %s.", vc.Expiration.AsTime())
 		}
 
 		// At this point we are certain that the owner should receive tokens.
