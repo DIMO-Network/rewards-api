@@ -262,7 +262,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			DisconnectionStreak:  disconnectionStreak,
 			Level:                *getLevelResp(lvl),
 			Minted:               device.TokenId != nil,
-			OptedIn:              device.OptedInAt != nil,
+			OptedIn:              true,
 		}
 	}
 
