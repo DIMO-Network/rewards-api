@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func MigrateDatabase(logger zerolog.Logger, settings *db.Settings, command string, dir string) error {
+func MigrateDatabase(_ zerolog.Logger, settings *db.Settings, command string, dir string) error {
 	db, err := sql.Open("postgres", settings.BuildConnectionString(true))
 	if err != nil {
 		return err
@@ -29,9 +29,5 @@ func MigrateDatabase(logger zerolog.Logger, settings *db.Settings, command strin
 
 	goose.SetTableName("rewards_api.migrations")
 
-	if err := goose.Run(command, db, dir); err != nil {
-		return err
-	}
-
-	return nil
+	return goose.Run(command, db, dir)
 }

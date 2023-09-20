@@ -243,10 +243,10 @@ func (t *BaselineClient) calculate() error {
 				if len(validIntegrations) == 1 {
 					logger.Info().Msg("AutoPi connected but not paired-onchain; no other active integrations.")
 					continue
-				} else {
-					validIntegrations = slices.Delete(validIntegrations, ind, ind+1)
-					logger.Info().Msg("AutoPi connected but not paired on-chain; there are other integrations.")
 				}
+
+				validIntegrations = slices.Delete(validIntegrations, ind, ind+1)
+				logger.Info().Msg("AutoPi connected but not paired on-chain; there are other integrations.")
 			} else {
 				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
 

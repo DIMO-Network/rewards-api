@@ -298,7 +298,10 @@ func TestStreak(t *testing.T) {
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
-			rwBonusService.calculate()
+			err = rwBonusService.calculate()
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
@@ -783,7 +786,7 @@ const autoPiIntegration = "2LFD6DXuGRdVucJO1a779kEUiYi"
 const teslaIntegration = "2LFQOgsYd5MEmRNBnsYXKp0QHC3"
 const smartcarIntegration = "2LFSA81Oo4agy0y4NvP7f6hTdgs"
 
-func (v Views) DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error) {
+func (v Views) DescribeActiveDevices(_, _ time.Time) ([]*DeviceData, error) {
 	out := []*DeviceData{}
 	for _, d := range v.devices {
 		if len(d.IntsWithData) == 0 {
@@ -799,7 +802,7 @@ func (v Views) DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error
 type FakeDefClient struct {
 }
 
-func (d *FakeDefClient) GetIntegrations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error) {
+func (d *FakeDefClient) GetIntegrations(_ context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error) {
 	return &pb_defs.GetIntegrationResponse{Integrations: []*pb_defs.Integration{
 		{Id: autoPiIntegration, Vendor: "AutoPi"},
 		{Id: teslaIntegration, Vendor: "Tesla"},
@@ -814,7 +817,7 @@ type FakeDevClient struct {
 
 var zeroAddr common.Address
 
-func (d *FakeDevClient) GetUserDevice(ctx context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error) {
+func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error) {
 	for _, ud := range d.devices {
 		if ud.ID != in.Id {
 			continue

@@ -188,11 +188,7 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 				return err
 			}
 
-			if err := tx.Commit(); err != nil {
-				return err
-			}
-
-			return nil
+			return tx.Commit()
 		}(); err != nil {
 			return err
 		}
