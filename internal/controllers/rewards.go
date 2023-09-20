@@ -74,7 +74,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 	devicesReq := &pb_devices.ListUserDevicesForUserRequest{UserId: userID}
 
-	if r.Settings.Environment != "prod" && user.EthereumAddress != nil {
+	if user.EthereumAddress != nil {
 		devicesReq.EthereumAddress = *user.EthereumAddress
 	}
 
@@ -111,7 +111,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		outInts := []UserResponseIntegration{}
 
-		otherChecklist := device.TokenId != nil && device.OptedInAt != nil
+		otherChecklist := device.TokenId != nil
 
 		eligibleThisWeek := false
 
@@ -218,7 +218,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		rewards, err := models.Rewards(
 			models.RewardWhere.UserDeviceID.EQ(device.Id),
-			models.RewardWhere.UserID.EQ(userID),
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
 		).All(c.Context(), r.DB.DBS().Reader.DB)
 		if err != nil {
@@ -263,7 +262,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			DisconnectionStreak:  disconnectionStreak,
 			Level:                *getLevelResp(lvl),
 			Minted:               device.TokenId != nil,
-			OptedIn:              device.OptedInAt != nil,
+			OptedIn:              true,
 		}
 	}
 
@@ -389,7 +388,7 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 
 	devicesReq := &pb_devices.ListUserDevicesForUserRequest{UserId: userID}
 
-	if r.Settings.Environment != "prod" && user.EthereumAddress != nil {
+	if user.EthereumAddress != nil {
 		devicesReq.EthereumAddress = *user.EthereumAddress
 	}
 
