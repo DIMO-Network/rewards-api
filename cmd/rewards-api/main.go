@@ -152,6 +152,11 @@ func main() {
 			UsersClient: usersClient,
 		}
 
+		deviceController := controllers.DeviceController{
+			DB:     pdb,
+			Logger: &logger,
+		}
+
 		// secured paths
 		keyRefreshInterval := time.Hour
 		keyRefreshUnknownKID := true
@@ -162,15 +167,18 @@ func main() {
 		})
 		app.Get("/v1/swagger/*", swagger.HandlerDefault)
 
-		v1 := app.Group("/v1", jwtAuth)
-		v1.Get("/user", rewardsController.GetUserRewards)
-		v1.Get("/user/history", rewardsController.GetUserRewardsHistory)
-		v1.Get("/user/history/transactions", rewardsController.GetTransactionHistory)
-		v1.Get("/user/history/balance", rewardsController.GetBalanceHistory)
+		v1 := app.Group("/v1")
 
-		if settings.Environment != "prod" {
-			v1.Get("/user/referrals", referralsController.GetUserReferralHistory)
-		}
+		v1.Get("/aftermarket/device/:tokenID", deviceController.GetDevice)
+
+		user := v1.Group("/user", jwtAuth)
+		user.Get("/", rewardsController.GetUserRewards)
+		user.Get("/history", rewardsController.GetUserRewardsHistory)
+		user.Get("/history/transactions", rewardsController.GetTransactionHistory)
+		user.Get("/history/balance", rewardsController.GetBalanceHistory)
+
+		// We never ended up using this.
+		user.Get("/user/referrals", referralsController.GetUserReferralHistory)
 
 		go startGRPCServer(&settings, pdb, &logger)
 
