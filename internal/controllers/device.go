@@ -46,7 +46,7 @@ func (r *DeviceController) GetDevice(c *fiber.Ctx) error {
 		}
 	}
 
-	return nil
+	return c.JSON(DeviceSummary{Weeks: out})
 }
 
 type DeviceWeek struct {
