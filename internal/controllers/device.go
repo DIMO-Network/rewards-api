@@ -40,9 +40,10 @@ func (r *DeviceController) GetDevice(c *fiber.Ctx) error {
 
 	for i, r := range rs {
 		out[i] = DeviceWeek{
-			Start:  services.NumToWeekStart(r.IssuanceWeekID),
-			End:    services.NumToWeekEnd(r.IssuanceWeekID),
-			Tokens: r.Tokens.Int(nil),
+			Start:     services.NumToWeekStart(r.IssuanceWeekID),
+			End:       services.NumToWeekEnd(r.IssuanceWeekID),
+			Tokens:    r.Tokens.Int(nil),
+			VehicleID: r.UserDeviceTokenID.Int(nil),
 		}
 	}
 
@@ -50,9 +51,10 @@ func (r *DeviceController) GetDevice(c *fiber.Ctx) error {
 }
 
 type DeviceWeek struct {
-	Start  time.Time `json:"start"`
-	End    time.Time `json:"end"`
-	Tokens *big.Int  `json:"tokens"`
+	Start     time.Time `json:"start"`
+	End       time.Time `json:"end"`
+	Tokens    *big.Int  `json:"tokens"`
+	VehicleID *big.Int  `json:"vehicleId"`
 }
 
 type DeviceSummary struct {
