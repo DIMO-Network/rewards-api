@@ -4,6 +4,6 @@ metadata:
   name: {{ include "rewards-api.fullname" . }}-config-config-map
   namespace: {{ .Release.Namespace }}
   labels:
-{{ include "rewards-api.fullname" . | indent 4 }}
+    {{- include "rewards-api.labels" . | nindent 4 }}
 data:
   config.yaml: {{ .Values.config | toYaml | quote }}
