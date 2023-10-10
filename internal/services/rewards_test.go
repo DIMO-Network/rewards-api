@@ -802,7 +802,7 @@ func (v Views) DescribeActiveDevices(_, _ time.Time) ([]*DeviceData, error) {
 type FakeDefClient struct {
 }
 
-func (d *FakeDefClient) GetIntegrations(_ context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error) {
+func (d *FakeDefClient) GetIntegrations(_ context.Context, _ *emptypb.Empty, _ ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error) {
 	return &pb_defs.GetIntegrationResponse{Integrations: []*pb_defs.Integration{
 		{Id: autoPiIntegration, Vendor: "AutoPi"},
 		{Id: teslaIntegration, Vendor: "Tesla"},
@@ -817,7 +817,7 @@ type FakeDevClient struct {
 
 var zeroAddr common.Address
 
-func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error) {
+func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserDeviceRequest, _ ...grpc.CallOption) (*pb_devices.UserDevice, error) {
 	for _, ud := range d.devices {
 		if ud.ID != in.Id {
 			continue
@@ -874,6 +874,6 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 
 type FakeTransfer struct{}
 
-func (t *FakeTransfer) BaselineIssuance(ctx context.Context, week int) error {
+func (t *FakeTransfer) BaselineIssuance(_ context.Context, _ int) error {
 	return nil
 }
