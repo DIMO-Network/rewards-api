@@ -298,7 +298,7 @@ func TestStreak(t *testing.T) {
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
-			err = rwBonusService.calculate()
+			err = rwBonusService.assignPoints()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -485,7 +485,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
-			err = rwBonusService.calculate()
+			err = rwBonusService.assignPoints()
 			assert.NoError(t, err)
 
 			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
