@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/DIMO-Network/device-definitions-api v1.0.17
-	github.com/DIMO-Network/devices-api v1.22.6
+	github.com/DIMO-Network/devices-api v1.23.1
 	github.com/DIMO-Network/shared v0.10.4
 	github.com/DIMO-Network/users-api v0.6.3
 	github.com/Shopify/sarama v1.38.1

@@ -14,7 +14,6 @@ import (
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"
-	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -31,6 +30,16 @@ var baseWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
 var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
+
+const (
+	AutoPiID  = "27qftVRWQYpVDcO5DltO5Ojbjxk"
+	MacaronID = "2ULfuC8U9dOqRshZBAi0lMM1Rrx"
+)
+
+var Integrations = map[uint64]string{
+	317: "27qftVRWQYpVDcO5DltO5Ojbjxk",
+	142: "2ULfuC8U9dOqRshZBAi0lMM1Rrx",
+}
 
 type BaselineClient struct {
 	TransferService *TransferService
@@ -105,40 +114,6 @@ func NumToWeekEnd(n int) time.Time {
 	return startTime.Add(time.Duration(n+1) * weekDuration)
 }
 
-func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
-	// Only blessed combination.
-	if slices.Contains(integrationIDs, i.AutoPiID) {
-		if slices.Contains(integrationIDs, i.SmartcarID) {
-			return 7000
-		}
-		return 6000
-	} else if slices.Contains(integrationIDs, i.TeslaID) {
-		return 4000
-	} else if slices.Contains(integrationIDs, i.SmartcarID) {
-		return 1000
-	}
-	return 0
-}
-
-func (t *BaselineClient) createIntegrationPointsCalculator(resp *pb_defs.GetIntegrationResponse) *integrationPointsCalculator {
-	var calc integrationPointsCalculator
-
-	for _, integration := range resp.Integrations {
-		switch integration.Vendor {
-		case "AutoPi":
-			calc.AutoPiID = integration.Id
-		case "Tesla":
-			calc.TeslaID = integration.Id
-		case "SmartCar":
-			calc.SmartcarID = integration.Id
-		default:
-			t.Logger.Warn().Msgf("Unrecognized integration %s with vendor %s", integration.Id, integration.Vendor)
-		}
-	}
-
-	return &calc
-}
-
 func (t *BaselineClient) assignPoints() error {
 	issuanceWeek := t.Week
 	ctx := context.Background()
@@ -185,13 +160,6 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	integs, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
-	if err != nil {
-		return err
-	}
-
-	integCalc := t.createIntegrationPointsCalculator(integs)
-
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.TransferService.db.DBS().Reader)
 	if err != nil {
 		return err
@@ -237,30 +205,54 @@ func (t *BaselineClient) assignPoints() error {
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
 
-		validIntegrations := deviceActivity.Integrations // Guaranteed to be non-empty at this point.
-		if ind := slices.Index(validIntegrations, integCalc.AutoPiID); ind != -1 {
-			if ud.AftermarketDeviceTokenId == nil {
-				if len(validIntegrations) == 1 {
-					logger.Info().Msg("AutoPi connected but not paired-onchain; no other active integrations.")
-					continue
-				}
+		validIntegrations := []string{}
+		integrationPoints := 0
 
-				validIntegrations = slices.Delete(validIntegrations, ind, ind+1)
-				logger.Info().Msg("AutoPi connected but not paired on-chain; there are other integrations.")
+		if ad := ud.AftermarketDevice; ad != nil {
+			thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ad.TokenId))
+			switch Integrations[ad.ManufacturerTokenId] {
+			case AutoPiID:
+				integrationPoints += 6000
+			case MacaronID:
+				integrationPoints += 2000
+			default:
+				integrationPoints += 0
+			}
+
+			if len(ad.Beneficiary) == 20 {
+				if vOwner != common.BytesToAddress(ad.Beneficiary) {
+					logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", common.BytesToAddress(ad.Beneficiary).Hex(), ad.TokenId)
+					thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(common.BytesToAddress(ad.Beneficiary).Hex())
+				}
 			} else {
-				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
-
-				if len(ud.AftermarketDeviceBeneficiaryAddress) == 20 {
-					adBene := common.BytesToAddress(ud.AftermarketDeviceBeneficiaryAddress)
-					if vOwner != adBene {
-						logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), *ud.AftermarketDeviceTokenId)
-						thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
-					}
-				} else {
-					logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", *ud.AftermarketDeviceTokenId)
-				}
+				logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", ad.TokenId)
 			}
 		}
+
+		// validIntegrations := deviceActivity.Integrations // Guaranteed to be non-empty at this point.
+		// if ind := slices.Index(validIntegrations, integCalc.AutoPiID); ind != -1 {
+		// 	if ud.AftermarketDeviceTokenId == nil {
+		// 		if len(validIntegrations) == 1 {
+		// 			logger.Info().Msg("AutoPi connected but not paired-onchain; no other active integrations.")
+		// 			continue
+		// 		}
+
+		// 		validIntegrations = slices.Delete(validIntegrations, ind, ind+1)
+		// 		logger.Info().Msg("AutoPi connected but not paired on-chain; there are other integrations.")
+		// 	} else {
+		// 		thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
+
+		// 		if len(ud.AftermarketDeviceBeneficiaryAddress) == 20 {
+		// 			adBene := common.BytesToAddress(ud.AftermarketDeviceBeneficiaryAddress)
+		// 			if vOwner != adBene {
+		// 				logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), *ud.AftermarketDeviceTokenId)
+		// 				thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
+		// 			}
+		// 		} else {
+		// 			logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", *ud.AftermarketDeviceTokenId)
+		// 		}
+		// 	}
+		// }
 
 		if vc := ud.LatestVinCredential; vc == nil {
 			logger.Warn().Msg("Earning vehicle has never had a VIN credential.")
@@ -270,7 +262,7 @@ func (t *BaselineClient) assignPoints() error {
 
 		// At this point we are certain that the owner should receive tokens.
 		thisWeek.IntegrationIds = validIntegrations
-		thisWeek.IntegrationPoints = integCalc.Calculate(validIntegrations)
+		thisWeek.IntegrationPoints = integrationPoints
 
 		var streak StreakOutput
 
