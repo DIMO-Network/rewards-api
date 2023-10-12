@@ -48,7 +48,7 @@ type FakeUserClient struct {
 	users []refUser
 }
 
-func (d *FakeUserClient) GetUser(_ context.Context, in *pb.GetUserRequest, opts ...grpc.CallOption) (*pb.User, error) {
+func (d *FakeUserClient) GetUser(_ context.Context, in *pb.GetUserRequest, _ ...grpc.CallOption) (*pb.User, error) {
 	for _, user := range d.users {
 		if user.ID == in.Id {
 			addr := user.Address.Hex()

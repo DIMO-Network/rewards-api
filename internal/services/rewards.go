@@ -139,7 +139,7 @@ func (t *BaselineClient) createIntegrationPointsCalculator(resp *pb_defs.GetInte
 	return &calc
 }
 
-func (t *BaselineClient) calculate() error {
+func (t *BaselineClient) assignPoints() error {
 	issuanceWeek := t.Week
 	ctx := context.Background()
 
@@ -341,24 +341,29 @@ func (t *BaselineClient) calculate() error {
 		t.Logger.Warn().Interface("overrides", deviceToOverride).Msg("Unused overrides.")
 	}
 
-	st := storage.DBStorage{DBS: t.TransferService.db}
-	err = st.AssignTokens(ctx, issuanceWeek, baseWeeklyTokens)
-	if err != nil {
-		return fmt.Errorf("failed to convert points to tokens: %w", err)
-	}
-
 	return nil
+}
+
+func (t *BaselineClient) calculateTokens() error {
+	st := storage.DBStorage{DBS: t.TransferService.db}
+	return st.AssignTokens(context.TODO(), t.Week, baseWeeklyTokens)
 }
 
 func (t *BaselineClient) BaselineIssuance() error {
 	ctx := context.Background()
 
-	err := t.calculate()
+	err := t.assignPoints()
 	if err != nil {
-		return fmt.Errorf("failed to calculate and assign baseline tokens: %w", err)
+		return fmt.Errorf("failed to assign points to vehicles: %w", err)
 	}
 
-	err = t.transfer(ctx)
+	// TODO(elffjs): This blows up with a division by zero if there are no points at all.
+	err = t.calculateTokens()
+	if err != nil {
+		return fmt.Errorf("failed to convert points into tokens: %w", err)
+	}
+
+	err = t.transferTokens(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to submit baseline token transfers: %w", err)
 	}

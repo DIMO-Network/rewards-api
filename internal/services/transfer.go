@@ -80,7 +80,7 @@ type transferData struct {
 	Data hexutil.Bytes  `json:"data"`
 }
 
-func (c *BaselineClient) transfer(ctx context.Context) error {
+func (c *BaselineClient) transferTokens(ctx context.Context) error {
 	batchSize := c.TransferService.batchSize
 	responseSize := batchSize
 
