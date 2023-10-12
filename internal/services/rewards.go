@@ -170,16 +170,6 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	overrides, err := models.Overrides(models.OverrideWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.TransferService.db.DBS().Reader)
-	if err != nil {
-		return err
-	}
-
-	deviceToOverride := map[string]int{}
-	for _, ov := range overrides {
-		deviceToOverride[ov.UserDeviceID] = ov.ConnectionStreak
-	}
-
 	// These describe the active integrations for each device active this week.
 	deviceActivityRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
@@ -273,26 +263,19 @@ func (t *BaselineClient) assignPoints() error {
 		thisWeek.IntegrationIds = validIntegrations.Slice()
 		thisWeek.IntegrationPoints = integCalc.Calculate(validIntegrations.Slice())
 
-		var streak StreakOutput
-
-		if connStreak, ok := deviceToOverride[deviceActivity.ID]; ok {
-			logger.Info().Int("connectionStreak", connStreak).Msg("Override for active device.")
-			streak = FakeStreak(connStreak)
-			delete(deviceToOverride, deviceActivity.ID)
-		} else {
-			// Streak rewards.
-			streakInput := StreakInput{
-				ConnectedThisWeek:           true,
-				ExistingConnectionStreak:    0,
-				ExistingDisconnectionStreak: 0,
-			}
-			if lastWeek, ok := lastWeekByDevice[deviceActivity.ID]; ok {
-				streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
-				streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
-			}
-
-			streak = ComputeStreak(streakInput)
+		// Streak rewards.
+		streakInput := StreakInput{
+			ConnectedThisWeek:           true,
+			ExistingConnectionStreak:    0,
+			ExistingDisconnectionStreak: 0,
 		}
+		if lastWeek, ok := lastWeekByDevice[deviceActivity.ID]; ok {
+			streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
+			streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
+		}
+
+		streak := ComputeStreak(streakInput)
+
 		setStreakFields(thisWeek, streak)
 
 		// Anything left in this map is considered disconnected.
@@ -335,10 +318,6 @@ func (t *BaselineClient) assignPoints() error {
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
-	}
-
-	if len(deviceToOverride) != 0 {
-		t.Logger.Warn().Interface("overrides", deviceToOverride).Msg("Unused overrides.")
 	}
 
 	return nil
