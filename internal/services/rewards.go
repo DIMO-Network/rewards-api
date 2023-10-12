@@ -10,6 +10,7 @@ import (
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
+	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -237,16 +238,11 @@ func (t *BaselineClient) assignPoints() error {
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
 
-		validIntegrations := deviceActivity.Integrations // Guaranteed to be non-empty at this point.
-		if ind := slices.Index(validIntegrations, integCalc.AutoPiID); ind != -1 {
-			if ud.AftermarketDeviceTokenId == nil {
-				if len(validIntegrations) == 1 {
-					logger.Info().Msg("AutoPi connected but not paired-onchain; no other active integrations.")
-					continue
-				}
+		validIntegrations := utils.NewSet(deviceActivity.Integrations...) // Guaranteed to be non-empty at this point.
 
-				validIntegrations = slices.Delete(validIntegrations, ind, ind+1)
-				logger.Info().Msg("AutoPi connected but not paired on-chain; there are other integrations.")
+		if validIntegrations.Contains(integCalc.AutoPiID) {
+			if ud.AftermarketDeviceTokenId == nil {
+				validIntegrations.Remove(integCalc.AutoPiID)
 			} else {
 				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
 
@@ -262,6 +258,11 @@ func (t *BaselineClient) assignPoints() error {
 			}
 		}
 
+		if validIntegrations.Len() == 0 {
+			logger.Warn().Msg("Integrations sending signals did not pass on-chain checks.")
+			continue
+		}
+
 		if vc := ud.LatestVinCredential; vc == nil {
 			logger.Warn().Msg("Earning vehicle has never had a VIN credential.")
 		} else if !vc.Expiration.AsTime().After(weekEnd) {
@@ -269,8 +270,8 @@ func (t *BaselineClient) assignPoints() error {
 		}
 
 		// At this point we are certain that the owner should receive tokens.
-		thisWeek.IntegrationIds = validIntegrations
-		thisWeek.IntegrationPoints = integCalc.Calculate(validIntegrations)
+		thisWeek.IntegrationIds = validIntegrations.Slice()
+		thisWeek.IntegrationPoints = integCalc.Calculate(validIntegrations.Slice())
 
 		var streak StreakOutput
 
@@ -288,7 +289,6 @@ func (t *BaselineClient) assignPoints() error {
 			if lastWeek, ok := lastWeekByDevice[deviceActivity.ID]; ok {
 				streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
 				streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
-
 			}
 
 			streak = ComputeStreak(streakInput)
