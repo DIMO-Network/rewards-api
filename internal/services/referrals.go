@@ -122,7 +122,6 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 }
 
 func (c *ReferralsClient) ReferralsIssuance(ctx context.Context) error {
-
 	refs, err := c.CollectReferrals(ctx, c.Week)
 	if err != nil {
 		return err

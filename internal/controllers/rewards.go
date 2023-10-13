@@ -73,7 +73,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	}
 
 	devicesReq := &pb_devices.ListUserDevicesForUserRequest{UserId: userID}
-
 	if user.EthereumAddress != nil {
 		devicesReq.EthereumAddress = *user.EthereumAddress
 	}

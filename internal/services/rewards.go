@@ -10,6 +10,7 @@ import (
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
+	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -128,18 +129,13 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	overrides, err := models.Overrides(models.OverrideWhere.IssuanceWeekID.EQ(issuanceWeek)).All(ctx, t.TransferService.db.DBS().Reader)
+	// These describe the active integrations for each device active this week.
+	deviceActivityRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
 		return err
 	}
 
-	deviceToOverride := map[string]int{}
-	for _, ov := range overrides {
-		deviceToOverride[ov.UserDeviceID] = ov.ConnectionStreak
-	}
-
-	// These describe the active integrations for each device active this week.
-	deviceActivityRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
+	integrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -152,11 +148,6 @@ func (t *BaselineClient) assignPoints() error {
 	lastWeekByDevice := make(map[string]*models.Reward)
 	for _, reward := range lastWeekRewards {
 		lastWeekByDevice[reward.UserDeviceID] = reward
-	}
-
-	integrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
-	if err != nil {
-		return err
 	}
 
 	for _, deviceActivity := range deviceActivityRecords {
@@ -194,29 +185,34 @@ func (t *BaselineClient) assignPoints() error {
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
 
-		validIntegrations := []string{}
+		validIntegrations := utils.NewSet(deviceActivity.Integrations...) // Guaranteed to be non-empty at this point.
 		integrationPoints := 0
 
-		if ad := ud.AftermarketDevice; ad != nil {
-			thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ad.TokenId))
-			for _, integ := range integrations.Integrations {
-				if ad.ManufacturerTokenId == integ.ManufacturerTokenId {
+		for _, integ := range integrations.Integrations {
+			if validIntegrations.Contains(integ.Id) {
+				if ud.AftermarketDevice.TokenId == 0 {
+					validIntegrations.Remove(integ.Id)
+				} else {
+					thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ud.AftermarketDevice.TokenId))
 					integrationPoints += int(integ.Points)
-					validIntegrations = append(validIntegrations, integ.Id)
-				}
-			}
 
-			if len(ad.Beneficiary) == 20 {
-				if vOwner != common.BytesToAddress(ad.Beneficiary) {
-					logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", common.BytesToAddress(ad.Beneficiary).Hex(), ad.TokenId)
-					thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(common.BytesToAddress(ad.Beneficiary).Hex())
+					if len(ud.AftermarketDeviceBeneficiaryAddress) == 20 {
+						adBene := common.BytesToAddress(ud.AftermarketDeviceBeneficiaryAddress)
+						if vOwner != adBene {
+							logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), *ud.AftermarketDeviceTokenId)
+							thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
+						}
+					} else {
+						logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", *ud.AftermarketDeviceTokenId)
+					}
 				}
-			} else {
-				logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", ad.TokenId)
 			}
 		}
 
-		// TODO: synthetic device logic
+		if validIntegrations.Len() == 0 || integrationPoints == 0 {
+			logger.Warn().Msg("Integrations sending signals did not pass on-chain checks.")
+			continue
+		}
 
 		if vc := ud.LatestVinCredential; vc == nil {
 			logger.Warn().Msg("Earning vehicle has never had a VIN credential.")
@@ -224,35 +220,23 @@ func (t *BaselineClient) assignPoints() error {
 			logger.Warn().Msgf("Earning vehicle's VIN credential expired on %s.", vc.Expiration.AsTime())
 		}
 
-		if len(validIntegrations) == 0 || integrationPoints == 0 {
-			continue
-		}
-
 		// At this point we are certain that the owner should receive tokens.
-		thisWeek.IntegrationIds = validIntegrations
+		thisWeek.IntegrationIds = validIntegrations.Slice()
 		thisWeek.IntegrationPoints = integrationPoints
 
-		var streak StreakOutput
-
-		if connStreak, ok := deviceToOverride[deviceActivity.ID]; ok {
-			logger.Info().Int("connectionStreak", connStreak).Msg("Override for active device.")
-			streak = FakeStreak(connStreak)
-			delete(deviceToOverride, deviceActivity.ID)
-		} else {
-			// Streak rewards.
-			streakInput := StreakInput{
-				ConnectedThisWeek:           true,
-				ExistingConnectionStreak:    0,
-				ExistingDisconnectionStreak: 0,
-			}
-			if lastWeek, ok := lastWeekByDevice[deviceActivity.ID]; ok {
-				streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
-				streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
-
-			}
-
-			streak = ComputeStreak(streakInput)
+		// Streak rewards.
+		streakInput := StreakInput{
+			ConnectedThisWeek:           true,
+			ExistingConnectionStreak:    0,
+			ExistingDisconnectionStreak: 0,
 		}
+		if lastWeek, ok := lastWeekByDevice[deviceActivity.ID]; ok {
+			streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
+			streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
+		}
+
+		streak := ComputeStreak(streakInput)
+
 		setStreakFields(thisWeek, streak)
 
 		// Anything left in this map is considered disconnected.
@@ -295,10 +279,6 @@ func (t *BaselineClient) assignPoints() error {
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
-	}
-
-	if len(deviceToOverride) != 0 {
-		t.Logger.Warn().Interface("overrides", deviceToOverride).Msg("Unused overrides.")
 	}
 
 	return nil
