@@ -160,7 +160,7 @@ func (t *BaselineClient) assignPoints() error {
 		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
 
-	integrations, err := t.DefsClient.GetIntegrations(ctx, nil)
+	integrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
