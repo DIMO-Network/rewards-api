@@ -813,10 +813,6 @@ type FakeDevClient struct {
 	devices []Device
 }
 
-func ref[A any](a A) *A {
-	return &a
-}
-
 var zeroAddr common.Address
 
 func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserDeviceRequest, _ ...grpc.CallOption) (*pb_devices.UserDevice, error) {
