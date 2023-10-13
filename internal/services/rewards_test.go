@@ -33,7 +33,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type User struct {
@@ -133,7 +132,7 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}, Opted: true},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0},
@@ -152,7 +151,7 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}, Opted: true},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0},
@@ -171,7 +170,7 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true},
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -190,7 +189,7 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}, Opted: true},
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 22, DiscStreak: 2},
@@ -209,7 +208,7 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, Opted: true},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}},
 			},
 			Previous: []OldReward{},
 			New: []NewReward{
@@ -225,8 +224,8 @@ func TestStreak(t *testing.T) {
 				{ID: "User2", Address: mkAddr(2)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}, Opted: true},
-				{ID: mkID(2), TokenID: 2, UserID: "User2", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, Opted: true},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}},
+				{ID: mkID(2), TokenID: 2, UserID: "User2", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0},
@@ -371,7 +370,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true, AftermarketDeviceBeneficiaryAddress: mkAddr(2).Bytes()},
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AftermarketDeviceBeneficiaryAddress: mkAddr(2).Bytes()},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -391,7 +390,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true},
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -411,7 +410,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true, AftermarketDeviceBeneficiaryAddress: mkAddr(1).Bytes()},
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AftermarketDeviceBeneficiaryAddress: mkAddr(1).Bytes()},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -561,7 +560,7 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true, AftermarketDeviceBeneficiaryAddress: mkAddr(2).Bytes()},
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AftermarketDeviceBeneficiaryAddress: mkAddr(2).Bytes()},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -581,7 +580,7 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, Opted: true},
+				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -772,7 +771,6 @@ type Device struct {
 	TokenID                             int
 	UserID                              string
 	VIN                                 string
-	Opted                               bool
 	IntsWithData                        []string
 	AMID                                int
 	AftermarketDeviceBeneficiaryAddress []byte
@@ -829,11 +827,6 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 			tk = &t
 		}
 
-		var t *timestamppb.Timestamp
-		if ud.Opted {
-			t = timestamppb.New(time.Now())
-		}
-
 		var owner []byte
 		for _, u := range d.users {
 			if u.ID == ud.UserID {
@@ -852,7 +845,6 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 		ud2 := &pb_devices.UserDevice{
 			Id:           ud.ID,
 			TokenId:      tk,
-			OptedInAt:    t,
 			Vin:          vin,
 			OwnerAddress: owner,
 		}
@@ -870,10 +862,4 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 	}
 
 	return nil, status.Error(codes.NotFound, "No user with that ID found.")
-}
-
-type FakeTransfer struct{}
-
-func (t *FakeTransfer) BaselineIssuance(_ context.Context, _ int) error {
-	return nil
 }
