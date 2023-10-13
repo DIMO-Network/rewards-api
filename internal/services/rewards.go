@@ -53,12 +53,6 @@ type DevicesClient interface {
 	GetUserDevice(ctx context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error)
 }
 
-type integrationPointsCalculator struct {
-	AutoPiID   string
-	TeslaID    string
-	SmartcarID string
-}
-
 func NewBaselineRewardService(
 	settings *config.Settings,
 	transferService *TransferService,

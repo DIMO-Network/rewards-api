@@ -131,7 +131,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 						DataThisWeek:         true,
 					}
 
-					if device.AftermarketDeviceTokenId != nil {
+					if device.AftermarketDevice.TokenId != 0 {
 						if otherChecklist {
 							uriAP.Points = 6000
 							eligibleThisWeek = true
@@ -198,7 +198,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 			stat := "NotApplicable"
 			if idToVendor[i.Id] == "AutoPi" {
-				if device.AftermarketDeviceTokenId != nil {
+				if device.AftermarketDevice.TokenId != 0 {
 					stat = "Paired"
 				} else {
 					stat = "Unpaired"

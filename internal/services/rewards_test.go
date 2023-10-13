@@ -982,9 +982,9 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 
 		if len(ud.AMBeneficiaryAddress) != 0 {
 			ud2.AftermarketDevice.Beneficiary = ud.AMBeneficiaryAddress
-			ud2.AftermarketDeviceBeneficiaryAddress = ud.AMBeneficiaryAddress
+			ud2.AftermarketDeviceBeneficiaryAddress = ud.AMBeneficiaryAddress //nolint:staticcheck
 		}
-		ud2.AftermarketDeviceTokenId = &ud2.AftermarketDevice.TokenId
+		ud2.AftermarketDeviceTokenId = &ud2.AftermarketDevice.TokenId //nolint:staticcheck
 
 		return ud2, nil
 	}
