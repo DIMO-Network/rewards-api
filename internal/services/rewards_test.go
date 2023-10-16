@@ -22,6 +22,7 @@ import (
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
+	"github.com/segmentio/ksuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -132,7 +133,7 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}, AMSerial: ksuid.New().String(), AMManufacturerTokenID: 122},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0},
@@ -151,7 +152,7 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), AMSerial: ksuid.New().String(), AMManufacturerTokenID: 122},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0},
@@ -170,7 +171,7 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMSerial: ksuid.New().String(), AMManufacturerTokenID: 137},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -189,7 +190,7 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), AMSerial: ksuid.New().String(), AMManufacturerTokenID: 137},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 22, DiscStreak: 2},
@@ -208,11 +209,26 @@ func TestStreak(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, AMSerial: ksuid.New().String(), AMManufacturerTokenID: 130},
 			},
 			Previous: []OldReward{},
 			New: []NewReward{
 				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 1, DiscStreak: 0, StreakPoints: 0, IntegrationPoints: 4000},
+			},
+			PrevVIN: []VIN{},
+			NewVIN:  []VIN{{VIN: mkVIN(1), FirstToken: 1}},
+		},
+		{
+			Name: "BrandNewMacaron",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{macaronIntegration}, AMSerial: ksuid.New().String(), AMManufacturerTokenID: 142},
+			},
+			Previous: []OldReward{},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 1, DiscStreak: 0, StreakPoints: 0, IntegrationPoints: 2000},
 			},
 			PrevVIN: []VIN{},
 			NewVIN:  []VIN{{VIN: mkVIN(1), FirstToken: 1}},
@@ -224,8 +240,8 @@ func TestStreak(t *testing.T) {
 				{ID: "User2", Address: mkAddr(2)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}},
-				{ID: mkID(2), TokenID: 2, UserID: "User2", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}, AMSerial: ksuid.New().String(), AMManufacturerTokenID: 130},
+				{ID: mkID(2), TokenID: 2, UserID: "User2", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, AMSerial: ksuid.New().String(), AMManufacturerTokenID: 130},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0},
@@ -370,7 +386,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AftermarketDeviceBeneficiaryAddress: mkAddr(2).Bytes()},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMBeneficiary: mkAddr(2).Bytes(), AMSerial: ksuid.New().String(), AMManufacturerTokenID: 142},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -390,7 +406,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMSerial: ksuid.New().String(), AMManufacturerTokenID: 142},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -410,7 +426,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AftermarketDeviceBeneficiaryAddress: mkAddr(1).Bytes()},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMBeneficiary: mkAddr(1).Bytes(), AMSerial: ksuid.New().String(), AMManufacturerTokenID: 142},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -560,7 +576,7 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AftermarketDeviceBeneficiaryAddress: mkAddr(2).Bytes()},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMBeneficiary: mkAddr(2).Bytes(), AMSerial: ksuid.New().String(), AMManufacturerTokenID: 142},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -580,7 +596,7 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, AMID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMSerial: ksuid.New().String(), AMManufacturerTokenID: 142},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -767,22 +783,26 @@ func GetDbConnection(ctx context.Context, t *testing.T, logger zerolog.Logger) (
 }
 
 type Device struct {
-	ID                                  string
-	TokenID                             int
-	UserID                              string
-	VIN                                 string
-	IntsWithData                        []string
-	AMID                                int
-	AftermarketDeviceBeneficiaryAddress []byte
+	ID                    string
+	TokenID               int
+	UserID                string
+	VIN                   string
+	IntsWithData          []string
+	AMSerial              string
+	AMManufacturerTokenID int
+	AMBeneficiary         []byte
 }
 
 type Views struct {
 	devices []Device
 }
 
-const autoPiIntegration = "2LFD6DXuGRdVucJO1a779kEUiYi"
-const teslaIntegration = "2LFQOgsYd5MEmRNBnsYXKp0QHC3"
-const smartcarIntegration = "2LFSA81Oo4agy0y4NvP7f6hTdgs"
+const (
+	autoPiIntegration   = "2LFD6DXuGRdVucJO1a779kEUiYi"
+	teslaIntegration    = "2LFQOgsYd5MEmRNBnsYXKp0QHC3"
+	smartcarIntegration = "2LFSA81Oo4agy0y4NvP7f6hTdgs"
+	macaronIntegration  = "2ULfuC8U9dOqRshZBAi0lMM1Rrx"
+)
 
 func (v Views) DescribeActiveDevices(_, _ time.Time) ([]*DeviceData, error) {
 	out := []*DeviceData{}
@@ -802,9 +822,10 @@ type FakeDefClient struct {
 
 func (d *FakeDefClient) GetIntegrations(_ context.Context, _ *emptypb.Empty, _ ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error) {
 	return &pb_defs.GetIntegrationResponse{Integrations: []*pb_defs.Integration{
-		{Id: autoPiIntegration, Vendor: "AutoPi"},
-		{Id: teslaIntegration, Vendor: "Tesla"},
-		{Id: smartcarIntegration, Vendor: "SmartCar"},
+		{Id: autoPiIntegration, Vendor: "AutoPi", ManufacturerTokenId: 137, Points: 6000},
+		{Id: teslaIntegration, Vendor: "Tesla", ManufacturerTokenId: 130, Points: 4000},
+		{Id: smartcarIntegration, Vendor: "SmartCar", ManufacturerTokenId: 122, Points: 1000},
+		{Id: macaronIntegration, Vendor: "Macaron", ManufacturerTokenId: 142, Points: 2000},
 	}}, nil
 }
 
@@ -847,15 +868,26 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 			TokenId:      tk,
 			Vin:          vin,
 			OwnerAddress: owner,
+			AftermarketDevice: &pb_devices.AftermarketDevice{
+				Serial:              ud.AMSerial,
+				UserId:              &ud.ID,
+				OwnerAddress:        owner,
+				TokenId:             *tk,
+				ManufacturerTokenId: uint64(ud.AMManufacturerTokenID),
+				Beneficiary:         owner,
+			},
 		}
 
-		if len(ud.AftermarketDeviceBeneficiaryAddress) != 0 {
-			ud2.AftermarketDeviceBeneficiaryAddress = ud.AftermarketDeviceBeneficiaryAddress
+		//nolint:staticcheck
+		if len(ud.AMBeneficiary) != 0 {
+			ud2.AftermarketDevice.Beneficiary = ud.AMBeneficiary
+			ud2.AftermarketDeviceBeneficiaryAddress = ud.AMBeneficiary
 		}
 
-		if ud.AMID != 0 {
-			u1 := uint64(ud.AMID)
-			ud2.AftermarketDeviceTokenId = &u1
+		if ud.AMManufacturerTokenID != 0 {
+			u1 := uint64(ud.AMManufacturerTokenID)
+			ud2.AftermarketDevice.TokenId = u1
+			ud2.AftermarketDeviceTokenId = &u1 //nolint:staticcheck
 		}
 
 		return ud2, nil

@@ -185,31 +185,31 @@ func (t *BaselineClient) assignPoints() error {
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
 
-		validIntegrations := utils.NewSet(deviceActivity.Integrations...) // Guaranteed to be non-empty at this point.
-		integrationPoints := 0
+		userIntegrations := utils.NewSet(deviceActivity.Integrations...) // Guaranteed to be non-empty at this point.
+		userIntegrationPts := 0
 
 		for _, integ := range integrations.Integrations {
-			if validIntegrations.Contains(integ.Id) {
+			if userIntegrations.Contains(integ.Id) {
 				if ud.AftermarketDevice.TokenId == 0 {
-					validIntegrations.Remove(integ.Id)
+					userIntegrations.Remove(integ.Id)
 				} else {
 					thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ud.AftermarketDevice.TokenId))
-					integrationPoints += int(integ.Points)
+					userIntegrationPts += int(integ.Points)
 
-					if len(ud.AftermarketDeviceBeneficiaryAddress) == 20 {
-						adBene := common.BytesToAddress(ud.AftermarketDeviceBeneficiaryAddress)
+					if len(ud.AftermarketDevice.Beneficiary) == 20 {
+						adBene := common.BytesToAddress(ud.AftermarketDevice.Beneficiary)
 						if vOwner != adBene {
-							logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), *ud.AftermarketDeviceTokenId)
+							logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), ud.AftermarketDevice.TokenId)
 							thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
 						}
 					} else {
-						logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", *ud.AftermarketDeviceTokenId)
+						logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", ud.AftermarketDevice.TokenId)
 					}
 				}
 			}
 		}
 
-		if validIntegrations.Len() == 0 || integrationPoints == 0 {
+		if userIntegrations.Len() == 0 || userIntegrationPts == 0 {
 			logger.Warn().Msg("Integrations sending signals did not pass on-chain checks.")
 			continue
 		}
@@ -221,8 +221,8 @@ func (t *BaselineClient) assignPoints() error {
 		}
 
 		// At this point we are certain that the owner should receive tokens.
-		thisWeek.IntegrationIds = validIntegrations.Slice()
-		thisWeek.IntegrationPoints = integrationPoints
+		thisWeek.IntegrationIds = userIntegrations.Slice()
+		thisWeek.IntegrationPoints = userIntegrationPts
 
 		// Streak rewards.
 		streakInput := StreakInput{
