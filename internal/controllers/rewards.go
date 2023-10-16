@@ -39,6 +39,11 @@ func getUserID(c *fiber.Ctx) string {
 	return userID
 }
 
+type vendorDesc struct {
+	ID     string
+	Points int
+}
+
 var opaqueInternalError = fiber.NewError(fiber.StatusInternalServerError, "Internal error.")
 
 // GetUserRewards godoc
@@ -87,10 +92,10 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
-	vendorToID := map[string]string{}
+	vendorToID := map[string]vendorDesc{}
 	idToVendor := map[string]string{}
 	for _, intDesc := range intDescs.Integrations {
-		vendorToID[intDesc.Vendor] = intDesc.Id
+		vendorToID[intDesc.Vendor] = vendorDesc{ID: intDesc.Id, Points: int(intDesc.Points)}
 		idToVendor[intDesc.Id] = intDesc.Vendor
 	}
 
@@ -122,9 +127,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					return opaqueInternalError
 				}
 
-				if slices.Contains(ints, vendorToID["AutoPi"]) {
+				if slices.Contains(ints, vendorToID["AutoPi"].ID) {
 					uriAP := UserResponseIntegration{
-						ID:                   vendorToID["AutoPi"],
+						ID:                   vendorToID["AutoPi"].ID,
 						Vendor:               "AutoPi",
 						OnChainPairingStatus: "Unpaired",
 						DataThisWeek:         true,
@@ -132,7 +137,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 					if device.AftermarketDevice.TokenId != 0 {
 						if otherChecklist {
-							uriAP.Points = 6000
+							uriAP.Points = vendorToID["AutoPi"].Points
 							eligibleThisWeek = true
 						}
 						uriAP.OnChainPairingStatus = "Paired"
@@ -140,50 +145,67 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 					outInts = append(outInts, uriAP)
 
-					if slices.Contains(ints, vendorToID["SmartCar"]) {
+					if slices.Contains(ints, vendorToID["SmartCar"].ID) {
 						uriSC := UserResponseIntegration{
-							ID:                   vendorToID["SmartCar"],
+							ID:                   vendorToID["SmartCar"].ID,
 							Vendor:               "SmartCar",
 							OnChainPairingStatus: "NotApplicable",
 							DataThisWeek:         true,
 						}
 
 						if otherChecklist {
-							uriSC.Points = 1000
+							uriSC.Points = vendorToID["SmartCar"].Points
 							eligibleThisWeek = true
 						}
 
 						outInts = append(outInts, uriSC)
 					}
-				} else if slices.Contains(ints, vendorToID["Tesla"]) {
+				} else if slices.Contains(ints, vendorToID["Tesla"].ID) {
 					uriTesla := UserResponseIntegration{
-						ID:                   vendorToID["Tesla"],
+						ID:                   vendorToID["Tesla"].ID,
 						Vendor:               "Tesla",
 						OnChainPairingStatus: "NotApplicable",
 						DataThisWeek:         true,
 					}
 
 					if otherChecklist {
-						uriTesla.Points = 4000
+						uriTesla.Points = vendorToID["Tesla"].Points
 						eligibleThisWeek = true
 					}
 
 					outInts = append(outInts, uriTesla)
-				} else if slices.Contains(ints, vendorToID["SmartCar"]) {
+				} else if slices.Contains(ints, vendorToID["SmartCar"].ID) {
 					eligibleThisWeek = true
 					uriSC := UserResponseIntegration{
-						ID:                   vendorToID["SmartCar"],
+						ID:                   vendorToID["SmartCar"].ID,
 						Vendor:               "SmartCar",
 						OnChainPairingStatus: "NotApplicable",
 						DataThisWeek:         true,
 					}
 
 					if otherChecklist {
-						uriSC.Points = 1000
+						uriSC.Points = vendorToID["SmartCar"].Points
 						eligibleThisWeek = true
 					}
 
 					outInts = append(outInts, uriSC)
+				} else if slices.Contains(ints, vendorToID["Macaron"].ID) {
+					uriAP := UserResponseIntegration{
+						ID:                   vendorToID["Macaron"].ID,
+						Vendor:               "Macaron",
+						OnChainPairingStatus: "Unpaired",
+						DataThisWeek:         true,
+					}
+
+					if device.AftermarketDevice.TokenId != 0 {
+						if otherChecklist {
+							uriAP.Points = vendorToID["Macaron"].Points
+							eligibleThisWeek = true
+						}
+						uriAP.OnChainPairingStatus = "Paired"
+					}
+
+					outInts = append(outInts, uriAP)
 				}
 			}
 		}
