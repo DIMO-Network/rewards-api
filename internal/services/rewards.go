@@ -193,18 +193,21 @@ func (t *BaselineClient) assignPoints() error {
 				if ud.AftermarketDevice.TokenId == 0 {
 					userIntegrations.Remove(integ.Id)
 				} else {
-					thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ud.AftermarketDevice.TokenId))
-					userIntegrationPts += int(integ.Points)
+					if ud.AftermarketDevice != nil {
+						thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ud.AftermarketDevice.TokenId))
+						userIntegrationPts += int(integ.Points)
 
-					if len(ud.AftermarketDevice.Beneficiary) == 20 {
-						adBene := common.BytesToAddress(ud.AftermarketDevice.Beneficiary)
-						if vOwner != adBene {
-							logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), ud.AftermarketDevice.TokenId)
-							thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
+						if len(ud.AftermarketDevice.Beneficiary) == 20 {
+							adBene := common.BytesToAddress(ud.AftermarketDevice.Beneficiary)
+							if vOwner != adBene {
+								logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), ud.AftermarketDevice.TokenId)
+								thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
+							}
+						} else {
+							logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", ud.AftermarketDevice.TokenId)
 						}
-					} else {
-						logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", ud.AftermarketDevice.TokenId)
 					}
+					// SyntheticDevice
 				}
 			}
 		}
