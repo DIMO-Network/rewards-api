@@ -239,7 +239,7 @@ func TestStreak(t *testing.T) {
 			NewVIN:  []VIN{},
 		},
 		{
-			Name: "MultipleHWIntegrations,CurrentAPConn",
+			Name: "Multiple HW Connections, paired on-chain is counted (autopi)",
 			Users: []User{
 				{ID: "User1", Address: mkAddr(1)},
 			},
@@ -258,7 +258,7 @@ func TestStreak(t *testing.T) {
 			NewVIN: []VIN{},
 		},
 		{
-			Name: "MultipleHWIntegrations,CurrentMacaronConn",
+			Name: "Multiple HW Connections, paired on-chain is counted (macaron)",
 			Users: []User{
 				{ID: "User1", Address: mkAddr(1)},
 			},
@@ -277,7 +277,7 @@ func TestStreak(t *testing.T) {
 			NewVIN: []VIN{},
 		},
 		{
-			Name: "MultipleSyntheticConns",
+			Name: "Multiple Synthetic Connections (Higher Earning is Counted)",
 			Users: []User{
 				{ID: "User1", Address: mkAddr(1)},
 			},
@@ -289,6 +289,44 @@ func TestStreak(t *testing.T) {
 			},
 			New: []NewReward{
 				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, IntegrationPoints: 4000},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN: []VIN{},
+		},
+		{
+			Name: "Combined HW and SW Connections, Macaron and Smartcar",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, macaronIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 142},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, IntegrationPoints: 3000},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN: []VIN{},
+		},
+		{
+			Name: "Combined HW and SW Connections, AutoPi and Smartcar",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, autoPiIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, IntegrationPoints: 7000},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
