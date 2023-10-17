@@ -32,3 +32,34 @@ func (s Set[A]) Slice() []A {
 func (s Set[A]) Len() int {
 	return len(s)
 }
+
+func (s Set[A]) Union(other Set[A]) Set[A] {
+	union := NewSet[A]()
+	for a := range s {
+		union.Add(a) // make copy of original set
+	}
+	for a := range other {
+		union.Add(a) // add elements from other set
+	}
+	return union
+}
+
+func (s Set[A]) Intersection(other Set[A]) Set[A] {
+	intersection := NewSet[A]()
+	for a := range s {
+		if other.Contains(a) {
+			intersection.Add(a)
+		}
+	}
+	return intersection
+}
+
+func (s Set[A]) Difference(other Set[A]) Set[A] {
+	difference := NewSet[A]()
+	for a := range s {
+		if !other.Contains(a) {
+			difference.Add(a)
+		}
+	}
+	return difference
+}

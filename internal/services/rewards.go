@@ -130,14 +130,21 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	// These describe the active integrations for each device active this week.
-	deviceActivityRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
+	allActiveDeviceRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
 		return err
 	}
 
-	integrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
+	integrationPointsByID := make(map[string]int)
+	var availableIntegrations utils.Set[string]
+	allIntegrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
+	}
+
+	for _, integ := range allIntegrations.Integrations {
+		integrationPointsByID[integ.Id] = int(integ.Points)
+		availableIntegrations.Add(integ.Id)
 	}
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.TransferService.db.DBS().Reader)
@@ -150,7 +157,7 @@ func (t *BaselineClient) assignPoints() error {
 		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
 
-	for _, deviceActivity := range deviceActivityRecords {
+	for _, deviceActivity := range allActiveDeviceRecords {
 		logger := t.Logger.With().Str("userDeviceId", deviceActivity.ID).Logger()
 
 		ud, err := t.DevicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: deviceActivity.ID})
@@ -188,28 +195,25 @@ func (t *BaselineClient) assignPoints() error {
 		userIntegrations := utils.NewSet(deviceActivity.Integrations...) // Guaranteed to be non-empty at this point.
 		userIntegrationPts := 0
 
-		for _, integ := range integrations.Integrations {
-			if userIntegrations.Contains(integ.Id) {
-				if ud.AftermarketDevice.TokenId == 0 {
-					userIntegrations.Remove(integ.Id)
-				} else {
-					if ud.AftermarketDevice != nil {
-						thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ud.AftermarketDevice.TokenId))
-						userIntegrationPts += int(integ.Points)
+		overlap := userIntegrations.Intersection(availableIntegrations).Slice() // will there ever be a scenario where overlap != userIntegrations
 
-						if len(ud.AftermarketDevice.Beneficiary) == 20 {
-							adBene := common.BytesToAddress(ud.AftermarketDevice.Beneficiary)
-							if vOwner != adBene {
-								logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), ud.AftermarketDevice.TokenId)
-								thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
-							}
-						} else {
-							logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", ud.AftermarketDevice.TokenId)
-						}
+		for _, integID := range overlap {
+			if ud.AftermarketDevice != nil {
+				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ud.AftermarketDevice.TokenId))
+				thisWeek.IntegrationPoints += integrationPointsByID[integID]
+				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integID)
+
+				if len(ud.AftermarketDevice.Beneficiary) == 20 {
+					adBene := common.BytesToAddress(ud.AftermarketDevice.Beneficiary)
+					if vOwner != adBene {
+						logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), ud.AftermarketDevice.TokenId)
+						thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
 					}
-					// SyntheticDevice
+				} else {
+					logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", ud.AftermarketDevice.TokenId)
 				}
 			}
+			// SyntheticDevice
 		}
 
 		if userIntegrations.Len() == 0 || userIntegrationPts == 0 {
@@ -222,10 +226,6 @@ func (t *BaselineClient) assignPoints() error {
 		} else if !vc.Expiration.AsTime().After(weekEnd) {
 			logger.Warn().Msgf("Earning vehicle's VIN credential expired on %s.", vc.Expiration.AsTime())
 		}
-
-		// At this point we are certain that the owner should receive tokens.
-		thisWeek.IntegrationIds = userIntegrations.Slice()
-		thisWeek.IntegrationPoints = userIntegrationPts
 
 		// Streak rewards.
 		streakInput := StreakInput{
