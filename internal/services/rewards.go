@@ -222,9 +222,9 @@ func (t *BaselineClient) assignPoints() error {
 			}
 
 			if len(ad.Beneficiary) == 20 {
-				bene := common.BytesToAddress(ud.AftermarketDevice.Beneficiary)
+				bene := common.BytesToAddress(ad.Beneficiary)
 				if vOwner != bene {
-					logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", bene.Hex(), ud.AftermarketDevice.TokenId)
+					logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", bene.Hex(), ad.TokenId)
 					thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(bene.Hex())
 				}
 			} else {
