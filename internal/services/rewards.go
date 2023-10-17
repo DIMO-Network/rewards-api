@@ -15,6 +15,7 @@ import (
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"
+	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -135,17 +136,25 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	integrationPointsByID := make(map[string]int)
-	var availableIntegrations utils.Set[string]
 	allIntegrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
 
-	for _, integ := range allIntegrations.Integrations {
-		integrationPointsByID[integ.Id] = int(integ.Points)
-		availableIntegrations.Add(integ.Id)
+	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
+	var swIntegsPointsDesc []*pb_defs.Integration
+
+	for _, integr := range allIntegrations.Integrations {
+		if integr.ManufacturerTokenId == 0 {
+			// Must be a software integration. Sort after this loop.
+			swIntegsPointsDesc = append(swIntegsPointsDesc, integr)
+		} else {
+			// Must be the integration associated with a manufacturer.
+			amMfrTokenToIntegration[integr.ManufacturerTokenId] = integr
+		}
 	}
+
+	slices.SortFunc(swIntegsPointsDesc, func(a, b *pb_defs.Integration) int { return int(b.Points - a.Points) })
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.TransferService.db.DBS().Reader)
 	if err != nil {
@@ -168,6 +177,8 @@ func (t *BaselineClient) assignPoints() error {
 			}
 			return err
 		}
+
+		integsSignalsThisWeek := utils.NewSet[string](deviceActivity.Integrations...)
 
 		logger = logger.With().Str("userId", ud.UserId).Logger()
 
@@ -192,31 +203,48 @@ func (t *BaselineClient) assignPoints() error {
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
 
-		userIntegrations := utils.NewSet(deviceActivity.Integrations...) // Guaranteed to be non-empty at this point.
-		userIntegrationPts := 0
-
-		overlap := userIntegrations.Intersection(availableIntegrations).Slice() // will there ever be a scenario where overlap != userIntegrations
-
-		for _, integID := range overlap {
-			if ud.AftermarketDevice != nil {
-				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ud.AftermarketDevice.TokenId))
-				thisWeek.IntegrationPoints += integrationPointsByID[integID]
-				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integID)
-
-				if len(ud.AftermarketDevice.Beneficiary) == 20 {
-					adBene := common.BytesToAddress(ud.AftermarketDevice.Beneficiary)
-					if vOwner != adBene {
-						logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), ud.AftermarketDevice.TokenId)
-						thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
-					}
-				} else {
-					logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", ud.AftermarketDevice.TokenId)
-				}
+		if ad := ud.AftermarketDevice; ad != nil {
+			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
+			// this week.
+			if ad.ManufacturerTokenId == 0 {
+				logger.Warn().Msgf("Aftermarket device %d does not have a manufacturer.", ad.TokenId)
+				continue
 			}
-			// SyntheticDevice
+
+			integr, ok := amMfrTokenToIntegration[ad.ManufacturerTokenId]
+			if !ok {
+				logger.Warn().Msgf("Aftermarket device manufacturer %d does not have an associated integration.", ad.ManufacturerTokenId)
+				continue
+			}
+
+			if !integsSignalsThisWeek.Contains(integr.Id) {
+				continue
+			}
+
+			if len(ad.Beneficiary) == 20 {
+				bene := common.BytesToAddress(ud.AftermarketDevice.Beneficiary)
+				if vOwner != bene {
+					logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", bene.Hex(), ud.AftermarketDevice.TokenId)
+					thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(bene.Hex())
+				}
+			} else {
+				logger.Warn().Msgf("Aftermarket device %d is not returning a beneficiary.", ad.TokenId)
+			}
+
+			thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ad.TokenId))
+			thisWeek.IntegrationPoints += int(integr.Points)
+			thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
 		}
 
-		if userIntegrations.Len() == 0 || userIntegrationPts == 0 {
+		for _, integr := range swIntegsPointsDesc {
+			if integsSignalsThisWeek.Contains(integr.Id) {
+				thisWeek.IntegrationPoints += int(integr.Points)
+				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
+				break
+			}
+		}
+
+		if len(thisWeek.IntegrationIds) == 0 {
 			logger.Warn().Msg("Integrations sending signals did not pass on-chain checks.")
 			continue
 		}
