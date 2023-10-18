@@ -15,7 +15,6 @@ import (
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"
-	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -142,19 +141,17 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
-	var swIntegsPointsDesc []*pb_defs.Integration
+	swIntegrsByID := make(map[string]*pb_defs.Integration)
 
 	for _, integr := range allIntegrations.Integrations {
 		if integr.ManufacturerTokenId == 0 {
 			// Must be a software integration. Sort after this loop.
-			swIntegsPointsDesc = append(swIntegsPointsDesc, integr)
+			swIntegrsByID[integr.Id] = integr
 		} else {
 			// Must be the integration associated with a manufacturer.
 			amMfrTokenToIntegration[integr.ManufacturerTokenId] = integr
 		}
 	}
-
-	slices.SortFunc(swIntegsPointsDesc, func(a, b *pb_defs.Integration) int { return int(b.Points - a.Points) })
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.TransferService.db.DBS().Reader)
 	if err != nil {
@@ -176,6 +173,11 @@ func (t *BaselineClient) assignPoints() error {
 				continue
 			}
 			return err
+		}
+
+		integsInDB := utils.NewSet[string]()
+		for _, integr := range ud.Integrations {
+			integsInDB.Add(integr.Id)
 		}
 
 		integsSignalsThisWeek := utils.NewSet[string](deviceActivity.Integrations...)
@@ -236,10 +238,12 @@ func (t *BaselineClient) assignPoints() error {
 			thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
 		}
 
-		for _, integr := range swIntegsPointsDesc {
-			if integsSignalsThisWeek.Contains(integr.Id) {
-				thisWeek.IntegrationPoints += int(integr.Points)
-				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
+		for _, vehIntegr := range ud.Integrations {
+			if integr, ok := swIntegrsByID[vehIntegr.Id]; ok {
+				if integsSignalsThisWeek.Contains(integr.Id) {
+					thisWeek.IntegrationPoints += int(integr.Points)
+					thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
+				}
 				break
 			}
 		}
