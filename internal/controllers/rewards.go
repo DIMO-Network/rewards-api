@@ -9,6 +9,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
 	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
@@ -17,7 +18,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -37,11 +37,6 @@ func getUserID(c *fiber.Ctx) string {
 	claims := token.Claims.(jwt.MapClaims)
 	userID := claims["sub"].(string)
 	return userID
-}
-
-type vendorDesc struct {
-	ID     string
-	Points int
 }
 
 var opaqueInternalError = fiber.NewError(fiber.StatusInternalServerError, "Internal error.")
@@ -87,16 +82,23 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return err
 	}
 
-	intDescs, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
+	allIntegrations, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
 	if err != nil {
 		return opaqueInternalError
 	}
 
-	vendorToID := map[string]vendorDesc{}
-	idToVendor := map[string]string{}
-	for _, intDesc := range intDescs.Integrations {
-		vendorToID[intDesc.Vendor] = vendorDesc{ID: intDesc.Id, Points: int(intDesc.Points)}
-		idToVendor[intDesc.Id] = intDesc.Vendor
+	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
+	var swIntegsPointsDesc []*pb_defs.Integration
+	idToInteg := map[string]*pb_defs.Integration{}
+	for _, intDesc := range allIntegrations.Integrations {
+		idToInteg[intDesc.Id] = intDesc
+		if intDesc.ManufacturerTokenId == 0 {
+			// Must be a software integration. Sort after this loop.
+			swIntegsPointsDesc = append(swIntegsPointsDesc, intDesc)
+		} else {
+			// Must be the integration associated with a manufacturer.
+			amMfrTokenToIntegration[intDesc.ManufacturerTokenId] = intDesc
+		}
 	}
 
 	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
@@ -122,119 +124,56 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		if seen {
 			maybeLastActive = &lastActive
 			if !lastActive.Before(weekStart) {
-				ints, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
+				deviceIntegs, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
 				if err != nil {
 					return opaqueInternalError
 				}
 
-				if slices.Contains(ints, vendorToID["AutoPi"].ID) {
-					uriAP := UserResponseIntegration{
-						ID:                   vendorToID["AutoPi"].ID,
-						Vendor:               "AutoPi",
-						OnChainPairingStatus: "Unpaired",
-						DataThisWeek:         true,
-					}
+				integSignalsThisWeek := utils.NewSet[string](deviceIntegs...)
 
-					if device.AftermarketDevice.TokenId != 0 {
-						if otherChecklist {
-							uriAP.Points = vendorToID["AutoPi"].Points
-							eligibleThisWeek = true
-						}
-						uriAP.OnChainPairingStatus = "Paired"
-					}
-
-					outInts = append(outInts, uriAP)
-
-					if slices.Contains(ints, vendorToID["SmartCar"].ID) {
-						uriSC := UserResponseIntegration{
-							ID:                   vendorToID["SmartCar"].ID,
-							Vendor:               "SmartCar",
-							OnChainPairingStatus: "NotApplicable",
-							DataThisWeek:         true,
-						}
-
-						if otherChecklist {
-							uriSC.Points = vendorToID["SmartCar"].Points
-							eligibleThisWeek = true
-						}
-
-						outInts = append(outInts, uriSC)
-					}
-				} else if slices.Contains(ints, vendorToID["Tesla"].ID) {
-					uriTesla := UserResponseIntegration{
-						ID:                   vendorToID["Tesla"].ID,
-						Vendor:               "Tesla",
+				for _, dInteg := range device.Integrations {
+					uri := UserResponseIntegration{
+						ID:                   dInteg.Id,
+						Vendor:               idToInteg[dInteg.Id].Vendor,
+						DataThisWeek:         false,
+						Points:               0,
 						OnChainPairingStatus: "NotApplicable",
-						DataThisWeek:         true,
 					}
 
-					if otherChecklist {
-						uriTesla.Points = vendorToID["Tesla"].Points
-						eligibleThisWeek = true
-					}
-
-					outInts = append(outInts, uriTesla)
-				} else if slices.Contains(ints, vendorToID["SmartCar"].ID) {
-					eligibleThisWeek = true
-					uriSC := UserResponseIntegration{
-						ID:                   vendorToID["SmartCar"].ID,
-						Vendor:               "SmartCar",
-						OnChainPairingStatus: "NotApplicable",
-						DataThisWeek:         true,
-					}
-
-					if otherChecklist {
-						uriSC.Points = vendorToID["SmartCar"].Points
-						eligibleThisWeek = true
-					}
-
-					outInts = append(outInts, uriSC)
-				} else if slices.Contains(ints, vendorToID["Macaron"].ID) {
-					uriAP := UserResponseIntegration{
-						ID:                   vendorToID["Macaron"].ID,
-						Vendor:               "Macaron",
-						OnChainPairingStatus: "Unpaired",
-						DataThisWeek:         true,
-					}
-
-					if device.AftermarketDevice.TokenId != 0 {
-						if otherChecklist {
-							uriAP.Points = vendorToID["Macaron"].Points
-							eligibleThisWeek = true
+					if ad := device.AftermarketDevice; ad != nil {
+						uri.OnChainPairingStatus = "Unpaired"
+						if device.AftermarketDevice.TokenId != 0 {
+							uri.OnChainPairingStatus = "Paired"
 						}
-						uriAP.OnChainPairingStatus = "Paired"
-					}
 
-					outInts = append(outInts, uriAP)
+						if integSignalsThisWeek.Contains(dInteg.Id) {
+							uri.DataThisWeek = true
+
+							if ad.ManufacturerTokenId != 0 {
+								integr, ok := amMfrTokenToIntegration[ad.ManufacturerTokenId]
+								if ok {
+									if otherChecklist {
+										uri.Points = int(integr.Points)
+										eligibleThisWeek = true
+									}
+								}
+							}
+
+						}
+					} else {
+						for _, swInteg := range swIntegsPointsDesc {
+							if integSignalsThisWeek.Contains(swInteg.Id) {
+								uri.DataThisWeek = true
+								if otherChecklist {
+									uri.Points = int(swInteg.Points)
+									eligibleThisWeek = true
+								}
+							}
+						}
+					}
+					outInts = append(outInts, uri)
 				}
 			}
-		}
-
-		for _, i := range device.Integrations {
-			if slices.ContainsFunc(outInts, func(uri UserResponseIntegration) bool {
-				return uri.ID == i.Id
-			}) {
-				continue
-			}
-
-			stat := "NotApplicable"
-			if idToVendor[i.Id] == "AutoPi" {
-				if device.AftermarketDevice.TokenId != 0 {
-					stat = "Paired"
-				} else {
-					stat = "Unpaired"
-				}
-			}
-
-			into := UserResponseIntegration{
-				ID:                   i.Id,
-				Vendor:               idToVendor[i.Id],
-				DataThisWeek:         false,
-				Points:               0,
-				OnChainPairingStatus: stat,
-			}
-
-			outInts = append(outInts, into)
 		}
 
 		rewards, err := models.Rewards(
