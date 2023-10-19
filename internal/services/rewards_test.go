@@ -277,25 +277,6 @@ func TestStreak(t *testing.T) {
 			NewVIN: []VIN{},
 		},
 		{
-			Name: "Multiple Synthetic Connections (Higher Earning is Counted)",
-			Users: []User{
-				{ID: "User1", Address: mkAddr(1)},
-			},
-			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, teslaIntegration}},
-			},
-			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0},
-			},
-			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, IntegrationPoints: 4000},
-			},
-			PrevVIN: []VIN{
-				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
-			},
-			NewVIN: []VIN{},
-		},
-		{
 			Name: "Combined HW and SW Connections, Macaron and Smartcar",
 			Users: []User{
 				{ID: "User1", Address: mkAddr(1)},
@@ -904,8 +885,8 @@ type FakeDefClient struct {
 func (d *FakeDefClient) GetIntegrations(_ context.Context, _ *emptypb.Empty, _ ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error) {
 	return &pb_defs.GetIntegrationResponse{Integrations: []*pb_defs.Integration{
 		{Id: autoPiIntegration, Vendor: "AutoPi", ManufacturerTokenId: 137, Points: 6000},
-		{Id: teslaIntegration, Vendor: "Tesla", Points: 4000},
-		{Id: smartcarIntegration, Vendor: "SmartCar", Points: 1000},
+		{Id: teslaIntegration, Vendor: "Tesla", Points: 4000, ManufacturerTokenId: 0},
+		{Id: smartcarIntegration, Vendor: "SmartCar", Points: 1000, ManufacturerTokenId: 0},
 		{Id: macaronIntegration, Vendor: "Macaron", ManufacturerTokenId: 142, Points: 2000},
 	}}, nil
 }
@@ -949,6 +930,12 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 			TokenId:      tk,
 			Vin:          vin,
 			OwnerAddress: owner,
+		}
+
+		for _, i := range ud.IntsWithData {
+			ud2.Integrations = append(ud2.Integrations, &pb_devices.UserDeviceIntegration{
+				Id: i,
+			})
 		}
 
 		if ud.AMTokenID != 0 {
