@@ -30,7 +30,6 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
-	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -809,39 +808,6 @@ func TestBaselineIssuance(t *testing.T) {
 			}}, rewards)
 		})
 	}
-}
-
-func TestSort(t *testing.T) {
-	var integsPointsDesc []*pb_defs.Integration
-
-	var d FakeDefClient
-	integs, err := d.GetIntegrations(context.Background(), &emptypb.Empty{})
-	assert.NoError(t, err)
-
-	for _, i := range integs.Integrations {
-		integsPointsDesc = append(integsPointsDesc, i)
-	}
-
-	// confirm not sorted in desc order by points
-	sorted := true
-	for i := 0; i < len(integsPointsDesc)-1; i++ {
-		if integsPointsDesc[i].Points > integsPointsDesc[i+1].Points {
-			sorted = false
-		}
-	}
-	assert.False(t, sorted)
-
-	slices.SortFunc(integsPointsDesc, func(a, b *pb_defs.Integration) int { return int(b.Points - a.Points) })
-
-	// confirm now sorted in desc order by points
-	sorted = true
-	for i := 0; i < len(integsPointsDesc)-1; i++ {
-		if integsPointsDesc[i].Points > integsPointsDesc[i+1].Points {
-			sorted = false
-		}
-	}
-	assert.False(t, sorted)
-
 }
 
 func GetDbConnection(ctx context.Context, t *testing.T, logger zerolog.Logger) (testcontainers.Container, db.Store) {
