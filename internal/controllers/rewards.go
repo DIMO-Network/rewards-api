@@ -70,7 +70,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			if err != nil {
 				return err
 			}
-			addrBalance = new(big.Int).Add(addrBalance, val)
+			addrBalance.Add(addrBalance, val)
 		}
 	}
 

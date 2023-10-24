@@ -1,4 +1,4 @@
 tokens:
-  - chainId: 80001
+  - chainId: 31337
     address: '0x80ee7ec4493a1d7975ab900f94db25ba7c688201'
     rpcUrl: http://ganache:8545

@@ -90,7 +90,7 @@ func main() {
 
 		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
+			logger.Fatal().Err(err).Msg("Failed to create users API client.")
 		}
 		defer usersConn.Close()
 
@@ -349,7 +349,7 @@ func main() {
 
 		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
+			logger.Fatal().Err(err).Msg("Failed to create users API client.")
 		}
 		defer usersConn.Close()
 
