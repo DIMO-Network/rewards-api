@@ -219,23 +219,21 @@ func (t *BaselineClient) assignPoints() error {
 				continue
 			}
 
-			if !integsSignalsThisWeek.Contains(integr.Id) {
-				continue
-			}
-
-			if len(ad.Beneficiary) == 20 {
-				bene := common.BytesToAddress(ad.Beneficiary)
-				if vOwner != bene {
-					logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", bene.Hex(), ad.TokenId)
-					thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(bene.Hex())
+			if integsSignalsThisWeek.Contains(integr.Id) {
+				if len(ad.Beneficiary) == 20 {
+					bene := common.BytesToAddress(ad.Beneficiary)
+					if vOwner != bene {
+						logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", bene.Hex(), ad.TokenId)
+						thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(bene.Hex())
+					}
+				} else {
+					logger.Warn().Msgf("Aftermarket device %d is not returning a beneficiary.", ad.TokenId)
 				}
-			} else {
-				logger.Warn().Msgf("Aftermarket device %d is not returning a beneficiary.", ad.TokenId)
-			}
 
-			thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ad.TokenId))
-			thisWeek.IntegrationPoints += int(integr.Points)
-			thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
+				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ad.TokenId))
+				thisWeek.IntegrationPoints += int(integr.Points)
+				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
+			}
 		}
 
 		for _, vehIntegr := range ud.Integrations {
