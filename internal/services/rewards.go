@@ -15,7 +15,6 @@ import (
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"
-	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -53,12 +52,6 @@ type IntegrationsGetter interface {
 
 type DevicesClient interface {
 	GetUserDevice(ctx context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error)
-}
-
-type integrationPointsCalculator struct {
-	AutoPiID   string
-	TeslaID    string
-	SmartcarID string
 }
 
 func NewBaselineRewardService(
@@ -106,40 +99,6 @@ func NumToWeekEnd(n int) time.Time {
 	return startTime.Add(time.Duration(n+1) * weekDuration)
 }
 
-func (i *integrationPointsCalculator) Calculate(integrationIDs []string) int {
-	// Only blessed combination.
-	if slices.Contains(integrationIDs, i.AutoPiID) {
-		if slices.Contains(integrationIDs, i.SmartcarID) {
-			return 7000
-		}
-		return 6000
-	} else if slices.Contains(integrationIDs, i.TeslaID) {
-		return 4000
-	} else if slices.Contains(integrationIDs, i.SmartcarID) {
-		return 1000
-	}
-	return 0
-}
-
-func (t *BaselineClient) createIntegrationPointsCalculator(resp *pb_defs.GetIntegrationResponse) *integrationPointsCalculator {
-	var calc integrationPointsCalculator
-
-	for _, integration := range resp.Integrations {
-		switch integration.Vendor {
-		case "AutoPi":
-			calc.AutoPiID = integration.Id
-		case "Tesla":
-			calc.TeslaID = integration.Id
-		case "SmartCar":
-			calc.SmartcarID = integration.Id
-		default:
-			t.Logger.Warn().Msgf("Unrecognized integration %s with vendor %s", integration.Id, integration.Vendor)
-		}
-	}
-
-	return &calc
-}
-
 func (t *BaselineClient) assignPoints() error {
 	issuanceWeek := t.Week
 	ctx := context.Background()
@@ -171,17 +130,28 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	// These describe the active integrations for each device active this week.
-	deviceActivityRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
+	allActiveDeviceRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
 		return err
 	}
 
-	integs, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
+	allIntegrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
 
-	integCalc := t.createIntegrationPointsCalculator(integs)
+	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
+	swIntegrsByID := make(map[string]*pb_defs.Integration)
+
+	for _, integr := range allIntegrations.Integrations {
+		if integr.ManufacturerTokenId == 0 {
+			// Must be a software integration. Sort after this loop.
+			swIntegrsByID[integr.Id] = integr
+		} else {
+			// Must be the integration associated with a manufacturer.
+			amMfrTokenToIntegration[integr.ManufacturerTokenId] = integr
+		}
+	}
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.TransferService.db.DBS().Reader)
 	if err != nil {
@@ -193,7 +163,7 @@ func (t *BaselineClient) assignPoints() error {
 		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
 
-	for _, deviceActivity := range deviceActivityRecords {
+	for _, deviceActivity := range allActiveDeviceRecords {
 		logger := t.Logger.With().Str("userDeviceId", deviceActivity.ID).Logger()
 
 		ud, err := t.DevicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: deviceActivity.ID})
@@ -204,6 +174,13 @@ func (t *BaselineClient) assignPoints() error {
 			}
 			return err
 		}
+
+		integsInDB := utils.NewSet[string]()
+		for _, integr := range ud.Integrations {
+			integsInDB.Add(integr.Id)
+		}
+
+		integsSignalsThisWeek := utils.NewSet[string](deviceActivity.Integrations...)
 
 		logger = logger.With().Str("userId", ud.UserId).Logger()
 
@@ -228,27 +205,48 @@ func (t *BaselineClient) assignPoints() error {
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
 
-		validIntegrations := utils.NewSet(deviceActivity.Integrations...) // Guaranteed to be non-empty at this point.
+		if ad := ud.AftermarketDevice; ad != nil {
+			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
+			// this week.
+			if ad.ManufacturerTokenId == 0 {
+				logger.Warn().Msgf("Aftermarket device %d does not have a manufacturer.", ad.TokenId)
+				continue
+			}
 
-		if validIntegrations.Contains(integCalc.AutoPiID) {
-			if ud.AftermarketDeviceTokenId == nil {
-				validIntegrations.Remove(integCalc.AutoPiID)
-			} else {
-				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.AftermarketDeviceTokenId))
+			integr, ok := amMfrTokenToIntegration[ad.ManufacturerTokenId]
+			if !ok {
+				logger.Warn().Msgf("Aftermarket device manufacturer %d does not have an associated integration.", ad.ManufacturerTokenId)
+				continue
+			}
 
-				if len(ud.AftermarketDeviceBeneficiaryAddress) == 20 {
-					adBene := common.BytesToAddress(ud.AftermarketDeviceBeneficiaryAddress)
-					if vOwner != adBene {
-						logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", adBene.Hex(), *ud.AftermarketDeviceTokenId)
-						thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(adBene.Hex())
+			if integsSignalsThisWeek.Contains(integr.Id) {
+				if len(ad.Beneficiary) == 20 {
+					bene := common.BytesToAddress(ad.Beneficiary)
+					if vOwner != bene {
+						logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", bene.Hex(), ad.TokenId)
+						thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(bene.Hex())
 					}
 				} else {
-					logger.Warn().Msgf("Aftermarket device %d is minted but not returning a beneficiary.", *ud.AftermarketDeviceTokenId)
+					logger.Warn().Msgf("Aftermarket device %d is not returning a beneficiary.", ad.TokenId)
 				}
+
+				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ad.TokenId))
+				thisWeek.IntegrationPoints += int(integr.Points)
+				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
 			}
 		}
 
-		if validIntegrations.Len() == 0 {
+		for _, vehIntegr := range ud.Integrations {
+			if integr, ok := swIntegrsByID[vehIntegr.Id]; ok {
+				if integsSignalsThisWeek.Contains(integr.Id) {
+					thisWeek.IntegrationPoints += int(integr.Points)
+					thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
+				}
+				break
+			}
+		}
+
+		if len(thisWeek.IntegrationIds) == 0 {
 			logger.Warn().Msg("Integrations sending signals did not pass on-chain checks.")
 			continue
 		}
@@ -258,10 +256,6 @@ func (t *BaselineClient) assignPoints() error {
 		} else if !vc.Expiration.AsTime().After(weekEnd) {
 			logger.Warn().Msgf("Earning vehicle's VIN credential expired on %s.", vc.Expiration.AsTime())
 		}
-
-		// At this point we are certain that the owner should receive tokens.
-		thisWeek.IntegrationIds = validIntegrations.Slice()
-		thisWeek.IntegrationPoints = integCalc.Calculate(validIntegrations.Slice())
 
 		// Streak rewards.
 		streakInput := StreakInput{
