@@ -236,6 +236,8 @@ func (t *BaselineClient) assignPoints() error {
 			}
 		}
 
+		// Check software integrations.
+		// This section will be replaced by a synthetic device check.
 		for _, vehIntegr := range ud.Integrations {
 			if integr, ok := swIntegrsByID[vehIntegr.Id]; ok {
 				if integsSignalsThisWeek.Contains(integr.Id) {
@@ -247,14 +249,14 @@ func (t *BaselineClient) assignPoints() error {
 		}
 
 		if len(thisWeek.IntegrationIds) == 0 {
-			logger.Warn().Msg("Integrations sending signals did not pass on-chain checks.")
+			logger.Warn().Msg("All integrations sending signals failed on-chain checks.")
 			continue
 		}
 
 		if vc := ud.LatestVinCredential; vc == nil {
-			logger.Warn().Msg("Earning vehicle has never had a VIN credential.")
+			logger.Debug().Msg("Earning vehicle has never had a VIN credential.")
 		} else if !vc.Expiration.AsTime().After(weekEnd) {
-			logger.Warn().Msgf("Earning vehicle's VIN credential expired on %s.", vc.Expiration.AsTime())
+			logger.Debug().Msgf("Earning vehicle's VIN credential expired on %s.", vc.Expiration.AsTime())
 		}
 
 		// Streak rewards.
