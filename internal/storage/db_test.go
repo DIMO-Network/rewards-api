@@ -23,7 +23,7 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
 	defer func() {
-		cont.Terminate(ctx)
+		_ = cont.Terminate(ctx)
 	}()
 
 	userDeviceID1 := ksuid.New().String()
@@ -53,10 +53,8 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 		IntegrationPoints: 4000,
 	}
 
-	err = reward1.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer())
-	require.NoError(t, err)
-	err = reward2.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer())
-	require.NoError(t, err)
+	require.NoError(t, reward1.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
+	require.NoError(t, reward2.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
 
 	db := DBStorage{DBS: conn}
 	err = db.AssignTokens(context.TODO(), 80, 40)
@@ -66,8 +64,8 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 
 	fmt.Println(r)
 
-	reward1.Reload(context.TODO(), conn.DBS().Reader)
-	reward2.Reload(context.TODO(), conn.DBS().Reader)
+	require.NoError(t, reward1.Reload(context.TODO(), conn.DBS().Reader))
+	require.NoError(t, reward2.Reload(context.TODO(), conn.DBS().Reader))
 
 	expect1, _ := new(big.Int).SetString("368333333333333333333333", 10)
 	expect2, _ := new(big.Int).SetString("736666666666666666666666", 10)
@@ -83,7 +81,7 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
 	defer func() {
-		cont.Terminate(ctx)
+		_ = cont.Terminate(ctx)
 	}()
 
 	userDeviceID1 := ksuid.New().String()
@@ -113,21 +111,15 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 		IntegrationPoints: 4000,
 	}
 
-	err = reward1.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer())
-	require.NoError(t, err)
-	err = reward2.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer())
-	require.NoError(t, err)
+	require.NoError(t, reward1.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
+	require.NoError(t, reward2.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
 
 	db := DBStorage{DBS: conn}
 	err = db.AssignTokens(context.TODO(), 92, 40)
 	require.NoError(t, err)
 
-	r, _ := models.Rewards().All(context.TODO(), conn.DBS().Reader)
-
-	fmt.Println(r)
-
-	reward1.Reload(context.TODO(), conn.DBS().Reader)
-	reward2.Reload(context.TODO(), conn.DBS().Reader)
+	require.NoError(t, reward1.Reload(context.TODO(), conn.DBS().Reader))
+	require.NoError(t, reward2.Reload(context.TODO(), conn.DBS().Reader))
 
 	expect1, _ := new(big.Int).SetString("313083333333333333333333", 10)
 	expect2, _ := new(big.Int).SetString("626166666666666666666666", 10)
