@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -25,21 +24,19 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
-var baseWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
-
 var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
 
 var weekDuration = 7 * 24 * time.Hour
 
 type BaselineClient struct {
-	TransferService *TransferService
-	DataService     DeviceActivityClient
-	DevicesClient   DevicesClient
-	DefsClient      IntegrationsGetter
-	ContractAddress common.Address
-	Week            int
-	Logger          *zerolog.Logger
+	TransferService    *TransferService
+	DataService        DeviceActivityClient
+	DevicesClient      DevicesClient
+	DefsClient         IntegrationsGetter
+	ContractAddress    common.Address
+	Week               int
+	Logger             *zerolog.Logger
+	FirstAutomatedWeek int
 }
 
 type DeviceActivityClient interface {
@@ -64,13 +61,14 @@ func NewBaselineRewardService(
 	logger *zerolog.Logger,
 ) *BaselineClient {
 	return &BaselineClient{
-		TransferService: transferService,
-		DataService:     dataService,
-		DevicesClient:   devicesClient,
-		DefsClient:      defsClient,
-		ContractAddress: common.HexToAddress(settings.IssuanceContractAddress),
-		Week:            week,
-		Logger:          logger,
+		TransferService:    transferService,
+		DataService:        dataService,
+		DevicesClient:      devicesClient,
+		DefsClient:         defsClient,
+		ContractAddress:    common.HexToAddress(settings.IssuanceContractAddress),
+		Week:               week,
+		Logger:             logger,
+		FirstAutomatedWeek: settings.FirstAutomatedWeek,
 	}
 }
 
@@ -320,8 +318,9 @@ func (t *BaselineClient) assignPoints() error {
 }
 
 func (t *BaselineClient) calculateTokens() error {
+	t.Logger.Info().Msgf("Calculating tokens. Year is %d.", (t.Week-t.FirstAutomatedWeek)/52)
 	st := storage.DBStorage{DBS: t.TransferService.db}
-	return st.AssignTokens(context.TODO(), t.Week, baseWeeklyTokens)
+	return st.AssignTokens(context.TODO(), t.Week, t.FirstAutomatedWeek)
 }
 
 func (t *BaselineClient) BaselineIssuance() error {

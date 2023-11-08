@@ -3,6 +3,7 @@ module github.com/DIMO-Network/rewards-api
 go 1.19
 
 require (
+	github.com/DIMO-Network/device-definitions-api v1.0.24-0.20231013155700-5e231e00fc4c
 	github.com/DIMO-Network/devices-api v1.23.1
 	github.com/DIMO-Network/shared v0.10.4
 	github.com/DIMO-Network/users-api v0.6.3
@@ -38,7 +39,6 @@ require (
 require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
-	github.com/DIMO-Network/device-definitions-api v1.0.24-0.20231013155700-5e231e00fc4c // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.11.0 // indirect
