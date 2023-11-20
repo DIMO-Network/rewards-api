@@ -13,20 +13,16 @@ import (
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
-	"github.com/DIMO-Network/rewards-api/internal/database"
+	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	"github.com/DIMO-Network/shared/db"
 	"github.com/Shopify/sarama/mocks"
-	"github.com/docker/go-connections/nat"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
@@ -120,7 +116,7 @@ func TestStreak(t *testing.T) {
 
 	logger := zerolog.Nop()
 
-	cont, conn := GetDbConnection(ctx, t, logger)
+	cont, conn := utils.GetDbConnection(ctx, t, logger)
 	defer func() {
 		err := cont.Terminate(ctx)
 		assert.NoError(t, err)
@@ -453,7 +449,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 
 	logger := zerolog.Nop()
 
-	cont, conn := GetDbConnection(ctx, t, logger)
+	cont, conn := utils.GetDbConnection(ctx, t, logger)
 	defer func() {
 		err := cont.Terminate(ctx)
 		assert.NoError(t, err)
@@ -643,7 +639,7 @@ func TestBaselineIssuance(t *testing.T) {
 
 	logger := zerolog.Nop()
 
-	cont, conn := GetDbConnection(ctx, t, logger)
+	cont, conn := utils.GetDbConnection(ctx, t, logger)
 	defer func() {
 		err := cont.Terminate(ctx)
 		assert.NoError(t, err)
@@ -808,58 +804,6 @@ func TestBaselineIssuance(t *testing.T) {
 			}}, rewards)
 		})
 	}
-}
-
-func GetDbConnection(ctx context.Context, t *testing.T, logger zerolog.Logger) (testcontainers.Container, db.Store) {
-	port := 5432
-	nport := fmt.Sprintf("%d/tcp", port)
-
-	req := testcontainers.ContainerRequest{
-		Image:        "postgres:12.11-alpine",
-		ExposedPorts: []string{nport},
-		AutoRemove:   true,
-		Env: map[string]string{
-			"POSTGRES_DB":       "rewards_api",
-			"POSTGRES_PASSWORD": "postgres",
-		},
-		WaitingFor: wait.ForListeningPort(nat.Port(nport)),
-	}
-	cont, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	host, err := cont.Host(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	mport, err := cont.MappedPort(ctx, nat.Port(nport))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dbset := db.Settings{
-		User:               "postgres",
-		Password:           "postgres",
-		Port:               mport.Port(),
-		Host:               host,
-		Name:               "rewards_api",
-		MaxOpenConnections: 10,
-		MaxIdleConnections: 10,
-	}
-
-	if err := database.MigrateDatabase(logger, &dbset, "", "../../migrations"); err != nil {
-		t.Fatal(err)
-	}
-
-	conn := db.NewDbConnectionForTest(ctx, &dbset, true)
-	conn.WaitForDB(logger)
-
-	return cont, conn
 }
 
 type Device struct {
