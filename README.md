@@ -51,3 +51,15 @@ sqlboiler psql --no-tests --wipe
 ```
 swag init -g cmd/rewards-api/main.go --parseDependency --parseInternal --generatedTime true --parseDepth 2
 ```
+
+### Simulating a production run
+
+1. Get production values for the Elastic instance to place in `ELASTIC_SEARCH_ANALYTICS_HOST`, `ELASTIC_SEARCH_ANALYTICS_USERNAME`, and `ELASTIC_SEARCH_ANALYTICS_PASSWORD` in `settings.yaml`. You will need to be on VPN for this to work.
+2. Make sure `DEVICE_DATA_INDEX_NAME` is appropriately set to, e.g., `device-status-prod-*`.
+3. Set `DEFINITIONS_API_GRPC_ADDR` and `DEVICES_API_GRPC_ADDR` to local ports. For the sake of an example, let's say these are `localhost:8086` and `localhost:8087`, respectively.
+4. Port-forward these two services through. In our example:
+   ```sh
+   kubectl port-forward -n prod services/device-definitions-api-prod 8086:8086
+   kubectl port-forward -n prod services/devices-api-prod 8087:8086
+   ```
+5. Run the job with, e.g., `go run ./cmd/rewards-api calculate 93`
