@@ -806,6 +806,139 @@ func TestBaselineIssuance(t *testing.T) {
 	}
 }
 
+func TestSyntheticDeviceIssuance(t *testing.T) {
+	ctx := context.Background()
+
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings.TransferBatchSize = 2
+
+	logger := zerolog.Nop()
+
+	cont, conn := utils.GetDbConnection(ctx, t, logger)
+	defer func() {
+		err := cont.Terminate(ctx)
+		assert.NoError(t, err)
+	}()
+
+	scens := []Scenario{
+		{
+			Name: "AutoPiJoinLevel1",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, Beneficiary: mkAddr(2).Bytes(), SDTokenID: 11, SDIntegrationID: 2}},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, IntegrationPoints: 6000, RewardsReceiverEthereumAddress: mkAddr(2)},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN:      []VIN{},
+			Description: "Should transfer to beneficiary set on the device",
+		},
+	}
+
+	for _, scen := range scens {
+		t.Run(scen.Name, func(t *testing.T) {
+			_, err = models.Rewards().DeleteAll(ctx, conn.DBS().Writer)
+			assert.NoError(t, err)
+
+			_, err := models.Vins().DeleteAll(ctx, conn.DBS().Writer)
+			assert.NoError(t, err)
+
+			_, err = models.IssuanceWeeks().DeleteAll(ctx, conn.DBS().Writer)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			lastWk := models.IssuanceWeek{ID: 0, JobStatus: models.IssuanceWeeksJobStatusFinished}
+			err = lastWk.Insert(ctx, conn.DBS().Writer, boil.Infer())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, lst := range scen.Previous {
+
+				wk := models.IssuanceWeek{
+					ID:        lst.Week,
+					JobStatus: models.IssuanceWeeksJobStatusFinished,
+				}
+
+				err := wk.Upsert(ctx, conn.DBS().Writer, false, []string{models.IssuanceWeekColumns.ID}, boil.Infer(), boil.Infer())
+				assert.NoError(t, err)
+
+				rw := models.Reward{
+					IssuanceWeekID:      lst.Week,
+					UserDeviceID:        lst.DeviceID,
+					ConnectionStreak:    lst.ConnStreak,
+					DisconnectionStreak: lst.DiscStreak,
+				}
+				err = rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			for _, v := range scen.PrevVIN {
+				vw := models.Vin{
+					Vin:                 v.VIN,
+					FirstEarningWeek:    v.FirstWeek,
+					FirstEarningTokenID: types.NewDecimal(decimal.New(int64(v.FirstToken), 0)),
+				}
+
+				err := vw.Insert(ctx, conn.DBS().Writer.DB, boil.Infer())
+				assert.NoError(t, err)
+			}
+
+			config := mocks.NewTestConfig()
+			config.Producer.Return.Successes = true
+			config.Producer.Return.Errors = true
+			producer := mocks.NewSyncProducer(t, config)
+
+			var out []shared.CloudEvent[transferData]
+
+			checker := func(b2 []byte) error {
+				var o shared.CloudEvent[transferData]
+				err := json.Unmarshal(b2, &o)
+				require.NoError(t, err)
+				out = append(out, o)
+				return nil
+			}
+			producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
+
+			transferService := NewTokenTransferService(&settings, producer, conn)
+
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
+
+			err = rwBonusService.BaselineIssuance()
+			assert.NoError(t, err)
+
+			producer.Close()
+
+			rewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, rw := range rewards {
+				assert.Equal(t, 11, rw.SyntheticDeviceID.Int)
+
+				for _, id := range rw.IntegrationIds {
+					assert.Equal(t, id, id)
+				}
+				assert.Equal(t, rw.IntegrationPoints, 8000)
+			}
+		})
+	}
+}
+
 type Device struct {
 	ID                  string
 	TokenID             int
@@ -816,6 +949,13 @@ type Device struct {
 	AMSerial            string
 	ManufacturerTokenID int
 	Beneficiary         []byte
+	SDTokenID           uint64
+	SDIntegrationID     uint64
+}
+
+type SyntheticDevice struct {
+	TokenID            uint64
+	IntegrationTokenId uint64
 }
 
 type Views struct {
@@ -847,10 +987,10 @@ type FakeDefClient struct {
 
 func (d *FakeDefClient) GetIntegrations(_ context.Context, _ *emptypb.Empty, _ ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error) {
 	return &pb_defs.GetIntegrationResponse{Integrations: []*pb_defs.Integration{
-		{Id: autoPiIntegration, Vendor: "AutoPi", ManufacturerTokenId: 137, Points: 6000},
-		{Id: teslaIntegration, Vendor: "Tesla", Points: 4000, ManufacturerTokenId: 0},
-		{Id: smartcarIntegration, Vendor: "SmartCar", Points: 1000, ManufacturerTokenId: 0},
-		{Id: macaronIntegration, Vendor: "Macaron", ManufacturerTokenId: 142, Points: 2000},
+		{Id: autoPiIntegration, Vendor: "AutoPi", ManufacturerTokenId: 137, Points: 6000, TokenId: 1},
+		{Id: teslaIntegration, Vendor: "Tesla", Points: 4000, ManufacturerTokenId: 0, TokenId: 2},
+		{Id: smartcarIntegration, Vendor: "SmartCar", Points: 1000, ManufacturerTokenId: 0, TokenId: 3},
+		{Id: macaronIntegration, Vendor: "Macaron", ManufacturerTokenId: 142, Points: 2000, TokenId: 4},
 	}}, nil
 }
 
@@ -916,6 +1056,13 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 			}
 
 			ud2.AftermarketDeviceTokenId = &ud2.AftermarketDevice.TokenId //nolint:staticcheck
+		}
+
+		if ud.SDTokenID != 0 && ud.SDIntegrationID != 0 {
+			ud2.SyntheticDevice = &pb_devices.SyntheticDevice{
+				TokenId:            ud.SDTokenID,
+				IntegrationTokenId: ud.SDIntegrationID,
+			}
 		}
 
 		return ud2, nil

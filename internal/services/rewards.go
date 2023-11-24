@@ -140,11 +140,13 @@ func (t *BaselineClient) assignPoints() error {
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
 	swIntegrsByID := make(map[string]*pb_defs.Integration)
+	swIntegrsByTokenID := make(map[uint64]*pb_defs.Integration)
 
 	for _, integr := range allIntegrations.Integrations {
 		if integr.ManufacturerTokenId == 0 {
 			// Must be a software integration. Sort after this loop.
 			swIntegrsByID[integr.Id] = integr
+			swIntegrsByTokenID[integr.TokenId] = integr
 		} else {
 			// Must be the integration associated with a manufacturer.
 			amMfrTokenToIntegration[integr.ManufacturerTokenId] = integr
@@ -227,6 +229,28 @@ func (t *BaselineClient) assignPoints() error {
 				thisWeek.IntegrationPoints += int(integr.Points)
 				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
 			}
+		}
+
+		if sd := ud.SyntheticDevice; sd != nil {
+			if sd.IntegrationTokenId == 0 {
+				logger.Warn().Msgf("Integration with tokenID %d has not been minted.", sd.IntegrationTokenId)
+				continue
+			}
+
+			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
+			if !ok {
+				logger.Warn().Msgf("Synthetic device IntegrationTokenID %d does not have an associated integration.", sd.IntegrationTokenId)
+				continue
+			}
+
+			if integsSignalsThisWeek.Contains(integr.Id) {
+				thisWeek.SyntheticDeviceID = null.IntFrom(int(sd.TokenId))
+				thisWeek.IntegrationPoints += int(integr.Points)
+				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
+			}
+
+		} else {
+			logger.Warn().Msgf("No SyntheticDevice Connection for vehicle with ID %s", ud.Id)
 		}
 
 		// Check software integrations.
