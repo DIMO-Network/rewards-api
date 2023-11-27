@@ -48,7 +48,6 @@ type jsonMap map[string]interface{}
 type DeviceData struct {
 	ID           string
 	Integrations []string
-	Serials      []string
 }
 
 // activityFieldExists is a list of Elastic exists queries for all of the non-constant fields in
@@ -169,11 +168,6 @@ type DeviceIntegrationsResp struct {
 				Key string `json:"key"`
 			} `json:"buckets"`
 		} `json:"integrations"`
-		UnitIDs struct {
-			Buckets []struct {
-				Key string `json:"key"`
-			} `json:"buckets"`
-		} `json:"unit_ids"`
 	} `json:"aggregations"`
 }
 
@@ -248,15 +242,9 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 					integrations = append(integrations, strings.TrimPrefix(key, integPrefix))
 				}
 			}
-			serials := make([]string, 0)
-			for _, bucket := range dv.UnitIDs.Buckets {
-				key := bucket.Key
-				serials = append(serials, key)
-			}
 			out = append(out, &DeviceData{
 				ID:           deviceID,
 				Integrations: integrations,
-				Serials:      serials,
 			})
 		}
 
@@ -287,11 +275,6 @@ type DeviceListResp struct {
 						Key string `json:"key"`
 					} `json:"buckets"`
 				} `json:"integrations"`
-				UnitIDs struct {
-					Buckets []struct {
-						Key string `json:"key"`
-					} `json:"buckets"`
-				} `json:"unit_ids"`
 			} `json:"buckets"`
 		} `json:"active_devices"`
 	} `json:"aggregations"`
