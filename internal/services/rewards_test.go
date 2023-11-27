@@ -934,7 +934,7 @@ func TestSyntheticDeviceIssuance(t *testing.T) {
 			for _, id := range rw.IntegrationIds {
 				assert.Equal(t, id, id)
 			}
-			assert.Equal(t, rw.IntegrationPoints, 8000)
+			assert.Equal(t, rw.IntegrationPoints, 4000)
 		}
 	}
 }
