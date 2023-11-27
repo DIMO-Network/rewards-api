@@ -320,7 +320,6 @@ func (t *BaselineClient) assignPoints() error {
 }
 
 func (t *BaselineClient) calculateTokens() error {
-	t.Logger.Info().Msgf("Calculating tokens. Year is %d.", (t.Week-t.FirstAutomatedWeek)/52)
 	st := storage.DBStorage{DBS: t.TransferService.db, Logger: t.Logger}
 	return st.AssignTokens(context.TODO(), t.Week, t.FirstAutomatedWeek)
 }
