@@ -825,12 +825,12 @@ func TestSyntheticDeviceIssuance(t *testing.T) {
 
 	scens := []Scenario{
 		{
-			Name: "AutoPiJoinLevel1",
+			Name: "SyntheticDeviceIssuance",
 			Users: []User{
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, Beneficiary: mkAddr(2).Bytes(), SDTokenID: 11, SDIntegrationID: 2}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, SDTokenID: 11, SDIntegrationID: 2}},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
 			},
@@ -934,7 +934,7 @@ func TestSyntheticDeviceIssuance(t *testing.T) {
 			for _, id := range rw.IntegrationIds {
 				assert.Equal(t, id, id)
 			}
-			assert.Equal(t, rw.IntegrationPoints, 8000)
+			assert.Equal(t, rw.IntegrationPoints, 4000)
 		}
 	}
 }
@@ -951,11 +951,6 @@ type Device struct {
 	Beneficiary         []byte
 	SDTokenID           uint64
 	SDIntegrationID     uint64
-}
-
-type SyntheticDevice struct {
-	TokenID            uint64
-	IntegrationTokenId uint64
 }
 
 type Views struct {

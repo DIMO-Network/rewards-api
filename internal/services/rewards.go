@@ -139,13 +139,11 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
-	swIntegrsByID := make(map[string]*pb_defs.Integration)
 	swIntegrsByTokenID := make(map[uint64]*pb_defs.Integration)
 
 	for _, integr := range allIntegrations.Integrations {
 		if integr.ManufacturerTokenId == 0 {
 			// Must be a software integration. Sort after this loop.
-			swIntegrsByID[integr.Id] = integr
 			swIntegrsByTokenID[integr.TokenId] = integr
 		} else {
 			// Must be the integration associated with a manufacturer.
@@ -233,13 +231,13 @@ func (t *BaselineClient) assignPoints() error {
 
 		if sd := ud.SyntheticDevice; sd != nil {
 			if sd.IntegrationTokenId == 0 {
-				logger.Warn().Msgf("Integration with tokenID %d has not been minted.", sd.IntegrationTokenId)
+				logger.Warn().Msg("synthetic device does not have an integration")
 				continue
 			}
 
 			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
 			if !ok {
-				logger.Warn().Msgf("Synthetic device IntegrationTokenID %d does not have an associated integration.", sd.IntegrationTokenId)
+				logger.Warn().Msgf("Sunknown integration with token id %d", sd.IntegrationTokenId)
 				continue
 			}
 
@@ -247,21 +245,6 @@ func (t *BaselineClient) assignPoints() error {
 				thisWeek.SyntheticDeviceID = null.IntFrom(int(sd.TokenId))
 				thisWeek.IntegrationPoints += int(integr.Points)
 				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
-			}
-
-		} else {
-			logger.Warn().Msgf("No SyntheticDevice Connection for vehicle with ID %s", ud.Id)
-		}
-
-		// Check software integrations.
-		// This section will be replaced by a synthetic device check.
-		for _, vehIntegr := range ud.Integrations {
-			if integr, ok := swIntegrsByID[vehIntegr.Id]; ok {
-				if integsSignalsThisWeek.Contains(integr.Id) {
-					thisWeek.IntegrationPoints += int(integr.Points)
-					thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
-				}
-				break
 			}
 		}
 
@@ -337,7 +320,6 @@ func (t *BaselineClient) assignPoints() error {
 }
 
 func (t *BaselineClient) calculateTokens() error {
-	t.Logger.Info().Msgf("Calculating tokens. Year is %d.", (t.Week-t.FirstAutomatedWeek)/52)
 	st := storage.DBStorage{DBS: t.TransferService.db, Logger: t.Logger}
 	return st.AssignTokens(context.TODO(), t.Week, t.FirstAutomatedWeek)
 }
