@@ -1,6 +1,6 @@
 module github.com/DIMO-Network/rewards-api
 
-go 1.19
+go 1.21
 
 require (
 	github.com/DIMO-Network/device-definitions-api v1.0.24-0.20231013155700-5e231e00fc4c
