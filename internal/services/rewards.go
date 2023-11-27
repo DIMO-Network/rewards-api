@@ -233,13 +233,13 @@ func (t *BaselineClient) assignPoints() error {
 
 		if sd := ud.SyntheticDevice; sd != nil {
 			if sd.IntegrationTokenId == 0 {
-				logger.Warn().Msgf("Integration with tokenID %d has not been minted.", sd.IntegrationTokenId)
+				logger.Warn().Msg("synthetic device does not have an integration")
 				continue
 			}
 
 			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
 			if !ok {
-				logger.Warn().Msgf("Synthetic device IntegrationTokenID %d does not have an associated integration.", sd.IntegrationTokenId)
+				logger.Warn().Msgf("Sunknown integration with token id %d", sd.IntegrationTokenId)
 				continue
 			}
 
@@ -248,9 +248,6 @@ func (t *BaselineClient) assignPoints() error {
 				thisWeek.IntegrationPoints += int(integr.Points)
 				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
 			}
-
-		} else {
-			logger.Warn().Msgf("No SyntheticDevice Connection for vehicle with ID %s", ud.Id)
 		}
 
 		// Check software integrations.
