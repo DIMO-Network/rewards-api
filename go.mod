@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/DIMO-Network/device-definitions-api v1.0.24-0.20231013155700-5e231e00fc4c
-	github.com/DIMO-Network/devices-api v1.23.1
+	github.com/DIMO-Network/devices-api v1.14.15
 	github.com/DIMO-Network/shared v0.10.4
 	github.com/DIMO-Network/users-api v0.6.3
 	github.com/Shopify/sarama v1.38.1
@@ -31,7 +31,7 @@ require (
 	github.com/volatiletech/sqlboiler/v4 v4.15.0
 	github.com/volatiletech/strmangle v0.0.5
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
-	google.golang.org/grpc v1.58.1
+	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/yaml.v3 v3.0.1
 )
