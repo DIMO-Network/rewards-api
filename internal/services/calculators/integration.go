@@ -57,6 +57,8 @@ func NewIntegrationCalculator(issuanceWeek int, integrs []*pbdef.Integration, lo
 // * synthetic_device_id
 // * integration_points
 // * integration_ids
+//
+// The returning of an error indicates that some check failed and that the vehicle will not earn this week.
 func (c IntegrationCalculator) Process(ud *pbdev.UserDevice, activeIntegrations []string) (*models.Reward, error) {
 	if ud.TokenId == nil {
 		return nil, errors.New("vehicle not minted")
