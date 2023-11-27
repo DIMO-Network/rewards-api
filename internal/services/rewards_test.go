@@ -921,21 +921,21 @@ func TestSyntheticDeviceIssuance(t *testing.T) {
 			assert.NoError(t, err)
 
 			producer.Close()
-
-			rewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			for _, rw := range rewards {
-				assert.Equal(t, 11, rw.SyntheticDeviceID.Int)
-
-				for _, id := range rw.IntegrationIds {
-					assert.Equal(t, id, id)
-				}
-				assert.Equal(t, rw.IntegrationPoints, 8000)
-			}
 		})
+
+		rewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for _, rw := range rewards {
+			assert.Equal(t, 11, rw.SyntheticDeviceID.Int)
+
+			for _, id := range rw.IntegrationIds {
+				assert.Equal(t, id, id)
+			}
+			assert.Equal(t, rw.IntegrationPoints, 8000)
+		}
 	}
 }
 
