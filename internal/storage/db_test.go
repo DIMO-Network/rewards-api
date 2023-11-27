@@ -56,7 +56,7 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 	require.NoError(t, reward1.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
 	require.NoError(t, reward2.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
 
-	db := DBStorage{DBS: conn}
+	db := DBStorage{DBS: conn, Logger: &logger}
 	err = db.AssignTokens(context.TODO(), 80, 40)
 	require.NoError(t, err)
 
@@ -114,7 +114,7 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 	require.NoError(t, reward1.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
 	require.NoError(t, reward2.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
 
-	db := DBStorage{DBS: conn}
+	db := DBStorage{DBS: conn, Logger: &logger}
 	err = db.AssignTokens(context.TODO(), 92, 40)
 	require.NoError(t, err)
 
