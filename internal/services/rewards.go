@@ -143,7 +143,7 @@ func (t *BaselineClient) assignPoints() error {
 
 	for _, integr := range allIntegrations.Integrations {
 		if integr.ManufacturerTokenId == 0 {
-			// Must be a software integration. Sort after this loop.
+			// Must be a software integration.
 			swIntegrsByTokenID[integr.TokenId] = integr
 		} else {
 			// Must be the integration associated with a manufacturer.
@@ -237,7 +237,7 @@ func (t *BaselineClient) assignPoints() error {
 
 			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
 			if !ok {
-				logger.Warn().Msgf("Sunknown integration with token id %d", sd.IntegrationTokenId)
+				logger.Warn().Msgf("unknown integration with token id %d", sd.IntegrationTokenId)
 				continue
 			}
 
