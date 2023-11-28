@@ -966,7 +966,7 @@ func (d *FakeDefClient) GetIntegrations(_ context.Context, _ *emptypb.Empty, _ .
 		{Id: autoPiIntegration, Vendor: "AutoPi", ManufacturerTokenId: 137, Points: 6000},
 		{Id: teslaIntegration, Vendor: "Tesla", Points: 4000, ManufacturerTokenId: 0, TokenId: 2},
 		{Id: smartcarIntegration, Vendor: "SmartCar", Points: 1000, ManufacturerTokenId: 0, TokenId: 3},
-		{Id: macaronIntegration, Vendor: "Macaron", ManufacturerTokenId: 142, Points: 2000, TokenId: 4},
+		{Id: macaronIntegration, Vendor: "Macaron", ManufacturerTokenId: 142, Points: 2000},
 	}}, nil
 }
 
