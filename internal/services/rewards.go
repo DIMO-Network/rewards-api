@@ -231,13 +231,13 @@ func (t *BaselineClient) assignPoints() error {
 
 		if sd := ud.SyntheticDevice; sd != nil {
 			if sd.IntegrationTokenId == 0 {
-				logger.Warn().Msg("synthetic device does not have an integration")
+				logger.Warn().Msgf("Synthetic device %d does not have an integration.", sd.IntegrationTokenId)
 				continue
 			}
 
 			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
 			if !ok {
-				logger.Warn().Msgf("unknown integration with token id %d", sd.IntegrationTokenId)
+				logger.Warn().Msgf("Synthetic device %d has integration %d without metadata.", sd.TokenId, sd.IntegrationTokenId)
 				continue
 			}
 
