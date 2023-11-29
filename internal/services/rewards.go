@@ -139,12 +139,12 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
-	swIntegrsByID := make(map[string]*pb_defs.Integration)
+	swIntegrsByTokenID := make(map[uint64]*pb_defs.Integration)
 
 	for _, integr := range allIntegrations.Integrations {
 		if integr.ManufacturerTokenId == 0 {
-			// Must be a software integration. Sort after this loop.
-			swIntegrsByID[integr.Id] = integr
+			// Must be a software integration.
+			swIntegrsByTokenID[integr.TokenId] = integr
 		} else {
 			// Must be the integration associated with a manufacturer.
 			amMfrTokenToIntegration[integr.ManufacturerTokenId] = integr
@@ -229,15 +229,22 @@ func (t *BaselineClient) assignPoints() error {
 			}
 		}
 
-		// Check software integrations.
-		// This section will be replaced by a synthetic device check.
-		for _, vehIntegr := range ud.Integrations {
-			if integr, ok := swIntegrsByID[vehIntegr.Id]; ok {
-				if integsSignalsThisWeek.Contains(integr.Id) {
-					thisWeek.IntegrationPoints += int(integr.Points)
-					thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
-				}
-				break
+		if sd := ud.SyntheticDevice; sd != nil {
+			if sd.IntegrationTokenId == 0 {
+				logger.Warn().Msgf("Synthetic device %d does not have an integration.", sd.IntegrationTokenId)
+				continue
+			}
+
+			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
+			if !ok {
+				logger.Warn().Msgf("Synthetic device %d has integration %d without metadata.", sd.TokenId, sd.IntegrationTokenId)
+				continue
+			}
+
+			if integsSignalsThisWeek.Contains(integr.Id) {
+				thisWeek.SyntheticDeviceID = null.IntFrom(int(sd.TokenId))
+				thisWeek.IntegrationPoints += int(integr.Points)
+				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
 			}
 		}
 
