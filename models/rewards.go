@@ -44,6 +44,11 @@ type Reward struct {
 	AftermarketTokenID               types.NullDecimal `boil:"aftermarket_token_id" json:"aftermarket_token_id,omitempty" toml:"aftermarket_token_id" yaml:"aftermarket_token_id,omitempty"`
 	RewardsReceiverEthereumAddress   null.String       `boil:"rewards_receiver_ethereum_address" json:"rewards_receiver_ethereum_address,omitempty" toml:"rewards_receiver_ethereum_address" yaml:"rewards_receiver_ethereum_address,omitempty"`
 	SyntheticDeviceID                null.Int          `boil:"synthetic_device_id" json:"synthetic_device_id,omitempty" toml:"synthetic_device_id" yaml:"synthetic_device_id,omitempty"`
+	AftermarketDevicePoints          null.Int          `boil:"aftermarket_device_points" json:"aftermarket_device_points,omitempty" toml:"aftermarket_device_points" yaml:"aftermarket_device_points,omitempty"`
+	SyntheticDevicePoints            null.Int          `boil:"synthetic_device_points" json:"synthetic_device_points,omitempty" toml:"synthetic_device_points" yaml:"synthetic_device_points,omitempty"`
+	AftermarketDeviceTokens          types.NullDecimal `boil:"aftermarket_device_tokens" json:"aftermarket_device_tokens,omitempty" toml:"aftermarket_device_tokens" yaml:"aftermarket_device_tokens,omitempty"`
+	SyntheticDeviceTokens            types.NullDecimal `boil:"synthetic_device_tokens" json:"synthetic_device_tokens,omitempty" toml:"synthetic_device_tokens" yaml:"synthetic_device_tokens,omitempty"`
+	StreakTokens                     types.NullDecimal `boil:"streak_tokens" json:"streak_tokens,omitempty" toml:"streak_tokens" yaml:"streak_tokens,omitempty"`
 
 	R *rewardR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L rewardL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -69,6 +74,11 @@ var RewardColumns = struct {
 	AftermarketTokenID               string
 	RewardsReceiverEthereumAddress   string
 	SyntheticDeviceID                string
+	AftermarketDevicePoints          string
+	SyntheticDevicePoints            string
+	AftermarketDeviceTokens          string
+	SyntheticDeviceTokens            string
+	StreakTokens                     string
 }{
 	IssuanceWeekID:                   "issuance_week_id",
 	UserDeviceID:                     "user_device_id",
@@ -89,6 +99,11 @@ var RewardColumns = struct {
 	AftermarketTokenID:               "aftermarket_token_id",
 	RewardsReceiverEthereumAddress:   "rewards_receiver_ethereum_address",
 	SyntheticDeviceID:                "synthetic_device_id",
+	AftermarketDevicePoints:          "aftermarket_device_points",
+	SyntheticDevicePoints:            "synthetic_device_points",
+	AftermarketDeviceTokens:          "aftermarket_device_tokens",
+	SyntheticDeviceTokens:            "synthetic_device_tokens",
+	StreakTokens:                     "streak_tokens",
 }
 
 var RewardTableColumns = struct {
@@ -111,6 +126,11 @@ var RewardTableColumns = struct {
 	AftermarketTokenID               string
 	RewardsReceiverEthereumAddress   string
 	SyntheticDeviceID                string
+	AftermarketDevicePoints          string
+	SyntheticDevicePoints            string
+	AftermarketDeviceTokens          string
+	SyntheticDeviceTokens            string
+	StreakTokens                     string
 }{
 	IssuanceWeekID:                   "rewards.issuance_week_id",
 	UserDeviceID:                     "rewards.user_device_id",
@@ -131,6 +151,11 @@ var RewardTableColumns = struct {
 	AftermarketTokenID:               "rewards.aftermarket_token_id",
 	RewardsReceiverEthereumAddress:   "rewards.rewards_receiver_ethereum_address",
 	SyntheticDeviceID:                "rewards.synthetic_device_id",
+	AftermarketDevicePoints:          "rewards.aftermarket_device_points",
+	SyntheticDevicePoints:            "rewards.synthetic_device_points",
+	AftermarketDeviceTokens:          "rewards.aftermarket_device_tokens",
+	SyntheticDeviceTokens:            "rewards.synthetic_device_tokens",
+	StreakTokens:                     "rewards.streak_tokens",
 }
 
 // Generated where
@@ -240,6 +265,11 @@ var RewardWhere = struct {
 	AftermarketTokenID               whereHelpertypes_NullDecimal
 	RewardsReceiverEthereumAddress   whereHelpernull_String
 	SyntheticDeviceID                whereHelpernull_Int
+	AftermarketDevicePoints          whereHelpernull_Int
+	SyntheticDevicePoints            whereHelpernull_Int
+	AftermarketDeviceTokens          whereHelpertypes_NullDecimal
+	SyntheticDeviceTokens            whereHelpertypes_NullDecimal
+	StreakTokens                     whereHelpertypes_NullDecimal
 }{
 	IssuanceWeekID:                   whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
 	UserDeviceID:                     whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
@@ -260,6 +290,11 @@ var RewardWhere = struct {
 	AftermarketTokenID:               whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"aftermarket_token_id\""},
 	RewardsReceiverEthereumAddress:   whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"rewards_receiver_ethereum_address\""},
 	SyntheticDeviceID:                whereHelpernull_Int{field: "\"rewards_api\".\"rewards\".\"synthetic_device_id\""},
+	AftermarketDevicePoints:          whereHelpernull_Int{field: "\"rewards_api\".\"rewards\".\"aftermarket_device_points\""},
+	SyntheticDevicePoints:            whereHelpernull_Int{field: "\"rewards_api\".\"rewards\".\"synthetic_device_points\""},
+	AftermarketDeviceTokens:          whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"aftermarket_device_tokens\""},
+	SyntheticDeviceTokens:            whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"synthetic_device_tokens\""},
+	StreakTokens:                     whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"streak_tokens\""},
 }
 
 // RewardRels is where relationship names are stored.
@@ -300,9 +335,9 @@ func (r *rewardR) GetTransferMetaTransactionRequest() *MetaTransactionRequest {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id"}
+	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
 	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
 	rewardGeneratedColumns      = []string{}
 )
