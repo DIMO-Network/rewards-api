@@ -224,7 +224,7 @@ func (t *BaselineClient) assignPoints() error {
 				}
 
 				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ad.TokenId))
-				thisWeek.AftermarketDevicePoints = null.IntFrom(int(integr.Points))
+				thisWeek.AftermarketDevicePoints = int(integr.Points)
 				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
 			}
 		}
@@ -243,7 +243,7 @@ func (t *BaselineClient) assignPoints() error {
 
 			if integsSignalsThisWeek.Contains(integr.Id) {
 				thisWeek.SyntheticDeviceID = null.IntFrom(int(sd.TokenId))
-				thisWeek.SyntheticDevicePoints = null.IntFrom(int(integr.Points))
+				thisWeek.SyntheticDevicePoints = int(integr.Points)
 				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
 			}
 		}

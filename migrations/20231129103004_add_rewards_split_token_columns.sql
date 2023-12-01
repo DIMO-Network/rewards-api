@@ -3,8 +3,8 @@
 SET search_path TO rewards_api, public;
 
 ALTER TABLE rewards 
-    ADD COLUMN aftermarket_device_points int,
-    ADD COLUMN synthetic_device_points int,
+    ADD COLUMN aftermarket_device_points int NOT NULL DEFAULT 0,
+    ADD COLUMN synthetic_device_points int NOT NULL DEFAULT 0,
     ADD COLUMN aftermarket_device_tokens numeric(26),
     ADD COLUMN synthetic_device_tokens numeric(26),
     ADD COLUMN streak_tokens numeric(26);

@@ -21,11 +21,21 @@ const assignTokensQuery = `
 UPDATE
 	rewards_api.rewards
 SET
-	tokens =
-		div(
-			(streak_points + integration_points) * $2::numeric,
-			(SELECT sum(streak_points + integration_points) FROM rewards_api.rewards WHERE issuance_week_id = $1)
-		)
+  streak_tokens =
+    div(
+      streak_points * $2::numeric,
+      (SELECT sum(streak_points + synthetic_device_points + aftermarket_device_points) FROM rewards_api.rewards WHERE issuance_week_id = $1)
+    ),
+  synthetic_device_tokens = 
+    div(
+      synthetic_device_points * $2::numeric,
+      (SELECT sum(streak_points + synthetic_device_points + aftermarket_device_points) FROM rewards_api.rewards WHERE issuance_week_id = $1)
+    ),
+  aftermarket_device_tokens = 
+    div(
+      aftermarket_device_points * $2::numeric,
+      (SELECT sum(streak_points + synthetic_device_points + aftermarket_device_points) FROM rewards_api.rewards WHERE issuance_week_id = $1)
+    )
 WHERE
 	issuance_week_id = $1;`
 

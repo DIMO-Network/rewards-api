@@ -44,8 +44,8 @@ type Reward struct {
 	AftermarketTokenID               types.NullDecimal `boil:"aftermarket_token_id" json:"aftermarket_token_id,omitempty" toml:"aftermarket_token_id" yaml:"aftermarket_token_id,omitempty"`
 	RewardsReceiverEthereumAddress   null.String       `boil:"rewards_receiver_ethereum_address" json:"rewards_receiver_ethereum_address,omitempty" toml:"rewards_receiver_ethereum_address" yaml:"rewards_receiver_ethereum_address,omitempty"`
 	SyntheticDeviceID                null.Int          `boil:"synthetic_device_id" json:"synthetic_device_id,omitempty" toml:"synthetic_device_id" yaml:"synthetic_device_id,omitempty"`
-	AftermarketDevicePoints          null.Int          `boil:"aftermarket_device_points" json:"aftermarket_device_points,omitempty" toml:"aftermarket_device_points" yaml:"aftermarket_device_points,omitempty"`
-	SyntheticDevicePoints            null.Int          `boil:"synthetic_device_points" json:"synthetic_device_points,omitempty" toml:"synthetic_device_points" yaml:"synthetic_device_points,omitempty"`
+	AftermarketDevicePoints          int               `boil:"aftermarket_device_points" json:"aftermarket_device_points" toml:"aftermarket_device_points" yaml:"aftermarket_device_points"`
+	SyntheticDevicePoints            int               `boil:"synthetic_device_points" json:"synthetic_device_points" toml:"synthetic_device_points" yaml:"synthetic_device_points"`
 	AftermarketDeviceTokens          types.NullDecimal `boil:"aftermarket_device_tokens" json:"aftermarket_device_tokens,omitempty" toml:"aftermarket_device_tokens" yaml:"aftermarket_device_tokens,omitempty"`
 	SyntheticDeviceTokens            types.NullDecimal `boil:"synthetic_device_tokens" json:"synthetic_device_tokens,omitempty" toml:"synthetic_device_tokens" yaml:"synthetic_device_tokens,omitempty"`
 	StreakTokens                     types.NullDecimal `boil:"streak_tokens" json:"streak_tokens,omitempty" toml:"streak_tokens" yaml:"streak_tokens,omitempty"`
@@ -265,8 +265,8 @@ var RewardWhere = struct {
 	AftermarketTokenID               whereHelpertypes_NullDecimal
 	RewardsReceiverEthereumAddress   whereHelpernull_String
 	SyntheticDeviceID                whereHelpernull_Int
-	AftermarketDevicePoints          whereHelpernull_Int
-	SyntheticDevicePoints            whereHelpernull_Int
+	AftermarketDevicePoints          whereHelperint
+	SyntheticDevicePoints            whereHelperint
 	AftermarketDeviceTokens          whereHelpertypes_NullDecimal
 	SyntheticDeviceTokens            whereHelpertypes_NullDecimal
 	StreakTokens                     whereHelpertypes_NullDecimal
@@ -290,8 +290,8 @@ var RewardWhere = struct {
 	AftermarketTokenID:               whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"aftermarket_token_id\""},
 	RewardsReceiverEthereumAddress:   whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"rewards_receiver_ethereum_address\""},
 	SyntheticDeviceID:                whereHelpernull_Int{field: "\"rewards_api\".\"rewards\".\"synthetic_device_id\""},
-	AftermarketDevicePoints:          whereHelpernull_Int{field: "\"rewards_api\".\"rewards\".\"aftermarket_device_points\""},
-	SyntheticDevicePoints:            whereHelpernull_Int{field: "\"rewards_api\".\"rewards\".\"synthetic_device_points\""},
+	AftermarketDevicePoints:          whereHelperint{field: "\"rewards_api\".\"rewards\".\"aftermarket_device_points\""},
+	SyntheticDevicePoints:            whereHelperint{field: "\"rewards_api\".\"rewards\".\"synthetic_device_points\""},
 	AftermarketDeviceTokens:          whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"aftermarket_device_tokens\""},
 	SyntheticDeviceTokens:            whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"synthetic_device_tokens\""},
 	StreakTokens:                     whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"streak_tokens\""},

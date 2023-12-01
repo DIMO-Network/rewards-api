@@ -425,13 +425,12 @@ func TestStreak(t *testing.T) {
 
 			for _, c := range rw {
 				nr := NewReward{
-					DeviceID:     c.UserDeviceID,
-					ConnStreak:   c.ConnectionStreak,
-					DiscStreak:   c.DisconnectionStreak,
-					StreakPoints: c.StreakPoints,
-					// IntegrationPoints: c.IntegrationPoints,
-					AftermarketDevicePoints: c.AftermarketDevicePoints.Int,
-					SyntheticDevicePoints:   c.SyntheticDevicePoints.Int,
+					DeviceID:                c.UserDeviceID,
+					ConnStreak:              c.ConnectionStreak,
+					DiscStreak:              c.DisconnectionStreak,
+					StreakPoints:            c.StreakPoints,
+					AftermarketDevicePoints: c.AftermarketDevicePoints,
+					SyntheticDevicePoints:   c.SyntheticDevicePoints,
 					SyntheticDeviceID:       c.SyntheticDeviceID.Int,
 				}
 
@@ -613,13 +612,12 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 
 			for _, c := range rw {
 				nr := NewReward{
-					DeviceID:     c.UserDeviceID,
-					ConnStreak:   c.ConnectionStreak,
-					DiscStreak:   c.DisconnectionStreak,
-					StreakPoints: c.StreakPoints,
-					// IntegrationPoints: c.IntegrationPoints,
-					AftermarketDevicePoints: c.AftermarketDevicePoints.Int,
-					SyntheticDevicePoints:   c.SyntheticDevicePoints.Int,
+					DeviceID:                c.UserDeviceID,
+					ConnStreak:              c.ConnectionStreak,
+					DiscStreak:              c.DisconnectionStreak,
+					StreakPoints:            c.StreakPoints,
+					AftermarketDevicePoints: c.AftermarketDevicePoints,
+					SyntheticDevicePoints:   c.SyntheticDevicePoints,
 				}
 
 				if !c.UserDeviceTokenID.IsZero() {
@@ -824,9 +822,20 @@ func TestBaselineIssuance(t *testing.T) {
 				user = common.HexToAddress(rw[0].UserEthereumAddress.String)
 			}
 
+			tokensSum := types.NewNullDecimal(decimal.New(0, 0))
+			if !rw[0].SyntheticDeviceTokens.IsZero() {
+				tokensSum.Add(tokensSum.Big, rw[0].SyntheticDeviceTokens.Big)
+			}
+			if !rw[0].AftermarketDeviceTokens.IsZero() {
+				tokensSum.Add(tokensSum.Big, rw[0].AftermarketDeviceTokens.Big)
+			}
+			if !rw[0].StreakTokens.IsZero() {
+				tokensSum.Add(tokensSum.Big, rw[0].StreakTokens.Big)
+			}
+
 			assert.ElementsMatch(t, []RewardEvent{{
 				User:      user,
-				Value:     rw[0].Tokens.Int(nil),
+				Value:     tokensSum.Int(nil),
 				VehicleID: rw[0].UserDeviceTokenID.Int(nil),
 			}}, rewards)
 		})
