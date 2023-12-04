@@ -30,6 +30,17 @@ type TransferService struct {
 	batchSize    int
 }
 
+type TransferInfo struct {
+	User                       common.Address
+	VehicleId                  *big.Int
+	AftermarketDeviceId        *big.Int
+	ValueFromAftermarketDevice *big.Int
+	SyntheticDeviceId          *big.Int
+	ValueFromSyntheticDevice   *big.Int
+	ConnectionStreak           *big.Int
+	ValueFromStreak            *big.Int
+}
+
 func NewTokenTransferService(
 	settings *config.Settings,
 	producer sarama.SyncProducer,
@@ -114,26 +125,24 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 			return err
 		}
 
-		responseSize = len(transfer)
-
-		userAddr := make([]common.Address, responseSize)
-		tknValues := make([]*big.Int, responseSize)
-		vehicleIds := make([]*big.Int, responseSize)
-
 		tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
 		if err != nil {
 			return err
 		}
 
-		for i, row := range transfer {
-			tokensSum := types.NewNullDecimal(decimal.New(0, 0))
-			tokensSum.Add(tokensSum.Big, row.SyntheticDeviceTokens.Big)
-			tokensSum.Add(tokensSum.Big, row.AftermarketDeviceTokens.Big)
-			tokensSum.Add(tokensSum.Big, row.StreakTokens.Big)
+		var transferInfo []TransferInfo
 
-			userAddr[i] = common.HexToAddress(row.RewardsReceiverEthereumAddress.String)
-			tknValues[i] = tokensSum.Int(nil)
-			vehicleIds[i] = row.UserDeviceTokenID.Int(nil)
+		for _, row := range transfer {
+			transferInfo = append(transferInfo, TransferInfo{
+				User:                       common.HexToAddress(row.RewardsReceiverEthereumAddress.String),
+				VehicleId:                  row.UserDeviceTokenID.Int(nil),
+				AftermarketDeviceId:        row.AftermarketTokenID.Int(nil),
+				ValueFromAftermarketDevice: row.AftermarketDeviceTokens.Int(nil),
+				SyntheticDeviceId:          big.NewInt(int64(row.SyntheticDeviceID.Int)),
+				ValueFromSyntheticDevice:   row.SyntheticDeviceTokens.Int(nil),
+				ConnectionStreak:           big.NewInt(int64(row.ConnectionStreak)),
+				ValueFromStreak:            row.StreakTokens.Int(nil),
+			})
 
 			row.TransferMetaTransactionRequestID = null.StringFrom(reqID)
 
@@ -143,7 +152,7 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 			}
 		}
 
-		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
+		err = c.BatchTransfer(reqID, transferInfo)
 		if err != nil {
 			return err
 		}
@@ -157,12 +166,12 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 	return nil
 }
 
-func (c *BaselineClient) BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []*big.Int) error {
+func (c *BaselineClient) BatchTransfer(requestID string, transferInfo []TransferInfo) error {
 	abi, err := contracts.RewardMetaData.GetAbi()
 	if err != nil {
 		return err
 	}
-	data, err := abi.Pack("batchTransfer", users, values, vehicleIds)
+	data, err := abi.Pack("batchTransfer", transferInfo)
 	if err != nil {
 		return err
 	}
