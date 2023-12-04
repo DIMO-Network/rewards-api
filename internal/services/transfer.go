@@ -98,7 +98,11 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 		}
 
 		transfer, err := models.Rewards(
-			models.RewardWhere.Tokens.GT(types.NewNullDecimal(decimal.New(0, 0))),
+			qm.Expr(
+				qm.Or2(models.RewardWhere.SyntheticDeviceTokens.GT(types.NewNullDecimal(decimal.New(0, 0)))),
+				qm.Or2(models.RewardWhere.AftermarketDeviceTokens.GT(types.NewNullDecimal(decimal.New(0, 0)))),
+				qm.Or2(models.RewardWhere.StreakTokens.GT(types.NewNullDecimal(decimal.New(0, 0)))),
+			),
 			models.RewardWhere.IssuanceWeekID.EQ(c.Week),
 			models.RewardWhere.TransferMetaTransactionRequestID.IsNull(),
 			// Temporary blacklist, see PLA-765.
@@ -122,8 +126,13 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 		}
 
 		for i, row := range transfer {
+			tokensSum := types.NewNullDecimal(decimal.New(0, 0))
+			tokensSum.Add(tokensSum.Big, row.SyntheticDeviceTokens.Big)
+			tokensSum.Add(tokensSum.Big, row.AftermarketDeviceTokens.Big)
+			tokensSum.Add(tokensSum.Big, row.StreakTokens.Big)
+
 			userAddr[i] = common.HexToAddress(row.RewardsReceiverEthereumAddress.String)
-			tknValues[i] = row.Tokens.Int(nil)
+			tknValues[i] = tokensSum.Int(nil)
 			vehicleIds[i] = row.UserDeviceTokenID.Int(nil)
 
 			row.TransferMetaTransactionRequestID = null.StringFrom(reqID)
