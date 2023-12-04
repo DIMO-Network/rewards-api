@@ -86,7 +86,7 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 		_ = cont.Terminate(ctx)
 	}()
 
-	userDeviceID1 := ksuid.New().String()
+userDeviceID1 := ksuid.New().String()
 	userDeviceID2 := ksuid.New().String()
 
 	wk := models.IssuanceWeek{

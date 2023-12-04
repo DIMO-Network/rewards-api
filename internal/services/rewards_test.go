@@ -48,13 +48,12 @@ type OldReward struct {
 }
 
 type NewReward struct {
-	DeviceID     string
-	TokenID      int
-	Address      common.Address
-	ConnStreak   int
-	DiscStreak   int
-	StreakPoints int
-	// IntegrationPoints              int
+	DeviceID                       string
+	TokenID                        int
+	Address                        common.Address
+	ConnStreak                     int
+	DiscStreak                     int
+	StreakPoints                   int
 	RewardsReceiverEthereumAddress common.Address
 	SyntheticDeviceID              int
 	AftermarketDevicePoints        int
