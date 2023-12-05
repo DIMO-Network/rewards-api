@@ -803,10 +803,10 @@ func TestBaselineIssuance(t *testing.T) {
 				o, _ := abi.Methods["batchTransfer"].Inputs.Unpack(b[4:])
 				rwrds := o[0].([]struct {
 					User                       common.Address `json:"user"`
-					VehicleId                  *big.Int       `json:"vehicleId"`
-					AftermarketDeviceId        *big.Int       `json:"aftermarketDeviceId"`
+					VehicleID                  *big.Int       `json:"vehicleId"`
+					AftermarketDeviceID        *big.Int       `json:"aftermarketDeviceId"`
 					ValueFromAftermarketDevice *big.Int       `json:"valueFromAftermarketDevice"`
-					SyntheticDeviceId          *big.Int       `json:"syntheticDeviceId"`
+					SyntheticDeviceID          *big.Int       `json:"syntheticDeviceId"`
 					ValueFromSyntheticDevice   *big.Int       `json:"valueFromSyntheticDevice"`
 					ConnectionStreak           *big.Int       `json:"connectionStreak"`
 					ValueFromStreak            *big.Int       `json:"valueFromStreak"`
@@ -815,19 +815,19 @@ func TestBaselineIssuance(t *testing.T) {
 				for _, r := range rwrds {
 					reward := contracts.RewardTransferInfo{
 						User:                       r.User,
-						VehicleId:                  r.VehicleId,
-						AftermarketDeviceId:        r.AftermarketDeviceId,
+						VehicleId:                  r.VehicleID,
+						AftermarketDeviceId:        r.AftermarketDeviceID,
 						ValueFromAftermarketDevice: r.ValueFromAftermarketDevice,
-						SyntheticDeviceId:          r.SyntheticDeviceId,
+						SyntheticDeviceId:          r.SyntheticDeviceID,
 						ValueFromSyntheticDevice:   r.ValueFromSyntheticDevice,
 						ConnectionStreak:           r.ConnectionStreak,
 						ValueFromStreak:            r.ValueFromStreak,
 					}
-					if r.AftermarketDeviceId.Int64() == 0 || r.ValueFromAftermarketDevice.Int64() == 0 {
+					if r.AftermarketDeviceID.Int64() == 0 || r.ValueFromAftermarketDevice.Int64() == 0 {
 						reward.AftermarketDeviceId = &big.Int{}
 						reward.ValueFromAftermarketDevice = &big.Int{}
 					}
-					if r.SyntheticDeviceId.Int64() == 0 || r.ValueFromSyntheticDevice.Int64() == 0 {
+					if r.SyntheticDeviceID.Int64() == 0 || r.ValueFromSyntheticDevice.Int64() == 0 {
 						reward.SyntheticDeviceId = &big.Int{}
 						reward.ValueFromSyntheticDevice = &big.Int{}
 					}
