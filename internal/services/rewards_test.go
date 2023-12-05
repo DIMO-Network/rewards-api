@@ -708,6 +708,25 @@ func TestBaselineIssuance(t *testing.T) {
 			NewVIN:      []VIN{},
 			Description: "Should transfer to owner when beneficiary is not set on the device",
 		},
+		{
+			Name: "Level1SmartcarGrow",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, autoPiIntegration}, SDTokenID: 1, SDIntegrationID: 3},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1, AftermarketDevicePoints: 0},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN: []VIN{},
+		},
 	}
 
 	for _, scen := range scens {
@@ -844,7 +863,7 @@ func TestBaselineIssuance(t *testing.T) {
 				{
 					User:                       user,
 					VehicleId:                  rw[0].UserDeviceTokenID.Int(nil),
-					AftermarketDeviceId:        rw[0].AftermarketTokenID.Int(nil),
+					AftermarketDeviceId:        utils.SafeNullDecimalToInt(rw[0].AftermarketTokenID),
 					ValueFromAftermarketDevice: rw[0].AftermarketDeviceTokens.Int(nil),
 					SyntheticDeviceId:          big.NewInt(int64(rw[0].SyntheticDeviceID.Int)),
 					ValueFromSyntheticDevice:   rw[0].SyntheticDeviceTokens.Int(nil),

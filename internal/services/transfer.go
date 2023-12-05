@@ -8,6 +8,7 @@ import (
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
+	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/db"
@@ -123,16 +124,18 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 		var transferInfo []contracts.RewardTransferInfo
 
 		for _, row := range transfer {
-			transferInfo = append(transferInfo, contracts.RewardTransferInfo{
+			trx := contracts.RewardTransferInfo{
 				User:                       common.HexToAddress(row.RewardsReceiverEthereumAddress.String),
-				VehicleId:                  row.UserDeviceTokenID.Int(nil),
-				AftermarketDeviceId:        row.AftermarketTokenID.Int(nil),
-				ValueFromAftermarketDevice: row.AftermarketDeviceTokens.Int(nil),
+				VehicleId:                  utils.SafeNullDecimalToInt(row.UserDeviceTokenID),
+				AftermarketDeviceId:        utils.SafeNullDecimalToInt(row.AftermarketTokenID),
+				ValueFromAftermarketDevice: utils.SafeNullDecimalToInt(row.AftermarketDeviceTokens),
 				SyntheticDeviceId:          big.NewInt(int64(row.SyntheticDeviceID.Int)),
-				ValueFromSyntheticDevice:   row.SyntheticDeviceTokens.Int(nil),
+				ValueFromSyntheticDevice:   utils.SafeNullDecimalToInt(row.SyntheticDeviceTokens),
 				ConnectionStreak:           big.NewInt(int64(row.ConnectionStreak)),
-				ValueFromStreak:            row.StreakTokens.Int(nil),
-			})
+				ValueFromStreak:            utils.SafeNullDecimalToInt(row.StreakTokens),
+			}
+
+			transferInfo = append(transferInfo, trx)
 			row.TransferMetaTransactionRequestID = null.StringFrom(reqID)
 
 			_, err = row.Update(ctx, tx, boil.Whitelist(models.RewardColumns.TransferMetaTransactionRequestID))
