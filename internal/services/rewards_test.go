@@ -803,10 +803,10 @@ func TestBaselineIssuance(t *testing.T) {
 				o, _ := abi.Methods["batchTransfer"].Inputs.Unpack(b[4:])
 				rwrds := o[0].([]struct {
 					User                       common.Address `json:"user"`
-					VehicleId                  *big.Int       `json:"vehicleId"`
-					AftermarketDeviceId        *big.Int       `json:"aftermarketDeviceId"`
+					VehicleId                  *big.Int       `json:"vehicleId"`           //nolint
+					AftermarketDeviceId        *big.Int       `json:"aftermarketDeviceId"` //nolint
 					ValueFromAftermarketDevice *big.Int       `json:"valueFromAftermarketDevice"`
-					SyntheticDeviceId          *big.Int       `json:"syntheticDeviceId"`
+					SyntheticDeviceId          *big.Int       `json:"syntheticDeviceId"` //nolint
 					ValueFromSyntheticDevice   *big.Int       `json:"valueFromSyntheticDevice"`
 					ConnectionStreak           *big.Int       `json:"connectionStreak"`
 					ValueFromStreak            *big.Int       `json:"valueFromStreak"`
