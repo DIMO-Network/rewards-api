@@ -26,11 +26,24 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
+
+// RewardTransferInfo is an auto generated low-level Go binding around an user-defined struct.
+type RewardTransferInfo struct {
+	User                       common.Address
+	VehicleId                  *big.Int
+	AftermarketDeviceId        *big.Int
+	ValueFromAftermarketDevice *big.Int
+	SyntheticDeviceId          *big.Int
+	ValueFromSyntheticDevice   *big.Int
+	ConnectionStreak           *big.Int
+	ValueFromStreak            *big.Int
+}
 
 // RewardMetaData contains all meta data concerning the Reward contract.
 var RewardMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"InvalidArrayLength\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TokenTransferFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"WeeklyLimitExceeded\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"AdminWithdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"vehicleNodeId\",\"type\":\"uint256\"}],\"name\":\"DidntQualify\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"vehicleNodeId\",\"type\":\"uint256\"}],\"name\":\"TokensTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ORACLE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"adminWithdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"users\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"vehicleIds\",\"type\":\"uint256[]\"}],\"name\":\"batchTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"calculateWeeklyLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"maxRewards\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentWeek\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentWeekLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentWeekSpent\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"dimoTotalSentOutByContract\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initialWeeklyLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"registryContractAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"registryVehicleNodeType\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sanctionsContractAddress\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"minimumTimeForRewards\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rewardsGenesisTime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newTimeInSeconds\",\"type\":\"uint256\"}],\"name\":\"setMinimumTimeForRewards\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"forceUpdate\",\"type\":\"bool\"}],\"name\":\"updateWeek\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"vehicleIdLastRewardTime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vehicleNodeType\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"TokenTransferFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"WeeklyLimitExceeded\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"AdminWithdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"vehicleNodeId\",\"type\":\"uint256\"}],\"name\":\"DidntQualify\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"vehicleNodeId\",\"type\":\"uint256\"}],\"name\":\"TokensTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"vehicleNodeId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"connectionStreak\",\"type\":\"uint256\"}],\"name\":\"TokensTransferredForConnectionStreak\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"vehicleNodeId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"deviceNftProxy\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"deviceNode\",\"type\":\"uint256\"}],\"name\":\"TokensTransferredForDevice\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newWeek\",\"type\":\"uint256\"}],\"name\":\"WeekAdvanced\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ORACLE_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"adminWithdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"aftermarketIdContractAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"vehicleId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"aftermarketDeviceId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"valueFromAftermarketDevice\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"syntheticDeviceId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"valueFromSyntheticDevice\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"connectionStreak\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"valueFromStreak\",\"type\":\"uint256\"}],\"internalType\":\"structReward.TransferInfo[]\",\"name\":\"transferInfos\",\"type\":\"tuple[]\"}],\"name\":\"batchTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"calculateWeeklyLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"maxRewards\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentWeek\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentWeekLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentWeekSpent\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"dimoToken\",\"outputs\":[{\"internalType\":\"contractIDimo\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"dimoTotalSentOutByContract\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initialWeeklyLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"vehicleIdProxyAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"sanctionsContractAddress\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"manuallySetRewardsGenesisTime\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"minimumTimeForRewards\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registry\",\"outputs\":[{\"internalType\":\"contractIRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"resetRewardsGenesisTime\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rewardsGenesisTime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sanctionsList\",\"outputs\":[{\"internalType\":\"contractISanctionsList\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aftermarketProxyAddress\",\"type\":\"address\"}],\"name\":\"setAftermarketProxyAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newTimeInSeconds\",\"type\":\"uint256\"}],\"name\":\"setMinimumTimeForRewards\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"registryContractAddress\",\"type\":\"address\"}],\"name\":\"setRegistryContractAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"syntheticProxyAddress\",\"type\":\"address\"}],\"name\":\"setSyntheticProxyAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"syntheticIdContractAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"vehicleIdLastRewardTime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vehicleIdProxy\",\"outputs\":[{\"internalType\":\"contractINft\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // RewardABI is the input ABI used to generate the binding from.
@@ -134,11 +147,11 @@ func NewRewardFilterer(address common.Address, filterer bind.ContractFilterer) (
 
 // bindReward binds a generic wrapper to an already deployed contract.
 func bindReward(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(RewardABI))
+	parsed, err := RewardMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -177,6 +190,37 @@ func (_Reward *RewardTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Tr
 // Transact invokes the (paid) contract method with params as input values.
 func (_Reward *RewardTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _Reward.Contract.contract.Transact(opts, method, params...)
+}
+
+// ADMINROLE is a free data retrieval call binding the contract method 0x75b238fc.
+//
+// Solidity: function ADMIN_ROLE() view returns(bytes32)
+func (_Reward *RewardCaller) ADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _Reward.contract.Call(opts, &out, "ADMIN_ROLE")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// ADMINROLE is a free data retrieval call binding the contract method 0x75b238fc.
+//
+// Solidity: function ADMIN_ROLE() view returns(bytes32)
+func (_Reward *RewardSession) ADMINROLE() ([32]byte, error) {
+	return _Reward.Contract.ADMINROLE(&_Reward.CallOpts)
+}
+
+// ADMINROLE is a free data retrieval call binding the contract method 0x75b238fc.
+//
+// Solidity: function ADMIN_ROLE() view returns(bytes32)
+func (_Reward *RewardCallerSession) ADMINROLE() ([32]byte, error) {
+	return _Reward.Contract.ADMINROLE(&_Reward.CallOpts)
 }
 
 // DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
@@ -239,6 +283,37 @@ func (_Reward *RewardSession) ORACLEROLE() ([32]byte, error) {
 // Solidity: function ORACLE_ROLE() view returns(bytes32)
 func (_Reward *RewardCallerSession) ORACLEROLE() ([32]byte, error) {
 	return _Reward.Contract.ORACLEROLE(&_Reward.CallOpts)
+}
+
+// AftermarketIdContractAddress is a free data retrieval call binding the contract method 0xd849d652.
+//
+// Solidity: function aftermarketIdContractAddress() view returns(address)
+func (_Reward *RewardCaller) AftermarketIdContractAddress(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _Reward.contract.Call(opts, &out, "aftermarketIdContractAddress")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// AftermarketIdContractAddress is a free data retrieval call binding the contract method 0xd849d652.
+//
+// Solidity: function aftermarketIdContractAddress() view returns(address)
+func (_Reward *RewardSession) AftermarketIdContractAddress() (common.Address, error) {
+	return _Reward.Contract.AftermarketIdContractAddress(&_Reward.CallOpts)
+}
+
+// AftermarketIdContractAddress is a free data retrieval call binding the contract method 0xd849d652.
+//
+// Solidity: function aftermarketIdContractAddress() view returns(address)
+func (_Reward *RewardCallerSession) AftermarketIdContractAddress() (common.Address, error) {
+	return _Reward.Contract.AftermarketIdContractAddress(&_Reward.CallOpts)
 }
 
 // CalculateWeeklyLimit is a free data retrieval call binding the contract method 0x60e1f139.
@@ -363,6 +438,37 @@ func (_Reward *RewardSession) CurrentWeekSpent() (*big.Int, error) {
 // Solidity: function currentWeekSpent() view returns(uint256)
 func (_Reward *RewardCallerSession) CurrentWeekSpent() (*big.Int, error) {
 	return _Reward.Contract.CurrentWeekSpent(&_Reward.CallOpts)
+}
+
+// DimoToken is a free data retrieval call binding the contract method 0x0524f28c.
+//
+// Solidity: function dimoToken() view returns(address)
+func (_Reward *RewardCaller) DimoToken(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _Reward.contract.Call(opts, &out, "dimoToken")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// DimoToken is a free data retrieval call binding the contract method 0x0524f28c.
+//
+// Solidity: function dimoToken() view returns(address)
+func (_Reward *RewardSession) DimoToken() (common.Address, error) {
+	return _Reward.Contract.DimoToken(&_Reward.CallOpts)
+}
+
+// DimoToken is a free data retrieval call binding the contract method 0x0524f28c.
+//
+// Solidity: function dimoToken() view returns(address)
+func (_Reward *RewardCallerSession) DimoToken() (common.Address, error) {
+	return _Reward.Contract.DimoToken(&_Reward.CallOpts)
 }
 
 // DimoTotalSentOutByContract is a free data retrieval call binding the contract method 0x7f350fea.
@@ -551,6 +657,37 @@ func (_Reward *RewardCallerSession) ProxiableUUID() ([32]byte, error) {
 	return _Reward.Contract.ProxiableUUID(&_Reward.CallOpts)
 }
 
+// Registry is a free data retrieval call binding the contract method 0x7b103999.
+//
+// Solidity: function registry() view returns(address)
+func (_Reward *RewardCaller) Registry(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _Reward.contract.Call(opts, &out, "registry")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// Registry is a free data retrieval call binding the contract method 0x7b103999.
+//
+// Solidity: function registry() view returns(address)
+func (_Reward *RewardSession) Registry() (common.Address, error) {
+	return _Reward.Contract.Registry(&_Reward.CallOpts)
+}
+
+// Registry is a free data retrieval call binding the contract method 0x7b103999.
+//
+// Solidity: function registry() view returns(address)
+func (_Reward *RewardCallerSession) Registry() (common.Address, error) {
+	return _Reward.Contract.Registry(&_Reward.CallOpts)
+}
+
 // RewardsGenesisTime is a free data retrieval call binding the contract method 0x7f2842b4.
 //
 // Solidity: function rewardsGenesisTime() view returns(uint256)
@@ -580,6 +717,37 @@ func (_Reward *RewardSession) RewardsGenesisTime() (*big.Int, error) {
 // Solidity: function rewardsGenesisTime() view returns(uint256)
 func (_Reward *RewardCallerSession) RewardsGenesisTime() (*big.Int, error) {
 	return _Reward.Contract.RewardsGenesisTime(&_Reward.CallOpts)
+}
+
+// SanctionsList is a free data retrieval call binding the contract method 0xec571c6a.
+//
+// Solidity: function sanctionsList() view returns(address)
+func (_Reward *RewardCaller) SanctionsList(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _Reward.contract.Call(opts, &out, "sanctionsList")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// SanctionsList is a free data retrieval call binding the contract method 0xec571c6a.
+//
+// Solidity: function sanctionsList() view returns(address)
+func (_Reward *RewardSession) SanctionsList() (common.Address, error) {
+	return _Reward.Contract.SanctionsList(&_Reward.CallOpts)
+}
+
+// SanctionsList is a free data retrieval call binding the contract method 0xec571c6a.
+//
+// Solidity: function sanctionsList() view returns(address)
+func (_Reward *RewardCallerSession) SanctionsList() (common.Address, error) {
+	return _Reward.Contract.SanctionsList(&_Reward.CallOpts)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -613,6 +781,37 @@ func (_Reward *RewardCallerSession) SupportsInterface(interfaceId [4]byte) (bool
 	return _Reward.Contract.SupportsInterface(&_Reward.CallOpts, interfaceId)
 }
 
+// SyntheticIdContractAddress is a free data retrieval call binding the contract method 0x3fddd852.
+//
+// Solidity: function syntheticIdContractAddress() view returns(address)
+func (_Reward *RewardCaller) SyntheticIdContractAddress(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _Reward.contract.Call(opts, &out, "syntheticIdContractAddress")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// SyntheticIdContractAddress is a free data retrieval call binding the contract method 0x3fddd852.
+//
+// Solidity: function syntheticIdContractAddress() view returns(address)
+func (_Reward *RewardSession) SyntheticIdContractAddress() (common.Address, error) {
+	return _Reward.Contract.SyntheticIdContractAddress(&_Reward.CallOpts)
+}
+
+// SyntheticIdContractAddress is a free data retrieval call binding the contract method 0x3fddd852.
+//
+// Solidity: function syntheticIdContractAddress() view returns(address)
+func (_Reward *RewardCallerSession) SyntheticIdContractAddress() (common.Address, error) {
+	return _Reward.Contract.SyntheticIdContractAddress(&_Reward.CallOpts)
+}
+
 // VehicleIdLastRewardTime is a free data retrieval call binding the contract method 0xdf959d01.
 //
 // Solidity: function vehicleIdLastRewardTime(uint256 ) view returns(uint256)
@@ -644,35 +843,35 @@ func (_Reward *RewardCallerSession) VehicleIdLastRewardTime(arg0 *big.Int) (*big
 	return _Reward.Contract.VehicleIdLastRewardTime(&_Reward.CallOpts, arg0)
 }
 
-// VehicleNodeType is a free data retrieval call binding the contract method 0x38195d0a.
+// VehicleIdProxy is a free data retrieval call binding the contract method 0x40c05794.
 //
-// Solidity: function vehicleNodeType() view returns(uint256)
-func (_Reward *RewardCaller) VehicleNodeType(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function vehicleIdProxy() view returns(address)
+func (_Reward *RewardCaller) VehicleIdProxy(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
-	err := _Reward.contract.Call(opts, &out, "vehicleNodeType")
+	err := _Reward.contract.Call(opts, &out, "vehicleIdProxy")
 
 	if err != nil {
-		return *new(*big.Int), err
+		return *new(common.Address), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
 
 }
 
-// VehicleNodeType is a free data retrieval call binding the contract method 0x38195d0a.
+// VehicleIdProxy is a free data retrieval call binding the contract method 0x40c05794.
 //
-// Solidity: function vehicleNodeType() view returns(uint256)
-func (_Reward *RewardSession) VehicleNodeType() (*big.Int, error) {
-	return _Reward.Contract.VehicleNodeType(&_Reward.CallOpts)
+// Solidity: function vehicleIdProxy() view returns(address)
+func (_Reward *RewardSession) VehicleIdProxy() (common.Address, error) {
+	return _Reward.Contract.VehicleIdProxy(&_Reward.CallOpts)
 }
 
-// VehicleNodeType is a free data retrieval call binding the contract method 0x38195d0a.
+// VehicleIdProxy is a free data retrieval call binding the contract method 0x40c05794.
 //
-// Solidity: function vehicleNodeType() view returns(uint256)
-func (_Reward *RewardCallerSession) VehicleNodeType() (*big.Int, error) {
-	return _Reward.Contract.VehicleNodeType(&_Reward.CallOpts)
+// Solidity: function vehicleIdProxy() view returns(address)
+func (_Reward *RewardCallerSession) VehicleIdProxy() (common.Address, error) {
+	return _Reward.Contract.VehicleIdProxy(&_Reward.CallOpts)
 }
 
 // AdminWithdraw is a paid mutator transaction binding the contract method 0x401d4482.
@@ -696,25 +895,25 @@ func (_Reward *RewardTransactorSession) AdminWithdraw(user common.Address, amoun
 	return _Reward.Contract.AdminWithdraw(&_Reward.TransactOpts, user, amount)
 }
 
-// BatchTransfer is a paid mutator transaction binding the contract method 0x1ef690c4.
+// BatchTransfer is a paid mutator transaction binding the contract method 0x13cc10c9.
 //
-// Solidity: function batchTransfer(address[] users, uint256[] values, uint256[] vehicleIds) returns()
-func (_Reward *RewardTransactor) BatchTransfer(opts *bind.TransactOpts, users []common.Address, values []*big.Int, vehicleIds []*big.Int) (*types.Transaction, error) {
-	return _Reward.contract.Transact(opts, "batchTransfer", users, values, vehicleIds)
+// Solidity: function batchTransfer((address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)[] transferInfos) returns()
+func (_Reward *RewardTransactor) BatchTransfer(opts *bind.TransactOpts, transferInfos []RewardTransferInfo) (*types.Transaction, error) {
+	return _Reward.contract.Transact(opts, "batchTransfer", transferInfos)
 }
 
-// BatchTransfer is a paid mutator transaction binding the contract method 0x1ef690c4.
+// BatchTransfer is a paid mutator transaction binding the contract method 0x13cc10c9.
 //
-// Solidity: function batchTransfer(address[] users, uint256[] values, uint256[] vehicleIds) returns()
-func (_Reward *RewardSession) BatchTransfer(users []common.Address, values []*big.Int, vehicleIds []*big.Int) (*types.Transaction, error) {
-	return _Reward.Contract.BatchTransfer(&_Reward.TransactOpts, users, values, vehicleIds)
+// Solidity: function batchTransfer((address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)[] transferInfos) returns()
+func (_Reward *RewardSession) BatchTransfer(transferInfos []RewardTransferInfo) (*types.Transaction, error) {
+	return _Reward.Contract.BatchTransfer(&_Reward.TransactOpts, transferInfos)
 }
 
-// BatchTransfer is a paid mutator transaction binding the contract method 0x1ef690c4.
+// BatchTransfer is a paid mutator transaction binding the contract method 0x13cc10c9.
 //
-// Solidity: function batchTransfer(address[] users, uint256[] values, uint256[] vehicleIds) returns()
-func (_Reward *RewardTransactorSession) BatchTransfer(users []common.Address, values []*big.Int, vehicleIds []*big.Int) (*types.Transaction, error) {
-	return _Reward.Contract.BatchTransfer(&_Reward.TransactOpts, users, values, vehicleIds)
+// Solidity: function batchTransfer((address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)[] transferInfos) returns()
+func (_Reward *RewardTransactorSession) BatchTransfer(transferInfos []RewardTransferInfo) (*types.Transaction, error) {
+	return _Reward.Contract.BatchTransfer(&_Reward.TransactOpts, transferInfos)
 }
 
 // GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
@@ -738,25 +937,46 @@ func (_Reward *RewardTransactorSession) GrantRole(role [32]byte, account common.
 	return _Reward.Contract.GrantRole(&_Reward.TransactOpts, role, account)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xbe203094.
+// Initialize is a paid mutator transaction binding the contract method 0xc0c53b8b.
 //
-// Solidity: function initialize(address tokenAddress, address registryContractAddress, uint256 registryVehicleNodeType, address sanctionsContractAddress) returns()
-func (_Reward *RewardTransactor) Initialize(opts *bind.TransactOpts, tokenAddress common.Address, registryContractAddress common.Address, registryVehicleNodeType *big.Int, sanctionsContractAddress common.Address) (*types.Transaction, error) {
-	return _Reward.contract.Transact(opts, "initialize", tokenAddress, registryContractAddress, registryVehicleNodeType, sanctionsContractAddress)
+// Solidity: function initialize(address tokenAddress, address vehicleIdProxyAddress, address sanctionsContractAddress) returns()
+func (_Reward *RewardTransactor) Initialize(opts *bind.TransactOpts, tokenAddress common.Address, vehicleIdProxyAddress common.Address, sanctionsContractAddress common.Address) (*types.Transaction, error) {
+	return _Reward.contract.Transact(opts, "initialize", tokenAddress, vehicleIdProxyAddress, sanctionsContractAddress)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xbe203094.
+// Initialize is a paid mutator transaction binding the contract method 0xc0c53b8b.
 //
-// Solidity: function initialize(address tokenAddress, address registryContractAddress, uint256 registryVehicleNodeType, address sanctionsContractAddress) returns()
-func (_Reward *RewardSession) Initialize(tokenAddress common.Address, registryContractAddress common.Address, registryVehicleNodeType *big.Int, sanctionsContractAddress common.Address) (*types.Transaction, error) {
-	return _Reward.Contract.Initialize(&_Reward.TransactOpts, tokenAddress, registryContractAddress, registryVehicleNodeType, sanctionsContractAddress)
+// Solidity: function initialize(address tokenAddress, address vehicleIdProxyAddress, address sanctionsContractAddress) returns()
+func (_Reward *RewardSession) Initialize(tokenAddress common.Address, vehicleIdProxyAddress common.Address, sanctionsContractAddress common.Address) (*types.Transaction, error) {
+	return _Reward.Contract.Initialize(&_Reward.TransactOpts, tokenAddress, vehicleIdProxyAddress, sanctionsContractAddress)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xbe203094.
+// Initialize is a paid mutator transaction binding the contract method 0xc0c53b8b.
 //
-// Solidity: function initialize(address tokenAddress, address registryContractAddress, uint256 registryVehicleNodeType, address sanctionsContractAddress) returns()
-func (_Reward *RewardTransactorSession) Initialize(tokenAddress common.Address, registryContractAddress common.Address, registryVehicleNodeType *big.Int, sanctionsContractAddress common.Address) (*types.Transaction, error) {
-	return _Reward.Contract.Initialize(&_Reward.TransactOpts, tokenAddress, registryContractAddress, registryVehicleNodeType, sanctionsContractAddress)
+// Solidity: function initialize(address tokenAddress, address vehicleIdProxyAddress, address sanctionsContractAddress) returns()
+func (_Reward *RewardTransactorSession) Initialize(tokenAddress common.Address, vehicleIdProxyAddress common.Address, sanctionsContractAddress common.Address) (*types.Transaction, error) {
+	return _Reward.Contract.Initialize(&_Reward.TransactOpts, tokenAddress, vehicleIdProxyAddress, sanctionsContractAddress)
+}
+
+// ManuallySetRewardsGenesisTime is a paid mutator transaction binding the contract method 0x132153c7.
+//
+// Solidity: function manuallySetRewardsGenesisTime(uint256 timestamp) returns()
+func (_Reward *RewardTransactor) ManuallySetRewardsGenesisTime(opts *bind.TransactOpts, timestamp *big.Int) (*types.Transaction, error) {
+	return _Reward.contract.Transact(opts, "manuallySetRewardsGenesisTime", timestamp)
+}
+
+// ManuallySetRewardsGenesisTime is a paid mutator transaction binding the contract method 0x132153c7.
+//
+// Solidity: function manuallySetRewardsGenesisTime(uint256 timestamp) returns()
+func (_Reward *RewardSession) ManuallySetRewardsGenesisTime(timestamp *big.Int) (*types.Transaction, error) {
+	return _Reward.Contract.ManuallySetRewardsGenesisTime(&_Reward.TransactOpts, timestamp)
+}
+
+// ManuallySetRewardsGenesisTime is a paid mutator transaction binding the contract method 0x132153c7.
+//
+// Solidity: function manuallySetRewardsGenesisTime(uint256 timestamp) returns()
+func (_Reward *RewardTransactorSession) ManuallySetRewardsGenesisTime(timestamp *big.Int) (*types.Transaction, error) {
+	return _Reward.Contract.ManuallySetRewardsGenesisTime(&_Reward.TransactOpts, timestamp)
 }
 
 // RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
@@ -780,6 +1000,27 @@ func (_Reward *RewardTransactorSession) RenounceRole(role [32]byte, account comm
 	return _Reward.Contract.RenounceRole(&_Reward.TransactOpts, role, account)
 }
 
+// ResetRewardsGenesisTime is a paid mutator transaction binding the contract method 0x1caa945d.
+//
+// Solidity: function resetRewardsGenesisTime() returns()
+func (_Reward *RewardTransactor) ResetRewardsGenesisTime(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Reward.contract.Transact(opts, "resetRewardsGenesisTime")
+}
+
+// ResetRewardsGenesisTime is a paid mutator transaction binding the contract method 0x1caa945d.
+//
+// Solidity: function resetRewardsGenesisTime() returns()
+func (_Reward *RewardSession) ResetRewardsGenesisTime() (*types.Transaction, error) {
+	return _Reward.Contract.ResetRewardsGenesisTime(&_Reward.TransactOpts)
+}
+
+// ResetRewardsGenesisTime is a paid mutator transaction binding the contract method 0x1caa945d.
+//
+// Solidity: function resetRewardsGenesisTime() returns()
+func (_Reward *RewardTransactorSession) ResetRewardsGenesisTime() (*types.Transaction, error) {
+	return _Reward.Contract.ResetRewardsGenesisTime(&_Reward.TransactOpts)
+}
+
 // RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
 //
 // Solidity: function revokeRole(bytes32 role, address account) returns()
@@ -799,6 +1040,27 @@ func (_Reward *RewardSession) RevokeRole(role [32]byte, account common.Address) 
 // Solidity: function revokeRole(bytes32 role, address account) returns()
 func (_Reward *RewardTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
 	return _Reward.Contract.RevokeRole(&_Reward.TransactOpts, role, account)
+}
+
+// SetAftermarketProxyAddress is a paid mutator transaction binding the contract method 0x56ba7adb.
+//
+// Solidity: function setAftermarketProxyAddress(address aftermarketProxyAddress) returns()
+func (_Reward *RewardTransactor) SetAftermarketProxyAddress(opts *bind.TransactOpts, aftermarketProxyAddress common.Address) (*types.Transaction, error) {
+	return _Reward.contract.Transact(opts, "setAftermarketProxyAddress", aftermarketProxyAddress)
+}
+
+// SetAftermarketProxyAddress is a paid mutator transaction binding the contract method 0x56ba7adb.
+//
+// Solidity: function setAftermarketProxyAddress(address aftermarketProxyAddress) returns()
+func (_Reward *RewardSession) SetAftermarketProxyAddress(aftermarketProxyAddress common.Address) (*types.Transaction, error) {
+	return _Reward.Contract.SetAftermarketProxyAddress(&_Reward.TransactOpts, aftermarketProxyAddress)
+}
+
+// SetAftermarketProxyAddress is a paid mutator transaction binding the contract method 0x56ba7adb.
+//
+// Solidity: function setAftermarketProxyAddress(address aftermarketProxyAddress) returns()
+func (_Reward *RewardTransactorSession) SetAftermarketProxyAddress(aftermarketProxyAddress common.Address) (*types.Transaction, error) {
+	return _Reward.Contract.SetAftermarketProxyAddress(&_Reward.TransactOpts, aftermarketProxyAddress)
 }
 
 // SetMinimumTimeForRewards is a paid mutator transaction binding the contract method 0x066404a7.
@@ -822,25 +1084,46 @@ func (_Reward *RewardTransactorSession) SetMinimumTimeForRewards(newTimeInSecond
 	return _Reward.Contract.SetMinimumTimeForRewards(&_Reward.TransactOpts, newTimeInSeconds)
 }
 
-// UpdateWeek is a paid mutator transaction binding the contract method 0xdf919960.
+// SetRegistryContractAddress is a paid mutator transaction binding the contract method 0xd20838f4.
 //
-// Solidity: function updateWeek(bool forceUpdate) returns()
-func (_Reward *RewardTransactor) UpdateWeek(opts *bind.TransactOpts, forceUpdate bool) (*types.Transaction, error) {
-	return _Reward.contract.Transact(opts, "updateWeek", forceUpdate)
+// Solidity: function setRegistryContractAddress(address registryContractAddress) returns()
+func (_Reward *RewardTransactor) SetRegistryContractAddress(opts *bind.TransactOpts, registryContractAddress common.Address) (*types.Transaction, error) {
+	return _Reward.contract.Transact(opts, "setRegistryContractAddress", registryContractAddress)
 }
 
-// UpdateWeek is a paid mutator transaction binding the contract method 0xdf919960.
+// SetRegistryContractAddress is a paid mutator transaction binding the contract method 0xd20838f4.
 //
-// Solidity: function updateWeek(bool forceUpdate) returns()
-func (_Reward *RewardSession) UpdateWeek(forceUpdate bool) (*types.Transaction, error) {
-	return _Reward.Contract.UpdateWeek(&_Reward.TransactOpts, forceUpdate)
+// Solidity: function setRegistryContractAddress(address registryContractAddress) returns()
+func (_Reward *RewardSession) SetRegistryContractAddress(registryContractAddress common.Address) (*types.Transaction, error) {
+	return _Reward.Contract.SetRegistryContractAddress(&_Reward.TransactOpts, registryContractAddress)
 }
 
-// UpdateWeek is a paid mutator transaction binding the contract method 0xdf919960.
+// SetRegistryContractAddress is a paid mutator transaction binding the contract method 0xd20838f4.
 //
-// Solidity: function updateWeek(bool forceUpdate) returns()
-func (_Reward *RewardTransactorSession) UpdateWeek(forceUpdate bool) (*types.Transaction, error) {
-	return _Reward.Contract.UpdateWeek(&_Reward.TransactOpts, forceUpdate)
+// Solidity: function setRegistryContractAddress(address registryContractAddress) returns()
+func (_Reward *RewardTransactorSession) SetRegistryContractAddress(registryContractAddress common.Address) (*types.Transaction, error) {
+	return _Reward.Contract.SetRegistryContractAddress(&_Reward.TransactOpts, registryContractAddress)
+}
+
+// SetSyntheticProxyAddress is a paid mutator transaction binding the contract method 0xee670696.
+//
+// Solidity: function setSyntheticProxyAddress(address syntheticProxyAddress) returns()
+func (_Reward *RewardTransactor) SetSyntheticProxyAddress(opts *bind.TransactOpts, syntheticProxyAddress common.Address) (*types.Transaction, error) {
+	return _Reward.contract.Transact(opts, "setSyntheticProxyAddress", syntheticProxyAddress)
+}
+
+// SetSyntheticProxyAddress is a paid mutator transaction binding the contract method 0xee670696.
+//
+// Solidity: function setSyntheticProxyAddress(address syntheticProxyAddress) returns()
+func (_Reward *RewardSession) SetSyntheticProxyAddress(syntheticProxyAddress common.Address) (*types.Transaction, error) {
+	return _Reward.Contract.SetSyntheticProxyAddress(&_Reward.TransactOpts, syntheticProxyAddress)
+}
+
+// SetSyntheticProxyAddress is a paid mutator transaction binding the contract method 0xee670696.
+//
+// Solidity: function setSyntheticProxyAddress(address syntheticProxyAddress) returns()
+func (_Reward *RewardTransactorSession) SetSyntheticProxyAddress(syntheticProxyAddress common.Address) (*types.Transaction, error) {
+	return _Reward.Contract.SetSyntheticProxyAddress(&_Reward.TransactOpts, syntheticProxyAddress)
 }
 
 // UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
@@ -2241,6 +2524,333 @@ func (_Reward *RewardFilterer) ParseTokensTransferred(log types.Log) (*RewardTok
 	return event, nil
 }
 
+// RewardTokensTransferredForConnectionStreakIterator is returned from FilterTokensTransferredForConnectionStreak and is used to iterate over the raw logs and unpacked data for TokensTransferredForConnectionStreak events raised by the Reward contract.
+type RewardTokensTransferredForConnectionStreakIterator struct {
+	Event *RewardTokensTransferredForConnectionStreak // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *RewardTokensTransferredForConnectionStreakIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(RewardTokensTransferredForConnectionStreak)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(RewardTokensTransferredForConnectionStreak)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *RewardTokensTransferredForConnectionStreakIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *RewardTokensTransferredForConnectionStreakIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// RewardTokensTransferredForConnectionStreak represents a TokensTransferredForConnectionStreak event raised by the Reward contract.
+type RewardTokensTransferredForConnectionStreak struct {
+	Week             *big.Int
+	User             common.Address
+	Amount           *big.Int
+	VehicleNodeId    *big.Int
+	ConnectionStreak *big.Int
+	Raw              types.Log // Blockchain specific contextual infos
+}
+
+// FilterTokensTransferredForConnectionStreak is a free log retrieval operation binding the contract event 0x4608830ab3ec9e091c65f293254fe1aef6fcd37ed152914a665e6ad38de6a992.
+//
+// Solidity: event TokensTransferredForConnectionStreak(uint256 week, address indexed user, uint256 _amount, uint256 indexed vehicleNodeId, uint256 connectionStreak)
+func (_Reward *RewardFilterer) FilterTokensTransferredForConnectionStreak(opts *bind.FilterOpts, user []common.Address, vehicleNodeId []*big.Int) (*RewardTokensTransferredForConnectionStreakIterator, error) {
+
+	var userRule []interface{}
+	for _, userItem := range user {
+		userRule = append(userRule, userItem)
+	}
+
+	var vehicleNodeIdRule []interface{}
+	for _, vehicleNodeIdItem := range vehicleNodeId {
+		vehicleNodeIdRule = append(vehicleNodeIdRule, vehicleNodeIdItem)
+	}
+
+	logs, sub, err := _Reward.contract.FilterLogs(opts, "TokensTransferredForConnectionStreak", userRule, vehicleNodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &RewardTokensTransferredForConnectionStreakIterator{contract: _Reward.contract, event: "TokensTransferredForConnectionStreak", logs: logs, sub: sub}, nil
+}
+
+// WatchTokensTransferredForConnectionStreak is a free log subscription operation binding the contract event 0x4608830ab3ec9e091c65f293254fe1aef6fcd37ed152914a665e6ad38de6a992.
+//
+// Solidity: event TokensTransferredForConnectionStreak(uint256 week, address indexed user, uint256 _amount, uint256 indexed vehicleNodeId, uint256 connectionStreak)
+func (_Reward *RewardFilterer) WatchTokensTransferredForConnectionStreak(opts *bind.WatchOpts, sink chan<- *RewardTokensTransferredForConnectionStreak, user []common.Address, vehicleNodeId []*big.Int) (event.Subscription, error) {
+
+	var userRule []interface{}
+	for _, userItem := range user {
+		userRule = append(userRule, userItem)
+	}
+
+	var vehicleNodeIdRule []interface{}
+	for _, vehicleNodeIdItem := range vehicleNodeId {
+		vehicleNodeIdRule = append(vehicleNodeIdRule, vehicleNodeIdItem)
+	}
+
+	logs, sub, err := _Reward.contract.WatchLogs(opts, "TokensTransferredForConnectionStreak", userRule, vehicleNodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(RewardTokensTransferredForConnectionStreak)
+				if err := _Reward.contract.UnpackLog(event, "TokensTransferredForConnectionStreak", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTokensTransferredForConnectionStreak is a log parse operation binding the contract event 0x4608830ab3ec9e091c65f293254fe1aef6fcd37ed152914a665e6ad38de6a992.
+//
+// Solidity: event TokensTransferredForConnectionStreak(uint256 week, address indexed user, uint256 _amount, uint256 indexed vehicleNodeId, uint256 connectionStreak)
+func (_Reward *RewardFilterer) ParseTokensTransferredForConnectionStreak(log types.Log) (*RewardTokensTransferredForConnectionStreak, error) {
+	event := new(RewardTokensTransferredForConnectionStreak)
+	if err := _Reward.contract.UnpackLog(event, "TokensTransferredForConnectionStreak", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// RewardTokensTransferredForDeviceIterator is returned from FilterTokensTransferredForDevice and is used to iterate over the raw logs and unpacked data for TokensTransferredForDevice events raised by the Reward contract.
+type RewardTokensTransferredForDeviceIterator struct {
+	Event *RewardTokensTransferredForDevice // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *RewardTokensTransferredForDeviceIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(RewardTokensTransferredForDevice)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(RewardTokensTransferredForDevice)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *RewardTokensTransferredForDeviceIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *RewardTokensTransferredForDeviceIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// RewardTokensTransferredForDevice represents a TokensTransferredForDevice event raised by the Reward contract.
+type RewardTokensTransferredForDevice struct {
+	Week           *big.Int
+	User           common.Address
+	Amount         *big.Int
+	VehicleNodeId  *big.Int
+	DeviceNftProxy common.Address
+	DeviceNode     *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterTokensTransferredForDevice is a free log retrieval operation binding the contract event 0x3ab5458e0b305f1e637781c67c5be0f43b7ee1a4427584e3b229524929184bc4.
+//
+// Solidity: event TokensTransferredForDevice(uint256 week, address indexed user, uint256 _amount, uint256 indexed vehicleNodeId, address deviceNftProxy, uint256 indexed deviceNode)
+func (_Reward *RewardFilterer) FilterTokensTransferredForDevice(opts *bind.FilterOpts, user []common.Address, vehicleNodeId []*big.Int, deviceNode []*big.Int) (*RewardTokensTransferredForDeviceIterator, error) {
+
+	var userRule []interface{}
+	for _, userItem := range user {
+		userRule = append(userRule, userItem)
+	}
+
+	var vehicleNodeIdRule []interface{}
+	for _, vehicleNodeIdItem := range vehicleNodeId {
+		vehicleNodeIdRule = append(vehicleNodeIdRule, vehicleNodeIdItem)
+	}
+
+	var deviceNodeRule []interface{}
+	for _, deviceNodeItem := range deviceNode {
+		deviceNodeRule = append(deviceNodeRule, deviceNodeItem)
+	}
+
+	logs, sub, err := _Reward.contract.FilterLogs(opts, "TokensTransferredForDevice", userRule, vehicleNodeIdRule, deviceNodeRule)
+	if err != nil {
+		return nil, err
+	}
+	return &RewardTokensTransferredForDeviceIterator{contract: _Reward.contract, event: "TokensTransferredForDevice", logs: logs, sub: sub}, nil
+}
+
+// WatchTokensTransferredForDevice is a free log subscription operation binding the contract event 0x3ab5458e0b305f1e637781c67c5be0f43b7ee1a4427584e3b229524929184bc4.
+//
+// Solidity: event TokensTransferredForDevice(uint256 week, address indexed user, uint256 _amount, uint256 indexed vehicleNodeId, address deviceNftProxy, uint256 indexed deviceNode)
+func (_Reward *RewardFilterer) WatchTokensTransferredForDevice(opts *bind.WatchOpts, sink chan<- *RewardTokensTransferredForDevice, user []common.Address, vehicleNodeId []*big.Int, deviceNode []*big.Int) (event.Subscription, error) {
+
+	var userRule []interface{}
+	for _, userItem := range user {
+		userRule = append(userRule, userItem)
+	}
+
+	var vehicleNodeIdRule []interface{}
+	for _, vehicleNodeIdItem := range vehicleNodeId {
+		vehicleNodeIdRule = append(vehicleNodeIdRule, vehicleNodeIdItem)
+	}
+
+	var deviceNodeRule []interface{}
+	for _, deviceNodeItem := range deviceNode {
+		deviceNodeRule = append(deviceNodeRule, deviceNodeItem)
+	}
+
+	logs, sub, err := _Reward.contract.WatchLogs(opts, "TokensTransferredForDevice", userRule, vehicleNodeIdRule, deviceNodeRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(RewardTokensTransferredForDevice)
+				if err := _Reward.contract.UnpackLog(event, "TokensTransferredForDevice", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTokensTransferredForDevice is a log parse operation binding the contract event 0x3ab5458e0b305f1e637781c67c5be0f43b7ee1a4427584e3b229524929184bc4.
+//
+// Solidity: event TokensTransferredForDevice(uint256 week, address indexed user, uint256 _amount, uint256 indexed vehicleNodeId, address deviceNftProxy, uint256 indexed deviceNode)
+func (_Reward *RewardFilterer) ParseTokensTransferredForDevice(log types.Log) (*RewardTokensTransferredForDevice, error) {
+	event := new(RewardTokensTransferredForDevice)
+	if err := _Reward.contract.UnpackLog(event, "TokensTransferredForDevice", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // RewardUpgradedIterator is returned from FilterUpgraded and is used to iterate over the raw logs and unpacked data for Upgraded events raised by the Reward contract.
 type RewardUpgradedIterator struct {
 	Event *RewardUpgraded // Event containing the contract specifics and raw log
@@ -2379,6 +2989,140 @@ func (_Reward *RewardFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *
 func (_Reward *RewardFilterer) ParseUpgraded(log types.Log) (*RewardUpgraded, error) {
 	event := new(RewardUpgraded)
 	if err := _Reward.contract.UnpackLog(event, "Upgraded", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// RewardWeekAdvancedIterator is returned from FilterWeekAdvanced and is used to iterate over the raw logs and unpacked data for WeekAdvanced events raised by the Reward contract.
+type RewardWeekAdvancedIterator struct {
+	Event *RewardWeekAdvanced // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *RewardWeekAdvancedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(RewardWeekAdvanced)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(RewardWeekAdvanced)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *RewardWeekAdvancedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *RewardWeekAdvancedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// RewardWeekAdvanced represents a WeekAdvanced event raised by the Reward contract.
+type RewardWeekAdvanced struct {
+	NewWeek *big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterWeekAdvanced is a free log retrieval operation binding the contract event 0x54ab1f5ea80e88ee480c10edc5b60056a0e392c6125954a9f47ce8677acc59d0.
+//
+// Solidity: event WeekAdvanced(uint256 newWeek)
+func (_Reward *RewardFilterer) FilterWeekAdvanced(opts *bind.FilterOpts) (*RewardWeekAdvancedIterator, error) {
+
+	logs, sub, err := _Reward.contract.FilterLogs(opts, "WeekAdvanced")
+	if err != nil {
+		return nil, err
+	}
+	return &RewardWeekAdvancedIterator{contract: _Reward.contract, event: "WeekAdvanced", logs: logs, sub: sub}, nil
+}
+
+// WatchWeekAdvanced is a free log subscription operation binding the contract event 0x54ab1f5ea80e88ee480c10edc5b60056a0e392c6125954a9f47ce8677acc59d0.
+//
+// Solidity: event WeekAdvanced(uint256 newWeek)
+func (_Reward *RewardFilterer) WatchWeekAdvanced(opts *bind.WatchOpts, sink chan<- *RewardWeekAdvanced) (event.Subscription, error) {
+
+	logs, sub, err := _Reward.contract.WatchLogs(opts, "WeekAdvanced")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(RewardWeekAdvanced)
+				if err := _Reward.contract.UnpackLog(event, "WeekAdvanced", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseWeekAdvanced is a log parse operation binding the contract event 0x54ab1f5ea80e88ee480c10edc5b60056a0e392c6125954a9f47ce8677acc59d0.
+//
+// Solidity: event WeekAdvanced(uint256 newWeek)
+func (_Reward *RewardFilterer) ParseWeekAdvanced(log types.Log) (*RewardWeekAdvanced, error) {
+	event := new(RewardWeekAdvanced)
+	if err := _Reward.contract.UnpackLog(event, "WeekAdvanced", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

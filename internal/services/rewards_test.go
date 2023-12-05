@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/big"
 	"testing"
 	"time"
@@ -647,7 +646,6 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			}
 
 			assert.ElementsMatch(t, scen.NewVIN, actualv)
-			log.Println(scen.Description)
 		})
 	}
 }
@@ -797,46 +795,63 @@ func TestBaselineIssuance(t *testing.T) {
 			abi, err := contracts.RewardMetaData.GetAbi()
 			require.NoError(t, err)
 
-			rewards := []RewardEvent{}
+			rewards := []contracts.RewardTransferInfo{}
 
 			for i := range out {
 				b := out[i].Data.Data
 				require.NoError(t, err)
 				o, _ := abi.Methods["batchTransfer"].Inputs.Unpack(b[4:])
-				users := o[0].([]common.Address)
-				values := o[1].([]*big.Int)
-				vehicleIds := o[2].([]*big.Int)
-				for y := range users {
-					rewards = append(rewards, RewardEvent{
-						User:      users[y],
-						Value:     values[y],
-						VehicleID: vehicleIds[y],
-					})
+				rwrds := o[0].([]struct {
+					User                       common.Address `json:"user"`
+					VehicleId                  *big.Int       `json:"vehicleId"`
+					AftermarketDeviceId        *big.Int       `json:"aftermarketDeviceId"`
+					ValueFromAftermarketDevice *big.Int       `json:"valueFromAftermarketDevice"`
+					SyntheticDeviceId          *big.Int       `json:"syntheticDeviceId"`
+					ValueFromSyntheticDevice   *big.Int       `json:"valueFromSyntheticDevice"`
+					ConnectionStreak           *big.Int       `json:"connectionStreak"`
+					ValueFromStreak            *big.Int       `json:"valueFromStreak"`
+				})
+
+				for _, r := range rwrds {
+					reward := contracts.RewardTransferInfo{
+						User:                       r.User,
+						VehicleId:                  r.VehicleId,
+						AftermarketDeviceId:        r.AftermarketDeviceId,
+						ValueFromAftermarketDevice: r.ValueFromAftermarketDevice,
+						SyntheticDeviceId:          r.SyntheticDeviceId,
+						ValueFromSyntheticDevice:   r.ValueFromSyntheticDevice,
+						ConnectionStreak:           r.ConnectionStreak,
+						ValueFromStreak:            r.ValueFromStreak,
+					}
+					if r.AftermarketDeviceId.Int64() == 0 || r.ValueFromAftermarketDevice.Int64() == 0 {
+						reward.AftermarketDeviceId = &big.Int{}
+						reward.ValueFromAftermarketDevice = &big.Int{}
+					}
+					if r.SyntheticDeviceId.Int64() == 0 || r.ValueFromSyntheticDevice.Int64() == 0 {
+						reward.SyntheticDeviceId = &big.Int{}
+						reward.ValueFromSyntheticDevice = &big.Int{}
+					}
+					if r.ConnectionStreak.Int64() == 0 || r.ValueFromStreak.Int64() == 0 {
+						reward.ConnectionStreak = &big.Int{}
+						reward.ValueFromStreak = &big.Int{}
+					}
+					rewards = append(rewards, reward)
 				}
 			}
 
 			user := common.HexToAddress(rw[0].RewardsReceiverEthereumAddress.String)
-
-			if rw[0].RewardsReceiverEthereumAddress.String == "" {
-				user = common.HexToAddress(rw[0].UserEthereumAddress.String)
-			}
-
-			tokensSum := types.NewNullDecimal(decimal.New(0, 0))
-			if !rw[0].SyntheticDeviceTokens.IsZero() {
-				tokensSum.Add(tokensSum.Big, rw[0].SyntheticDeviceTokens.Big)
-			}
-			if !rw[0].AftermarketDeviceTokens.IsZero() {
-				tokensSum.Add(tokensSum.Big, rw[0].AftermarketDeviceTokens.Big)
-			}
-			if !rw[0].StreakTokens.IsZero() {
-				tokensSum.Add(tokensSum.Big, rw[0].StreakTokens.Big)
-			}
-
-			assert.ElementsMatch(t, []RewardEvent{{
-				User:      user,
-				Value:     tokensSum.Int(nil),
-				VehicleID: rw[0].UserDeviceTokenID.Int(nil),
-			}}, rewards)
+			assert.ElementsMatch(t, []contracts.RewardTransferInfo{
+				{
+					User:                       user,
+					VehicleId:                  rw[0].UserDeviceTokenID.Int(nil),
+					AftermarketDeviceId:        rw[0].AftermarketTokenID.Int(nil),
+					ValueFromAftermarketDevice: rw[0].AftermarketDeviceTokens.Int(nil),
+					SyntheticDeviceId:          big.NewInt(int64(rw[0].SyntheticDeviceID.Int)),
+					ValueFromSyntheticDevice:   rw[0].SyntheticDeviceTokens.Int(nil),
+					ConnectionStreak:           big.NewInt(int64(rw[0].ConnectionStreak)),
+					ValueFromStreak:            rw[0].StreakTokens.Int(nil),
+				},
+			}, rewards)
 		})
 	}
 }

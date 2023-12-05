@@ -116,17 +116,34 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 
 		responseSize = len(transfer)
 
-		userAddr := make([]common.Address, responseSize)
+		/* userAddr := make([]common.Address, responseSize)
 		tknValues := make([]*big.Int, responseSize)
-		vehicleIds := make([]*big.Int, responseSize)
+		vehicleIds := make([]*big.Int, responseSize) */
 
 		tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
 		if err != nil {
 			return err
 		}
+		var transferInfo []contracts.RewardTransferInfo
 
-		for i, row := range transfer {
-			tokensSum := types.NewNullDecimal(decimal.New(0, 0))
+		for _, row := range transfer {
+			transferInfo = append(transferInfo, contracts.RewardTransferInfo{
+				User:                       common.HexToAddress(row.RewardsReceiverEthereumAddress.String),
+				VehicleId:                  row.UserDeviceTokenID.Int(nil),
+				AftermarketDeviceId:        row.AftermarketTokenID.Int(nil),
+				ValueFromAftermarketDevice: row.AftermarketDeviceTokens.Int(nil),
+				SyntheticDeviceId:          big.NewInt(int64(row.SyntheticDeviceID.Int)),
+				ValueFromSyntheticDevice:   row.SyntheticDeviceTokens.Int(nil),
+				ConnectionStreak:           big.NewInt(int64(row.ConnectionStreak)),
+				ValueFromStreak:            row.StreakTokens.Int(nil),
+			})
+			row.TransferMetaTransactionRequestID = null.StringFrom(reqID)
+
+			_, err = row.Update(ctx, tx, boil.Whitelist(models.RewardColumns.TransferMetaTransactionRequestID))
+			if err != nil {
+				return err
+			}
+			/* tokensSum := types.NewNullDecimal(decimal.New(0, 0))
 			tokensSum.Add(tokensSum.Big, row.SyntheticDeviceTokens.Big)
 			tokensSum.Add(tokensSum.Big, row.AftermarketDeviceTokens.Big)
 			tokensSum.Add(tokensSum.Big, row.StreakTokens.Big)
@@ -140,10 +157,10 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 			_, err = row.Update(ctx, tx, boil.Whitelist(models.RewardColumns.TransferMetaTransactionRequestID))
 			if err != nil {
 				return err
-			}
+			} */
 		}
 
-		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
+		err = c.BatchTransfer(reqID, transferInfo)
 		if err != nil {
 			return err
 		}
@@ -157,12 +174,12 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 	return nil
 }
 
-func (c *BaselineClient) BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []*big.Int) error {
+func (c *BaselineClient) BatchTransfer(requestID string, transferInfo []contracts.RewardTransferInfo) error {
 	abi, err := contracts.RewardMetaData.GetAbi()
 	if err != nil {
 		return err
 	}
-	data, err := abi.Pack("batchTransfer", users, values, vehicleIds)
+	data, err := abi.Pack("batchTransfer", transferInfo)
 	if err != nil {
 		return err
 	}
