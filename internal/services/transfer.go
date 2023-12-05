@@ -116,10 +116,6 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 
 		responseSize = len(transfer)
 
-		/* userAddr := make([]common.Address, responseSize)
-		tknValues := make([]*big.Int, responseSize)
-		vehicleIds := make([]*big.Int, responseSize) */
-
 		tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
 		if err != nil {
 			return err
@@ -143,21 +139,6 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			/* tokensSum := types.NewNullDecimal(decimal.New(0, 0))
-			tokensSum.Add(tokensSum.Big, row.SyntheticDeviceTokens.Big)
-			tokensSum.Add(tokensSum.Big, row.AftermarketDeviceTokens.Big)
-			tokensSum.Add(tokensSum.Big, row.StreakTokens.Big)
-
-			userAddr[i] = common.HexToAddress(row.RewardsReceiverEthereumAddress.String)
-			tknValues[i] = tokensSum.Int(nil)
-			vehicleIds[i] = row.UserDeviceTokenID.Int(nil)
-
-			row.TransferMetaTransactionRequestID = null.StringFrom(reqID)
-
-			_, err = row.Update(ctx, tx, boil.Whitelist(models.RewardColumns.TransferMetaTransactionRequestID))
-			if err != nil {
-				return err
-			} */
 		}
 
 		err = c.BatchTransfer(reqID, transferInfo)
