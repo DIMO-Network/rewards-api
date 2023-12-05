@@ -813,12 +813,12 @@ func TestBaselineIssuance(t *testing.T) {
 				})
 
 				for _, r := range rwrds {
-					reward := contracts.RewardTransferInfo{//nolint
+					reward := contracts.RewardTransferInfo{
 						User:                       r.User,
-						VehicleId:                  r.VehicleId,
-						AftermarketDeviceId:        r.AftermarketDeviceId,
+						VehicleId:                  r.VehicleId,           //nolint
+						AftermarketDeviceId:        r.AftermarketDeviceId, //nolint
 						ValueFromAftermarketDevice: r.ValueFromAftermarketDevice,
-						SyntheticDeviceId:          r.SyntheticDeviceId,
+						SyntheticDeviceId:          r.SyntheticDeviceId, //nolint
 						ValueFromSyntheticDevice:   r.ValueFromSyntheticDevice,
 						ConnectionStreak:           r.ConnectionStreak,
 						ValueFromStreak:            r.ValueFromStreak,
