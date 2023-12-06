@@ -906,7 +906,7 @@ func TestBaselineIssuance(t *testing.T) {
 				{
 					User:                       user,
 					VehicleId:                  rw[0].UserDeviceTokenID.Int(nil),
-					AftermarketDeviceId:        utils.SafeNullDecimalToInt(rw[0].AftermarketTokenID),
+					AftermarketDeviceId:        utils.NullDecimalToIntDefaultZero(rw[0].AftermarketTokenID),
 					ValueFromAftermarketDevice: rw[0].AftermarketDeviceTokens.Int(nil),
 					SyntheticDeviceId:          big.NewInt(int64(rw[0].SyntheticDeviceID.Int)),
 					ValueFromSyntheticDevice:   rw[0].SyntheticDeviceTokens.Int(nil),

@@ -121,21 +121,21 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		var transferInfo []contracts.RewardTransferInfo
+		var transfers []contracts.RewardTransferInfo
 
 		for _, row := range transfer {
 			trx := contracts.RewardTransferInfo{
 				User:                       common.HexToAddress(row.RewardsReceiverEthereumAddress.String),
-				VehicleId:                  utils.SafeNullDecimalToInt(row.UserDeviceTokenID),
-				AftermarketDeviceId:        utils.SafeNullDecimalToInt(row.AftermarketTokenID),
-				ValueFromAftermarketDevice: utils.SafeNullDecimalToInt(row.AftermarketDeviceTokens),
+				VehicleId:                  row.UserDeviceTokenID.Int(nil),
+				AftermarketDeviceId:        utils.NullDecimalToIntDefaultZero(row.AftermarketTokenID),
+				ValueFromAftermarketDevice: utils.NullDecimalToIntDefaultZero(row.AftermarketDeviceTokens),
 				SyntheticDeviceId:          big.NewInt(int64(row.SyntheticDeviceID.Int)),
-				ValueFromSyntheticDevice:   utils.SafeNullDecimalToInt(row.SyntheticDeviceTokens),
+				ValueFromSyntheticDevice:   utils.NullDecimalToIntDefaultZero(row.SyntheticDeviceTokens),
 				ConnectionStreak:           big.NewInt(int64(row.ConnectionStreak)),
-				ValueFromStreak:            utils.SafeNullDecimalToInt(row.StreakTokens),
+				ValueFromStreak:            utils.NullDecimalToIntDefaultZero(row.StreakTokens),
 			}
 
-			transferInfo = append(transferInfo, trx)
+			transfers = append(transfers, trx)
 			row.TransferMetaTransactionRequestID = null.StringFrom(reqID)
 
 			_, err = row.Update(ctx, tx, boil.Whitelist(models.RewardColumns.TransferMetaTransactionRequestID))
@@ -144,7 +144,7 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 			}
 		}
 
-		err = c.BatchTransfer(reqID, transferInfo)
+		err = c.BatchTransfer(reqID, transfers)
 		if err != nil {
 			return err
 		}
