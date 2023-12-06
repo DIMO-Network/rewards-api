@@ -709,12 +709,31 @@ func TestBaselineIssuance(t *testing.T) {
 			Description: "Should transfer to owner when beneficiary is not set on the device",
 		},
 		{
-			Name: "Level1SmartcarGrow",
+			Name: "SmartCar1",
 			Users: []User{
 				{ID: "User1", Address: mkAddr(1)},
 			},
 			Devices: []Device{
-				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, autoPiIntegration}, SDTokenID: 1, SDIntegrationID: 3},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}, SDTokenID: 1, SDIntegrationID: 3},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
+			},
+			PrevVIN: []VIN{
+				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
+			},
+			NewVIN: []VIN{},
+		},
+		{
+			Name: "SmartCarAutopi1",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, autoPiIntegration}, SDTokenID: 1, SDIntegrationID: 3, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137, Beneficiary: mkAddr(2).Bytes()},
 			},
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0},
@@ -726,6 +745,26 @@ func TestBaselineIssuance(t *testing.T) {
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
 			},
 			NewVIN: []VIN{},
+		},
+		{
+			Name: "NewCopySameVIN",
+			Users: []User{
+				{ID: "User2", Address: mkAddr(2)},
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(2), TokenID: 2, UserID: "User2", VIN: mkVIN(1), IntsWithData: []string{}},
+				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}, SDTokenID: 1, SDIntegrationID: 3},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(2), ConnStreak: 0, DiscStreak: 0, StreakPoints: 0, AftermarketDevicePoints: 0, TokenID: 2},
+				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
+			},
+			PrevVIN: []VIN{{VIN: mkVIN(1), FirstToken: 1}},
+			NewVIN:  []VIN{},
 		},
 	}
 
@@ -850,8 +889,12 @@ func TestBaselineIssuance(t *testing.T) {
 						reward.SyntheticDeviceId = &big.Int{}
 						reward.ValueFromSyntheticDevice = &big.Int{}
 					}
-					if r.ConnectionStreak.Int64() == 0 || r.ValueFromStreak.Int64() == 0 {
+
+					if r.ConnectionStreak.Int64() == 0 {
 						reward.ConnectionStreak = &big.Int{}
+					}
+
+					if r.ValueFromStreak.Int64() == 0 {
 						reward.ValueFromStreak = &big.Int{}
 					}
 					rewards = append(rewards, reward)
