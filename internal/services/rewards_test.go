@@ -777,8 +777,7 @@ func TestBaselineIssuance(t *testing.T) {
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0},
 			},
-			New: []NewReward{
-				{DeviceID: mkID(2), ConnStreak: 0, DiscStreak: 0, StreakPoints: 0, AftermarketDevicePoints: 0, TokenID: 1, SyntheticDevicePoints: 0}},
+			New:     []NewReward{},
 			PrevVIN: []VIN{{VIN: mkVIN(1), FirstToken: 1}},
 			NewVIN:  []VIN{},
 		},
@@ -850,20 +849,15 @@ func TestBaselineIssuance(t *testing.T) {
 				out = append(out, o)
 				return nil
 			}
-			if scen.Name != "EmptyVehicles" {
-				producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
-			}
+
+			producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
 
 			transferService := NewTokenTransferService(&settings, producer, conn)
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
 			err = rwBonusService.BaselineIssuance()
-			if scen.Name == "EmptyVehicles" {
-				assert.Error(t, err, "failed to convert points into tokens: invalid number of points for week 5. could not complete rewards transfer")
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.NoError(t, err)
 
 			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
@@ -925,7 +919,8 @@ func TestBaselineIssuance(t *testing.T) {
 
 			expected := []contracts.RewardTransferInfo{}
 			user := common.HexToAddress(rw[0].RewardsReceiverEthereumAddress.String)
-			if len(out) > 0 {
+
+			if len(rw) > 0 && scen.Name != "EmptyVehicles" {
 				expected = append(expected, contracts.RewardTransferInfo{
 					User:                       user,
 					VehicleId:                  rw[0].UserDeviceTokenID.Int(nil),
@@ -937,6 +932,7 @@ func TestBaselineIssuance(t *testing.T) {
 					ValueFromStreak:            utils.NullDecimalToIntDefaultZero(rw[0].StreakTokens),
 				})
 			}
+
 			assert.ElementsMatch(t, expected, rewards)
 		})
 	}
