@@ -766,6 +766,22 @@ func TestBaselineIssuance(t *testing.T) {
 			PrevVIN: []VIN{{VIN: mkVIN(1), FirstToken: 1}},
 			NewVIN:  []VIN{},
 		},
+		{
+			Name: "EmptyVehicles",
+			Users: []User{
+				{ID: "User1", Address: mkAddr(1)},
+			},
+			Devices: []Device{
+				{ID: mkID(2), TokenID: 1, UserID: "User2", VIN: mkVIN(1), IntsWithData: []string{}},
+			},
+			Previous: []OldReward{
+				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0},
+			},
+			New: []NewReward{
+				{DeviceID: mkID(2), ConnStreak: 0, DiscStreak: 0, StreakPoints: 0, AftermarketDevicePoints: 0, TokenID: 1, SyntheticDevicePoints: 0}},
+			PrevVIN: []VIN{{VIN: mkVIN(1), FirstToken: 1}},
+			NewVIN:  []VIN{},
+		},
 	}
 
 	for _, scen := range scens {
@@ -834,14 +850,20 @@ func TestBaselineIssuance(t *testing.T) {
 				out = append(out, o)
 				return nil
 			}
-			producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
+			if scen.Name != "EmptyVehicles" {
+				producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
+			}
 
 			transferService := NewTokenTransferService(&settings, producer, conn)
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
 
 			err = rwBonusService.BaselineIssuance()
-			assert.NoError(t, err)
+			if scen.Name == "EmptyVehicles" {
+				assert.Error(t, err, "failed to convert points into tokens: invalid number of points for week 5. could not complete rewards transfer")
+			} else {
+				assert.NoError(t, err)
+			}
 
 			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
@@ -901,19 +923,21 @@ func TestBaselineIssuance(t *testing.T) {
 				}
 			}
 
+			expected := []contracts.RewardTransferInfo{}
 			user := common.HexToAddress(rw[0].RewardsReceiverEthereumAddress.String)
-			assert.ElementsMatch(t, []contracts.RewardTransferInfo{
-				{
+			if len(out) > 0 {
+				expected = append(expected, contracts.RewardTransferInfo{
 					User:                       user,
 					VehicleId:                  rw[0].UserDeviceTokenID.Int(nil),
 					AftermarketDeviceId:        utils.NullDecimalToIntDefaultZero(rw[0].AftermarketTokenID),
-					ValueFromAftermarketDevice: rw[0].AftermarketDeviceTokens.Int(nil),
+					ValueFromAftermarketDevice: utils.NullDecimalToIntDefaultZero(rw[0].AftermarketDeviceTokens),
 					SyntheticDeviceId:          big.NewInt(int64(rw[0].SyntheticDeviceID.Int)),
-					ValueFromSyntheticDevice:   rw[0].SyntheticDeviceTokens.Int(nil),
+					ValueFromSyntheticDevice:   utils.NullDecimalToIntDefaultZero(rw[0].SyntheticDeviceTokens),
 					ConnectionStreak:           big.NewInt(int64(rw[0].ConnectionStreak)),
-					ValueFromStreak:            rw[0].StreakTokens.Int(nil),
-				},
-			}, rewards)
+					ValueFromStreak:            utils.NullDecimalToIntDefaultZero(rw[0].StreakTokens),
+				})
+			}
+			assert.ElementsMatch(t, expected, rewards)
 		})
 	}
 }
