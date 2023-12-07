@@ -26,9 +26,6 @@ rewardsCronJob:
 referralsCronJob:
   enabled: true
   schedule: 0 6 * * 1
-migrateOldRewardsCronJob:
-  enabled: true
-  schedule: 0 6 * * 1
 env:
   ENVIRONMENT: dev
   PORT: "8080"
