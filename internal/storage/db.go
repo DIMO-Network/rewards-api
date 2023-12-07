@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/DIMO-Network/rewards-api/models"
@@ -46,7 +45,6 @@ WHERE
 
 func (s *DBStorage) AssignTokens(ctx context.Context, issuanceWeek, firstAutomatedWeek int) error {
 	// check if issuance week has any points to avoid divide by zero
-	// err := models.NewQuery(Select("sum(age) as age_sum", "count(*) as juicy_count", From("jets"))).Bind(ctx, db, &info)
 	type RwrdInfo struct {
 		PointsSum int `boil:"points_sum"`
 	}
@@ -61,7 +59,7 @@ func (s *DBStorage) AssignTokens(ctx context.Context, issuanceWeek, firstAutomat
 	}
 
 	if rwrdInfo.PointsSum == 0 {
-		return fmt.Errorf("invalid number of points for week %d. could not complete rewards transfer", issuanceWeek)
+		return nil
 	}
 
 	contractWeek := issuanceWeek - firstAutomatedWeek

@@ -777,8 +777,7 @@ func TestBaselineIssuance(t *testing.T) {
 			Previous: []OldReward{
 				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0},
 			},
-			New: []NewReward{
-				{DeviceID: mkID(2), ConnStreak: 0, DiscStreak: 0, StreakPoints: 0, AftermarketDevicePoints: 0, TokenID: 1, SyntheticDevicePoints: 0}},
+			New:     []NewReward{},
 			PrevVIN: []VIN{{VIN: mkVIN(1), FirstToken: 1}},
 			NewVIN:  []VIN{},
 		},
@@ -850,9 +849,8 @@ func TestBaselineIssuance(t *testing.T) {
 				out = append(out, o)
 				return nil
 			}
-			if scen.Name != "EmptyVehicles" {
-				producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
-			}
+
+			producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
 
 			transferService := NewTokenTransferService(&settings, producer, conn)
 
@@ -925,7 +923,8 @@ func TestBaselineIssuance(t *testing.T) {
 
 			expected := []contracts.RewardTransferInfo{}
 			user := common.HexToAddress(rw[0].RewardsReceiverEthereumAddress.String)
-			if len(out) > 0 {
+
+			if len(rw) > 0 && scen.Name != "EmptyVehicles" {
 				expected = append(expected, contracts.RewardTransferInfo{
 					User:                       user,
 					VehicleId:                  rw[0].UserDeviceTokenID.Int(nil),

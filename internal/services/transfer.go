@@ -121,7 +121,7 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		var transfers []contracts.RewardTransferInfo
+		transfers := []contracts.RewardTransferInfo{}
 
 		for _, row := range transfer {
 			trx := contracts.RewardTransferInfo{
