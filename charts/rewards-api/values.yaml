@@ -4,12 +4,12 @@ image:
   pullPolicy: IfNotPresent
   tag: 727ad7f
 imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: ''
+fullnameOverride: ''
 serviceAccount:
   create: true
   annotations: {}
-  name: ""
+  name: ''
 podAnnotations: {}
 podSecurityContext:
   runAsNonRoot: true
@@ -28,14 +28,14 @@ referralsCronJob:
   schedule: 0 6 * * 1
 env:
   ENVIRONMENT: dev
-  PORT: "8080"
+  PORT: '8080'
   LOG_LEVEL: info
-  DB_PORT: "5432"
+  DB_PORT: '5432'
   DB_NAME: rewards_api
-  DB_MAX_OPEN_CONNECTIONS: "10"
-  DB_MAX_IDLE_CONNECTIONS: "3"
+  DB_MAX_OPEN_CONNECTIONS: '10'
+  DB_MAX_IDLE_CONNECTIONS: '3'
   SERVICE_NAME: rewards-api
-  GRPC_PORT: "8086"
+  GRPC_PORT: '8086'
   JWT_KEY_SET_URL: https://auth.dev.dimo.zone/keys
   DEPLOYMENT_BASE_URL: https://rewards-api.dev.dimo.zone
   DEVICE_DATA_INDEX_NAME: device-status-dev*
@@ -47,16 +47,16 @@ env:
   META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
   KAFKA_BROKERS: kafka-dev-dimo-kafka-kafka-brokers:9092
   CONSUMER_GROUP: rewards-api
-  ISSUANCE_CONTRACT_ADDRESS: "0x375885164266d48C48abbbb439Be98864Ae62bBE"
+  ISSUANCE_CONTRACT_ADDRESS: '0x375885164266d48C48abbbb439Be98864Ae62bBE'
   TRANSFER_BATCH_SIZE: 2
   FIRST_AUTOMATED_WEEK: 44
-  TOKEN_ADDRESS: "0x80ee7ec4493a1d7975ab900f94db25ba7c688201"
+  TOKEN_ADDRESS: '0x80ee7ec4493a1d7975ab900f94db25ba7c688201'
   CONTRACT_EVENT_TOPIC: topic.contract.event
-  REFERRAL_CONTRACT_ADDRESS: "0xfF358a3dB687d9E80435a642bB3Ba8E64D4359A6"
+  REFERRAL_CONTRACT_ADDRESS: '0xfF358a3dB687d9E80435a642bB3Ba8E64D4359A6'
 config:
   tokens:
     - chainId: 80001
-      address: "0x80ee7ec4493a1d7975ab900f94db25ba7c688201"
+      address: '0x80ee7ec4493a1d7975ab900f94db25ba7c688201'
       rpcUrl: $MUMBAI_RPC_URL
 service:
   type: ClusterIP
@@ -88,10 +88,10 @@ ingress:
   className: nginx
   annotations:
     nginx.ingress.kubernetes.io/auth-tls-secret: ingress/cf-origin-ca
-    nginx.ingress.kubernetes.io/auth-tls-verify-client: "on"
-    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/auth-tls-verify-client: 'on'
+    nginx.ingress.kubernetes.io/enable-cors: 'true'
     nginx.ingress.kubernetes.io/cors-allow-origin: https://app.dev.dimo.zone
-    nginx.ingress.kubernetes.io/limit-rps: "3"
+    nginx.ingress.kubernetes.io/limit-rps: '3'
     external-dns.alpha.kubernetes.io/hostname: rewards-api.dev.dimo.zone
   hosts:
     - host: rewards-api.dev.dimo.zone
