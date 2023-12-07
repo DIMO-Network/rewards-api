@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"os"
 	"runtime/debug"
@@ -11,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ericlagergren/decimal"
 	_ "github.com/lib/pq"
+	"github.com/volatiletech/sqlboiler/v4/types"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
@@ -22,6 +25,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
@@ -36,6 +40,7 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"gopkg.in/yaml.v3"
 )
 
@@ -360,7 +365,64 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}
+	case "migrate-rewards":
+		var week int
+		if len(os.Args) == 2 {
+			// We have to subtract 1 because we're getting the number of the newly beginning week.
+			week = services.GetWeekNumForCron(time.Now()) - 1
+		} else {
+			var err error
+			week, err = strconv.Atoi(os.Args[2])
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Could not parse week number.")
+			}
+		}
 
+		logger := logger.With().Int("week", week).Str("sub-command", "migrate-rewards").Logger()
+
+		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
+		totalTime := 0
+		for !pdb.IsReady() {
+			if totalTime > 30 {
+				logger.Fatal().Msg("could not connect to postgres after 30 seconds")
+			}
+			time.Sleep(time.Second)
+			totalTime++
+		}
+
+		definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create device-definitions-api connection.")
+		}
+		defer definitionsConn.Close()
+
+		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
+
+		integrsByID := make(map[string]*pb_defs.Integration)
+		allIntegrations, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
+
+		if err != nil {
+			logger.Fatal().Err(err).Msg("could not fetch integrations.")
+			return
+		}
+
+		for _, integr := range allIntegrations.Integrations {
+			integrsByID[integr.Id] = integr
+		}
+
+		rewards, err := models.Rewards(
+			models.RewardWhere.IssuanceWeekID.LT(week),
+			models.RewardWhere.Tokens.GT(types.NewNullDecimal(decimal.New(0, 0))),
+		).All(ctx, pdb.DBS().Reader)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to fetch rewards.")
+			return
+		}
+
+		for _, reward := range rewards {
+			log.Println(reward)
+			// integration := swIntegrsByTokenID
+		}
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
