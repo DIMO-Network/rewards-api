@@ -398,7 +398,7 @@ func main() {
 			logger.Fatal().Msg("could not fetch integrations")
 		}
 
-		err = services.MigrateRewardsController(ctx, &logger, &settings, pdb, allIntegrations, week)
+		err = services.MigrateRewardsController(ctx, &logger, pdb, allIntegrations, week)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Error occurred completing reward migrations")
 		}

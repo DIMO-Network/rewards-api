@@ -5,10 +5,8 @@ import (
 	"testing"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
-	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
-	"github.com/DIMO-Network/shared"
 	"github.com/ericlagergren/decimal"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -19,10 +17,6 @@ import (
 
 func TestMigrateOldRewards(t *testing.T) {
 	ctx := context.Background()
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	logger := zerolog.Nop()
 
@@ -75,7 +69,7 @@ func TestMigrateOldRewards(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	err = MigrateRewardsController(ctx, &logger, &settings, conn, intgs, 2)
+	err = MigrateRewardsController(ctx, &logger, conn, intgs, 2)
 	assert.NoError(t, err)
 
 	rewards, err := models.Rewards().All(ctx, conn.DBS().Reader)
