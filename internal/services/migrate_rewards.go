@@ -30,6 +30,7 @@ func MigrateRewardsController(ctx context.Context, logger *zerolog.Logger, setti
 	}
 
 	for _, reward := range rewards {
+		logger.Info().Int("Issuance Week", reward.IssuanceWeekID).Str("DeviceID", reward.UserDeviceID).Msg("Starting reward token migration")
 
 		if len(reward.IntegrationIds) == 0 {
 			continue
@@ -86,6 +87,7 @@ func MigrateRewardsController(ctx context.Context, logger *zerolog.Logger, setti
 			`
 		_, err = pdb.DBS().Writer.ExecContext(ctx, qry, int(sd.Points), int(ad.Points), reward.IssuanceWeekID, reward.UserDeviceID)
 		if err != nil {
+			logger.Info().Int("Issuance Week", reward.IssuanceWeekID).Str("DeviceID", reward.UserDeviceID).Err(err).Msg("Error occurred migrating rewards")
 			return fmt.Errorf("error occurred splitting up rewards with issuance week %d", reward.IssuanceWeekID)
 		}
 	}
