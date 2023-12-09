@@ -48,12 +48,24 @@ func MigrateRewardsController(ctx context.Context, logger *zerolog.Logger, pdb d
 			}
 		}
 
+		if ad == nil {
+			ad = &pb_defs.Integration{
+				Points: 0,
+			}
+		}
+
+		if sd == nil {
+			sd = &pb_defs.Integration{
+				Points: 0,
+			}
+		}
+
 		qry := `UPDATE
 			rewards_api.rewards
 			SET
 				synthetic_device_points = $1,
 				aftermarket_device_points = $2,
-			synthetic_device_tokens = div(
+			synthetic_device_tokens = coalesce(div(
 				$1 * tokens::INTEGER,
 				(SELECT
 					sum(streak_points + integration_points)
@@ -62,8 +74,8 @@ func MigrateRewardsController(ctx context.Context, logger *zerolog.Logger, pdb d
 						issuance_week_id = $3
 						AND user_device_id = $4
 				)
-			),
-			aftermarket_device_tokens = div(
+			), 0),
+			aftermarket_device_tokens = coalesce(div(
 				$2 * tokens::INTEGER,
 				(SELECT
 					sum(streak_points + integration_points)
@@ -72,8 +84,8 @@ func MigrateRewardsController(ctx context.Context, logger *zerolog.Logger, pdb d
 						issuance_week_id = $3
 						AND user_device_id = $4
 				)
-			),
-			streak_tokens = div(
+			), 0),
+			streak_tokens = coalesce(div(
 				streak_points * tokens::INTEGER,
 				(SELECT
 					sum(streak_points + integration_points)
@@ -82,7 +94,7 @@ func MigrateRewardsController(ctx context.Context, logger *zerolog.Logger, pdb d
 						issuance_week_id = $3
 						AND user_device_id = $4
 				)
-			)
+			), 0)
 			`
 		_, err = pdb.DBS().Writer.ExecContext(ctx, qry, int(sd.Points), int(ad.Points), reward.IssuanceWeekID, reward.UserDeviceID)
 		if err != nil {
