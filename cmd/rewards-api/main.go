@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"net"
 	"os"
 	"runtime/debug"
@@ -12,9 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ericlagergren/decimal"
 	_ "github.com/lib/pq"
-	"github.com/volatiletech/sqlboiler/v4/types"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
@@ -25,7 +22,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
-	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
@@ -377,7 +373,6 @@ func main() {
 				logger.Fatal().Err(err).Msg("Could not parse week number.")
 			}
 		}
-
 		logger := logger.With().Int("week", week).Str("sub-command", "migrate-rewards").Logger()
 
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
@@ -392,36 +387,20 @@ func main() {
 
 		definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create device-definitions-api connection.")
+			logger.Fatal().Msg("Failed to create device-definitions-api connection.")
 		}
 		defer definitionsConn.Close()
 
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 
-		integrsByID := make(map[string]*pb_defs.Integration)
 		allIntegrations, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
-
 		if err != nil {
-			logger.Fatal().Err(err).Msg("could not fetch integrations.")
-			return
+			logger.Fatal().Msg("could not fetch integrations")
 		}
 
-		for _, integr := range allIntegrations.Integrations {
-			integrsByID[integr.Id] = integr
-		}
-
-		rewards, err := models.Rewards(
-			models.RewardWhere.IssuanceWeekID.LT(week),
-			models.RewardWhere.Tokens.GT(types.NewNullDecimal(decimal.New(0, 0))),
-		).All(ctx, pdb.DBS().Reader)
+		err = services.MigrateRewardsController(ctx, &logger, &settings, pdb, allIntegrations, week)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to fetch rewards.")
-			return
-		}
-
-		for _, reward := range rewards {
-			log.Println(reward)
-			// integration := swIntegrsByTokenID
+			logger.Fatal().Err(err).Msg("Error occurred completing reward migrations")
 		}
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
