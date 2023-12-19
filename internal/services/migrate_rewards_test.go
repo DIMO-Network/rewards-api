@@ -93,5 +93,5 @@ func TestMigrateOldRewards(t *testing.T) {
 		StreakTokens:            rewards[0].StreakTokens,
 	}
 
-	assert.ElementsMatch(t, expected, actual)
+	assert.Equal(t, expected, actual)
 }
