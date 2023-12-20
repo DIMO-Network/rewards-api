@@ -63,9 +63,9 @@ func MigrateRewardsService(ctx context.Context, logger *zerolog.Logger, pdb db.S
 				streak_points * tokens,
 				(streak_points + integration_points)
 			), 0)
-			WHERE issuance_week_id = $3;
+			WHERE issuance_week_id = $3 AND user_device_id = $4;
 			`
-		_, err = pdb.DBS().Writer.ExecContext(ctx, qry, sdPoints, adPoints, reward.IssuanceWeekID)
+		_, err = pdb.DBS().Writer.ExecContext(ctx, qry, sdPoints, adPoints, reward.IssuanceWeekID, reward.UserDeviceID)
 		if err != nil {
 			migLogger.Info().Msg("Error occurred migrating rewards")
 			return fmt.Errorf("error occurred splitting up rewards with issuance week %d", reward.IssuanceWeekID)
