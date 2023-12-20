@@ -91,11 +91,13 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
 	swIntegrsByID := make(map[string]*pb_defs.Integration)
+	swIntegrsByTokenID := make(map[uint64]*pb_defs.Integration)
 
 	for _, intDesc := range allIntegrations.Integrations {
 		if intDesc.ManufacturerTokenId == 0 {
 			// Must be a software integration. Sort after this loop.
 			swIntegrsByID[intDesc.Id] = intDesc
+			swIntegrsByTokenID[intDesc.TokenId] = intDesc
 		} else {
 			// Must be the integration associated with a manufacturer.
 			amMfrTokenToIntegration[intDesc.ManufacturerTokenId] = intDesc
@@ -159,8 +161,35 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			outInts = append(outInts, uri)
 		}
 
+		if sd := device.SyntheticDevice; sd != nil {
+			if sd.IntegrationTokenId == 0 {
+				return fmt.Errorf("synthetic device %d does not have an integration", sd.IntegrationTokenId)
+			}
+
+			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
+			if !ok {
+				return fmt.Errorf("synthetic device %d has integration %d without metadata", sd.TokenId, sd.IntegrationTokenId)
+			}
+
+			uri := UserResponseIntegration{
+				ID:                   integr.Id,
+				Vendor:               integr.Vendor,
+				DataThisWeek:         false,
+				Points:               0,
+				OnChainPairingStatus: "Unpaired",
+			}
+
+			if vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
+				uri.Points = int(integr.Points)
+				uri.DataThisWeek = true
+				uri.OnChainPairingStatus = "Paired"
+			}
+
+			outInts = append(outInts, uri)
+		}
+
 		// Take care of a software integration, if there is one.
-		for _, vehIntegr := range device.Integrations {
+		/*for _, vehIntegr := range device.Integrations {
 			if integr, ok := swIntegrsByID[vehIntegr.Id]; ok {
 				uri := UserResponseIntegration{
 					ID:                   integr.Id,
@@ -179,7 +208,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 				break
 			}
-		}
+		}*/
 
 		rewards, err := models.Rewards(
 			models.RewardWhere.UserDeviceID.EQ(device.Id),
