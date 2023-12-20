@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"os"
 	"runtime/debug"
@@ -36,7 +37,6 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"gopkg.in/yaml.v3"
 )
 
@@ -362,6 +362,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}
 	case "migrate-rewards":
+		log.Println(os.Args[2], "-=-====")
 		if len(os.Args) < 2 || os.Args[2] == "" {
 			logger.Fatal().Msg("invalid value provided for week")
 		}
@@ -383,7 +384,7 @@ func main() {
 			totalTime++
 		}
 
-		definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		/*definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Msg("Failed to create device-definitions-api connection.")
 		}
@@ -394,6 +395,25 @@ func main() {
 		allIntegrations, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
 		if err != nil {
 			logger.Fatal().Msg("could not fetch integrations")
+		}
+		{}
+		*/
+
+		allIntegrations := &pb_defs.GetIntegrationResponse{
+			Integrations: []*pb_defs.Integration{
+				{
+					Id:                       "26A5Dk3vvvQutjSyF0Jka2DP5lg",
+					Type:                     "",
+					Style:                    "",
+					Vendor:                   "",
+					AutoPiDefaultTemplateId:  0,
+					AutoPiPowertrainTemplate: nil,
+					RefreshLimitSecs:         0,
+					TokenId:                  0,
+					Points:                   10000,
+					ManufacturerTokenId:      0,
+				},
+			},
 		}
 
 		err = services.MigrateRewardsService(ctx, &logger, pdb, allIntegrations, week)

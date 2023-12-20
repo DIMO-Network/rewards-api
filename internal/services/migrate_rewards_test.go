@@ -69,7 +69,7 @@ func TestMigrateOldRewards(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	err = MigrateRewardsController(ctx, &logger, conn, intgs, 2)
+	err = MigrateRewardsService(ctx, &logger, conn, intgs, 2)
 	assert.NoError(t, err)
 
 	rewards, err := models.Rewards().All(ctx, conn.DBS().Reader)

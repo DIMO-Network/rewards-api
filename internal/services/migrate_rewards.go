@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
@@ -37,70 +36,38 @@ func MigrateRewardsService(ctx context.Context, logger *zerolog.Logger, pdb db.S
 			continue
 		}
 
-		var sd *pb_defs.Integration
-		var ad *pb_defs.Integration
+		adPoints, sdPoints := int64(0), int64(0)
 
 		for _, id := range reward.IntegrationIds {
 			integration := integrsByID[id]
-
 			if integration.ManufacturerTokenId == 0 { // Synthetic
-				sd = integration
+				sdPoints = integration.Points
 			} else {
-				ad = integration
+				adPoints = integration.Points
 			}
 		}
-
-		if ad == nil {
-			ad = &pb_defs.Integration{
-				Points: 0,
-			}
-		}
-
-		if sd == nil {
-			sd = &pb_defs.Integration{
-				Points: 0,
-			}
-		}
-
 		qry := `UPDATE
 			rewards_api.rewards
 			SET
-				synthetic_device_points = $1,
-				aftermarket_device_points = $2,
-			synthetic_device_tokens = coalesce(div(
-				$1 * tokens::INTEGER,
-				(SELECT
-					sum(streak_points + integration_points)
-					FROM rewards_api.rewards
-					WHERE
-						issuance_week_id = $3
-						AND user_device_id = $4
-				)
-			), 0),
+				synthetic_device_points = $1::integer,
+				aftermarket_device_points = $2::integer,
+			synthetic_device_tokens = div(
+				$1 * tokens,
+				(streak_points + integration_points)
+			),
 			aftermarket_device_tokens = coalesce(div(
-				$2 * tokens::INTEGER,
-				(SELECT
-					sum(streak_points + integration_points)
-					FROM rewards_api.rewards
-					WHERE
-						issuance_week_id = $3
-						AND user_device_id = $4
-				)
+				$2 * tokens,
+				(streak_points + integration_points)
 			), 0),
 			streak_tokens = coalesce(div(
-				streak_points * tokens::INTEGER,
-				(SELECT
-					sum(streak_points + integration_points)
-					FROM rewards_api.rewards
-					WHERE
-						issuance_week_id = $3
-						AND user_device_id = $4
-				)
+				streak_points * tokens,
+				(streak_points + integration_points)
 			), 0)
+			WHERE issuance_week_id = $3;
 			`
-		_, err = pdb.DBS().Writer.ExecContext(ctx, qry, int(sd.Points), int(ad.Points), reward.IssuanceWeekID, reward.UserDeviceID)
+		_, err = pdb.DBS().Writer.ExecContext(ctx, qry, sdPoints, adPoints, reward.IssuanceWeekID)
 		if err != nil {
-			logger.Info().Int("Issuance Week", reward.IssuanceWeekID).Str("DeviceID", reward.UserDeviceID).Err(err).Msg("Error occurred migrating rewards")
+			migLogger.Info().Msg("Error occurred migrating rewards")
 			return fmt.Errorf("error occurred splitting up rewards with issuance week %d", reward.IssuanceWeekID)
 		}
 	}
