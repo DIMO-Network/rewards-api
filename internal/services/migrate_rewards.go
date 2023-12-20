@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
+	pbdefs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/ericlagergren/decimal"
@@ -12,8 +12,8 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
-func MigrateRewardsService(ctx context.Context, logger *zerolog.Logger, pdb db.Store, allIntegrations *pb_defs.GetIntegrationResponse, week int) error {
-	integrsByID := make(map[string]*pb_defs.Integration)
+func MigrateRewardsService(ctx context.Context, logger *zerolog.Logger, pdb db.Store, allIntegrations *pbdefs.GetIntegrationResponse, week int) error {
+	integrsByID := make(map[string]*pbdefs.Integration)
 	for _, integr := range allIntegrations.Integrations {
 		integrsByID[integr.Id] = integr
 	}
