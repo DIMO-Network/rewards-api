@@ -13,15 +13,14 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
-func MigrateRewardsController(ctx context.Context, logger *zerolog.Logger, pdb db.Store, allIntegrations *pb_defs.GetIntegrationResponse, week int) error {
-
+func MigrateRewardsService(ctx context.Context, logger *zerolog.Logger, pdb db.Store, allIntegrations *pb_defs.GetIntegrationResponse, week int) error {
 	integrsByID := make(map[string]*pb_defs.Integration)
 	for _, integr := range allIntegrations.Integrations {
 		integrsByID[integr.Id] = integr
 	}
 
 	rewards, err := models.Rewards(
-		models.RewardWhere.IssuanceWeekID.LT(week),
+		models.RewardWhere.IssuanceWeekID.LTE(week),
 		models.RewardWhere.Tokens.GT(types.NewNullDecimal(decimal.New(0, 0))),
 	).All(ctx, pdb.DBS().Reader)
 	if err != nil {
@@ -29,9 +28,12 @@ func MigrateRewardsController(ctx context.Context, logger *zerolog.Logger, pdb d
 	}
 
 	for _, reward := range rewards {
-		logger.Info().Int("Issuance Week", reward.IssuanceWeekID).Str("DeviceID", reward.UserDeviceID).Msg("Starting reward token migration")
+		migLogger := logger.With().Int("issuanceWeek", reward.IssuanceWeekID).Str("userDeviceID", reward.UserDeviceID).Logger()
+
+		migLogger.Info().Msg("Starting reward token migration")
 
 		if len(reward.IntegrationIds) == 0 {
+			migLogger.Warn().Msg("skipping, could not find any integrations for device")
 			continue
 		}
 

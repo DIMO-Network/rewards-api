@@ -362,18 +362,16 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}
 	case "migrate-rewards":
-		var week int
-		if len(os.Args) == 2 {
-			// We have to subtract 1 because we're getting the number of the newly beginning week.
-			week = services.GetWeekNumForCron(time.Now()) - 1
-		} else {
-			var err error
-			week, err = strconv.Atoi(os.Args[2])
-			if err != nil {
-				logger.Fatal().Err(err).Msg("Could not parse week number.")
-			}
+		if len(os.Args) < 2 || os.Args[2] == "" {
+			logger.Fatal().Msg("invalid value provided for week")
 		}
-		logger := logger.With().Int("week", week).Str("sub-command", "migrate-rewards").Logger()
+
+		week, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Could not parse week number.")
+		}
+
+		logger := logger.With().Int("week", week).Str("subCommand", "migrate-rewards").Logger()
 
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
 		totalTime := 0
@@ -398,7 +396,7 @@ func main() {
 			logger.Fatal().Msg("could not fetch integrations")
 		}
 
-		err = services.MigrateRewardsController(ctx, &logger, pdb, allIntegrations, week)
+		err = services.MigrateRewardsService(ctx, &logger, pdb, allIntegrations, week)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Error occurred completing reward migrations")
 		}
