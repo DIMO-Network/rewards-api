@@ -53,8 +53,8 @@ func MigrateRewardsService(ctx context.Context, logger *zerolog.Logger, pdb db.S
 			synthetic_device_points = $1::integer,
 			aftermarket_device_points = $2::integer,
 			synthetic_device_tokens = div($1 * tokens, (streak_points + integration_points)),
-			aftermarket_device_tokens = coalesce(div($2 * tokens, (streak_points + integration_points)), 0),
-			streak_tokens = coalesce(div(streak_points * tokens, (streak_points + integration_points)), 0)
+			aftermarket_device_tokens = div($2 * tokens, (streak_points + integration_points)),
+			streak_tokens = div(streak_points * tokens, (streak_points + integration_points))
 		WHERE
 			issuance_week_id = $3
 			AND user_device_id = $4;`
