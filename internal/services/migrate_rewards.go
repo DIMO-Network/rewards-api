@@ -47,24 +47,17 @@ func MigrateRewardsService(ctx context.Context, logger *zerolog.Logger, pdb db.S
 			}
 		}
 		qry := `UPDATE
-			rewards_api.rewards
-			SET
-				synthetic_device_points = $1::integer,
-				aftermarket_device_points = $2::integer,
-			synthetic_device_tokens = div(
-				$1 * tokens,
-				(streak_points + integration_points)
-			),
-			aftermarket_device_tokens = coalesce(div(
-				$2 * tokens,
-				(streak_points + integration_points)
-			), 0),
-			streak_tokens = coalesce(div(
-				streak_points * tokens,
-				(streak_points + integration_points)
-			), 0)
-			WHERE issuance_week_id = $3 AND user_device_id = $4;
-			`
+		rewards_api.rewards
+		SET
+			synthetic_device_points = $1::integer,
+			aftermarket_device_points = $2::integer,
+			synthetic_device_tokens = div($1 * tokens, (streak_points + integration_points)),
+			aftermarket_device_tokens = coalesce(div($2 * tokens, (streak_points + integration_points)), 0),
+			streak_tokens = coalesce(div(streak_points * tokens, (streak_points + integration_points)), 0)
+		WHERE
+			issuance_week_id = $3
+			AND user_device_id = $4;`
+
 		_, err = pdb.DBS().Writer.ExecContext(ctx, qry, sdPoints, adPoints, reward.IssuanceWeekID, reward.UserDeviceID)
 		if err != nil {
 			migLogger.Info().Msg("Error occurred migrating rewards")
