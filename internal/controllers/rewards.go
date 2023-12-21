@@ -109,23 +109,13 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
 
-		var maybeLastActive *time.Time
-		lastActive, seen, err := r.DataClient.GetLastActivity(device.Id)
-		if err != nil {
-			dlog.Err(err).Msg("Failed to retrieve last activity.")
-			return opaqueInternalError
-		}
-
-		if seen {
-			maybeLastActive = &lastActive
-		}
-
 		outInts := []UserResponseIntegration{}
 
 		vehicleMinted := device.TokenId != nil
 
 		vehicleIntegsWithSignals, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
 		if err != nil {
+			dlog.Err(err).Msg("Error querying for this week's integrations.")
 			return opaqueInternalError
 		}
 
@@ -222,7 +212,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			Tokens:               tkns,
 			ConnectedThisWeek:    slices.ContainsFunc(outInts, func(uri UserResponseIntegration) bool { return uri.Points > 0 }),
 			IntegrationsThisWeek: outInts,
-			LastActive:           maybeLastActive,
+			LastActive:           nil, // Unused, we think.
 			ConnectionStreak:     connectionStreak,
 			DisconnectionStreak:  disconnectionStreak,
 			Level:                *getLevelResp(lvl),
