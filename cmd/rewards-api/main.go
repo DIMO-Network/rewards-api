@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"io"
 	"net"
 	"os"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	_ "github.com/lib/pq"
 
