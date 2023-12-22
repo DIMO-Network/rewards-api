@@ -6,3 +6,4 @@ resources/data/
 
 # For local testing
 settings.yaml
+.idea/

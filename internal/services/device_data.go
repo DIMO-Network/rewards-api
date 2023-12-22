@@ -83,8 +83,8 @@ func (c *elasticDeviceDataClient) GetLastActivity(userDeviceID string) (lastActi
 				Should(activityFieldExists...).
 				MinimumShouldMatch(1),
 		).
-		SourceIncludes("data.timestamp").
-		Sort("data.timestamp", esquery.OrderDesc).
+		SourceIncludes("time").
+		Sort("time", esquery.OrderDesc).
 		Size(1)
 
 	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
@@ -102,16 +102,14 @@ func (c *elasticDeviceDataClient) GetLastActivity(userDeviceID string) (lastActi
 		return time.Time{}, false, nil
 	}
 
-	return respb.Hits.Hits[0].Source.Data.Timestamp, true, nil
+	return respb.Hits.Hits[0].Source.Time, true, nil
 }
 
 type ActivityResp struct {
 	Hits struct {
 		Hits []struct {
 			Source struct {
-				Data struct {
-					Timestamp time.Time `json:"timestamp"`
-				} `json:"data"`
+				Time time.Time `json:"time"`
 			} `json:"_source"`
 		} `json:"hits"`
 	} `json:"hits"`
