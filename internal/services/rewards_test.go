@@ -932,7 +932,6 @@ func TestBaselineIssuance(t *testing.T) {
 					ValueFromStreak:            utils.NullDecimalToIntDefaultZero(rw[0].StreakTokens),
 				})
 			}
-
 			assert.ElementsMatch(t, expected, rewards)
 		})
 	}
