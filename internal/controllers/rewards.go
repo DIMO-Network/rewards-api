@@ -2,10 +2,11 @@ package controllers
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"math/big"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
