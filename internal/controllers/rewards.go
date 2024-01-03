@@ -198,17 +198,19 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		pts := 0
 		for _, r := range rewards {
-			pts += r.StreakPoints + r.IntegrationPoints
+			pts += r.StreakPoints + r.AftermarketDevicePoints + r.SyntheticDevicePoints
 		}
 
 		userPts += pts
 
 		tkns := big.NewInt(0)
 		for _, t := range rewards {
-			if t.Tokens.IsZero() {
+			if t.AftermarketDeviceTokens.IsZero() && t.SyntheticDeviceTokens.IsZero() && t.StreakTokens.IsZero() {
 				continue
 			}
-			tkns.Add(tkns, t.Tokens.Int(nil))
+			tkns.Add(tkns, t.StreakTokens.Int(nil))
+			tkns.Add(tkns, t.SyntheticDeviceTokens.Int(nil))
+			tkns.Add(tkns, t.AftermarketDeviceTokens.Int(nil))
 		}
 
 		userTokens.Add(userTokens, tkns)
@@ -398,12 +400,19 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		weeks[i].Tokens = big.NewInt(0)
 	}
 
+	tkns := big.NewInt(0)
 	for _, r := range rs {
-		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.IntegrationPoints
-		if r.Tokens.IsZero() {
+		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.AftermarketDevicePoints + r.SyntheticDevicePoints
+
+		if r.AftermarketDeviceTokens.IsZero() && r.SyntheticDeviceTokens.IsZero() && r.StreakTokens.IsZero() {
 			continue
 		}
-		weeks[maxWeek-r.IssuanceWeekID].Tokens.Add(weeks[maxWeek-r.IssuanceWeekID].Tokens, r.Tokens.Int(nil))
+
+		tkns.Add(tkns, r.StreakTokens.Int(nil))
+		tkns.Add(tkns, r.SyntheticDeviceTokens.Int(nil))
+		tkns.Add(tkns, r.AftermarketDeviceTokens.Int(nil))
+
+		weeks[maxWeek-r.IssuanceWeekID].Tokens.Add(weeks[maxWeek-r.IssuanceWeekID].Tokens, tkns)
 	}
 
 	return c.JSON(HistoryResponse{Weeks: weeks})
