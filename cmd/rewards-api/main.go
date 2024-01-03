@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net"
 	"os"
@@ -71,7 +70,9 @@ func main() {
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
 		app := fiber.New(fiber.Config{
 			DisableStartupMessage: true,
-			ErrorHandler:          ErrorHandler,
+			ErrorHandler: func(c *fiber.Ctx, err error) error {
+				return ErrorHandler(c, err, &logger, settings.Environment == "prod")
+			},
 		})
 
 		app.Get("/", func(c *fiber.Ctx) error {
@@ -421,20 +422,58 @@ func startGRPCServer(settings *config.Settings, dbs db.Store, logger *zerolog.Lo
 	}
 }
 
-func ErrorHandler(c *fiber.Ctx, err error) error {
-	code := fiber.StatusInternalServerError // Default.
-	message := "Internal error."
+// logging stuff here
 
-	var fiberErr *fiber.Error
-	if errors.As(err, &fiberErr) {
-		code = fiberErr.Code
-		message = err.Error()
+const skipErrorLogKey = "skipErrorLog"
+
+func GetLogger(c *fiber.Ctx, d *zerolog.Logger) *zerolog.Logger {
+	m := c.Locals("logger")
+	if m == nil {
+		return d
 	}
 
-	return c.Status(code).JSON(fiber.Map{
-		"code":    code,
-		"message": message,
+	l, ok := m.(*zerolog.Logger)
+	if !ok {
+		return d
+	}
+
+	return l
+}
+
+// ErrorHandler custom handler to log recovered errors using our logger and return json instead of string
+func ErrorHandler(c *fiber.Ctx, err error, logger *zerolog.Logger, isProduction bool) error {
+	logger = GetLogger(c, logger)
+
+	code := fiber.StatusInternalServerError // Default 500 statuscode
+
+	e, fiberTypeErr := err.(*fiber.Error)
+	if fiberTypeErr {
+		// Override status code if fiber.Error type
+		code = e.Code
+	}
+	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+	codeStr := strconv.Itoa(code)
+
+	if c.Locals(skipErrorLogKey) != true {
+		logger.Err(err).Str("httpStatusCode", codeStr).
+			Str("httpMethod", c.Method()).
+			Str("httpPath", c.Path()).
+			Msg("caught an error from http request")
+	}
+	// return an opaque error if we're in a higher level environment and we haven't specified an fiber type err.
+	if !fiberTypeErr && isProduction {
+		err = fiber.NewError(fiber.StatusInternalServerError, "Internal error")
+	}
+
+	return c.Status(code).JSON(ErrorRes{
+		Code:    code,
+		Message: err.Error(),
 	})
+}
+
+type ErrorRes struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
 func createKafkaClient(settings *config.Settings) (sarama.Client, error) {
