@@ -5,6 +5,9 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"google.golang.org/protobuf/types/known/emptypb"
+
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -14,13 +17,11 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
 	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"golang.org/x/exp/slices"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type RewardsController struct {
@@ -90,12 +91,12 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	}
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
-	swIntegrsByID := make(map[string]*pb_defs.Integration)
+	swIntegrsByTokenID := make(map[uint64]*pb_defs.Integration)
 
 	for _, intDesc := range allIntegrations.Integrations {
 		if intDesc.ManufacturerTokenId == 0 {
 			// Must be a software integration. Sort after this loop.
-			swIntegrsByID[intDesc.Id] = intDesc
+			swIntegrsByTokenID[intDesc.TokenId] = intDesc
 		} else {
 			// Must be the integration associated with a manufacturer.
 			amMfrTokenToIntegration[intDesc.ManufacturerTokenId] = intDesc
@@ -149,26 +150,31 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			outInts = append(outInts, uri)
 		}
 
-		// Take care of a software integration, if there is one.
-		for _, vehIntegr := range device.Integrations {
-			if integr, ok := swIntegrsByID[vehIntegr.Id]; ok {
-				uri := UserResponseIntegration{
-					ID:                   integr.Id,
-					Vendor:               integr.Vendor,
-					DataThisWeek:         false,
-					Points:               0,
-					OnChainPairingStatus: "NotApplicable",
-				}
-
-				if vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
-					uri.Points = int(integr.Points)
-					uri.DataThisWeek = true
-				}
-
-				outInts = append(outInts, uri)
-
-				break
+		if sd := device.SyntheticDevice; sd != nil {
+			if sd.IntegrationTokenId == 0 {
+				return fmt.Errorf("synthetic device %d does not have an integration", sd.IntegrationTokenId)
 			}
+
+			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
+			if !ok {
+				return fmt.Errorf("synthetic device %d has integration %d without metadata", sd.TokenId, sd.IntegrationTokenId)
+			}
+
+			uri := UserResponseIntegration{
+				ID:                   integr.Id,
+				Vendor:               integr.Vendor,
+				DataThisWeek:         false,
+				Points:               0,
+				OnChainPairingStatus: "Unpaired",
+			}
+
+			if vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
+				uri.Points = int(integr.Points)
+				uri.DataThisWeek = true
+				uri.OnChainPairingStatus = "Paired"
+			}
+
+			outInts = append(outInts, uri)
 		}
 
 		rewards, err := models.Rewards(
@@ -182,17 +188,19 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		pts := 0
 		for _, r := range rewards {
-			pts += r.StreakPoints + r.IntegrationPoints
+			pts += r.StreakPoints + r.AftermarketDevicePoints + r.SyntheticDevicePoints
 		}
 
 		userPts += pts
 
 		tkns := big.NewInt(0)
 		for _, t := range rewards {
-			if t.Tokens.IsZero() {
+			if t.AftermarketDeviceTokens.IsZero() && t.SyntheticDeviceTokens.IsZero() && t.StreakTokens.IsZero() {
 				continue
 			}
-			tkns.Add(tkns, t.Tokens.Int(nil))
+			tkns.Add(tkns, t.StreakTokens.Int(nil))
+			tkns.Add(tkns, t.SyntheticDeviceTokens.Int(nil))
+			tkns.Add(tkns, t.AftermarketDeviceTokens.Int(nil))
 		}
 
 		userTokens.Add(userTokens, tkns)
@@ -382,12 +390,19 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		weeks[i].Tokens = big.NewInt(0)
 	}
 
+	tkns := big.NewInt(0)
 	for _, r := range rs {
-		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.IntegrationPoints
-		if r.Tokens.IsZero() {
+		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.AftermarketDevicePoints + r.SyntheticDevicePoints
+
+		if r.AftermarketDeviceTokens.IsZero() && r.SyntheticDeviceTokens.IsZero() && r.StreakTokens.IsZero() {
 			continue
 		}
-		weeks[maxWeek-r.IssuanceWeekID].Tokens.Add(weeks[maxWeek-r.IssuanceWeekID].Tokens, r.Tokens.Int(nil))
+
+		tkns.Add(tkns, r.StreakTokens.Int(nil))
+		tkns.Add(tkns, r.SyntheticDeviceTokens.Int(nil))
+		tkns.Add(tkns, r.AftermarketDeviceTokens.Int(nil))
+
+		weeks[maxWeek-r.IssuanceWeekID].Tokens.Add(weeks[maxWeek-r.IssuanceWeekID].Tokens, tkns)
 	}
 
 	return c.JSON(HistoryResponse{Weeks: weeks})
