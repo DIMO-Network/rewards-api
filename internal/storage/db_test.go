@@ -38,19 +38,21 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 	require.NoError(t, err)
 
 	reward1 := models.Reward{
-		IssuanceWeekID:    80,
-		UserDeviceID:      userDeviceID1,
-		ConnectionStreak:  6,
-		StreakPoints:      1000,
-		IntegrationPoints: 1000,
+		IssuanceWeekID:          80,
+		UserDeviceID:            userDeviceID1,
+		ConnectionStreak:        6,
+		StreakPoints:            1000,
+		AftermarketDevicePoints: 0,
+		SyntheticDevicePoints:   1000,
 	}
 
 	reward2 := models.Reward{
-		IssuanceWeekID:    80,
-		UserDeviceID:      userDeviceID2,
-		ConnectionStreak:  2,
-		StreakPoints:      0,
-		IntegrationPoints: 4000,
+		IssuanceWeekID:          80,
+		UserDeviceID:            userDeviceID2,
+		ConnectionStreak:        2,
+		StreakPoints:            0,
+		AftermarketDevicePoints: 0,
+		SyntheticDevicePoints:   4000,
 	}
 
 	require.NoError(t, reward1.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
@@ -67,11 +69,11 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 	require.NoError(t, reward1.Reload(context.TODO(), conn.DBS().Reader))
 	require.NoError(t, reward2.Reload(context.TODO(), conn.DBS().Reader))
 
-	expect1, _ := new(big.Int).SetString("368333333333333333333333", 10)
+	expect1, _ := new(big.Int).SetString("184166666666666666666666", 10)
 	expect2, _ := new(big.Int).SetString("736666666666666666666666", 10)
 
-	assert.Equal(t, expect1, reward1.Tokens.Int(nil))
-	assert.Equal(t, reward2.Tokens.Int(nil), expect2)
+	assert.Equal(t, expect1, reward1.SyntheticDeviceTokens.Int(nil))
+	assert.Equal(t, expect2, reward2.SyntheticDeviceTokens.Int(nil))
 }
 
 func TestTokenAssignmentOneDecrease(t *testing.T) {
@@ -96,19 +98,21 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 	require.NoError(t, err)
 
 	reward1 := models.Reward{
-		IssuanceWeekID:    92,
-		UserDeviceID:      userDeviceID1,
-		ConnectionStreak:  6,
-		StreakPoints:      1000,
-		IntegrationPoints: 1000,
+		IssuanceWeekID:          92,
+		UserDeviceID:            userDeviceID1,
+		ConnectionStreak:        6,
+		StreakPoints:            1000,
+		SyntheticDevicePoints:   0,
+		AftermarketDevicePoints: 1000,
 	}
 
 	reward2 := models.Reward{
-		IssuanceWeekID:    92,
-		UserDeviceID:      userDeviceID2,
-		ConnectionStreak:  2,
-		StreakPoints:      0,
-		IntegrationPoints: 4000,
+		IssuanceWeekID:          92,
+		UserDeviceID:            userDeviceID2,
+		ConnectionStreak:        2,
+		StreakPoints:            0,
+		SyntheticDevicePoints:   0,
+		AftermarketDevicePoints: 4000,
 	}
 
 	require.NoError(t, reward1.Insert(context.TODO(), conn.DBS().Writer.DB, boil.Infer()))
@@ -121,9 +125,9 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 	require.NoError(t, reward1.Reload(context.TODO(), conn.DBS().Reader))
 	require.NoError(t, reward2.Reload(context.TODO(), conn.DBS().Reader))
 
-	expect1, _ := new(big.Int).SetString("313083333333333333333333", 10)
+	expect1, _ := new(big.Int).SetString("156541666666666666666666", 10)
 	expect2, _ := new(big.Int).SetString("626166666666666666666666", 10)
 
-	assert.Equal(t, reward1.Tokens.Int(nil), expect1)
-	assert.Equal(t, reward2.Tokens.Int(nil), expect2)
+	assert.Equal(t, expect1, reward1.AftermarketDeviceTokens.Int(nil))
+	assert.Equal(t, expect2, reward2.AftermarketDeviceTokens.Int(nil))
 }
