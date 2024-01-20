@@ -8,7 +8,6 @@ import (
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
-	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/db"
@@ -99,11 +98,7 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 		}
 
 		transfer, err := models.Rewards(
-			qm.Expr(
-				qm.Or2(models.RewardWhere.SyntheticDeviceTokens.GT(types.NewNullDecimal(decimal.New(0, 0)))),
-				qm.Or2(models.RewardWhere.AftermarketDeviceTokens.GT(types.NewNullDecimal(decimal.New(0, 0)))),
-				qm.Or2(models.RewardWhere.StreakTokens.GT(types.NewNullDecimal(decimal.New(0, 0)))),
-			),
+			models.RewardWhere.Tokens.GT(types.NewNullDecimal(decimal.New(0, 0))),
 			models.RewardWhere.IssuanceWeekID.EQ(c.Week),
 			models.RewardWhere.TransferMetaTransactionRequestID.IsNull(),
 			// Temporary blacklist, see PLA-765.
@@ -117,25 +112,20 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 
 		responseSize = len(transfer)
 
+		userAddr := make([]common.Address, responseSize)
+		tknValues := make([]*big.Int, responseSize)
+		vehicleIds := make([]*big.Int, responseSize)
+
 		tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
 		if err != nil {
 			return err
 		}
-		transfers := []contracts.RewardTransferInfo{}
 
-		for _, row := range transfer {
-			trx := contracts.RewardTransferInfo{
-				User:                       common.HexToAddress(row.RewardsReceiverEthereumAddress.String),
-				VehicleId:                  row.UserDeviceTokenID.Int(nil),
-				AftermarketDeviceId:        utils.NullDecimalToIntDefaultZero(row.AftermarketTokenID),
-				ValueFromAftermarketDevice: utils.NullDecimalToIntDefaultZero(row.AftermarketDeviceTokens),
-				SyntheticDeviceId:          big.NewInt(int64(row.SyntheticDeviceID.Int)),
-				ValueFromSyntheticDevice:   utils.NullDecimalToIntDefaultZero(row.SyntheticDeviceTokens),
-				ConnectionStreak:           big.NewInt(int64(row.ConnectionStreak)),
-				ValueFromStreak:            utils.NullDecimalToIntDefaultZero(row.StreakTokens),
-			}
+		for i, row := range transfer {
+			userAddr[i] = common.HexToAddress(row.RewardsReceiverEthereumAddress.String)
+			tknValues[i] = row.Tokens.Int(nil)
+			vehicleIds[i] = row.UserDeviceTokenID.Int(nil)
 
-			transfers = append(transfers, trx)
 			row.TransferMetaTransactionRequestID = null.StringFrom(reqID)
 
 			_, err = row.Update(ctx, tx, boil.Whitelist(models.RewardColumns.TransferMetaTransactionRequestID))
@@ -144,7 +134,7 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 			}
 		}
 
-		err = c.BatchTransfer(reqID, transfers)
+		err = c.BatchTransfer(reqID, userAddr, tknValues, vehicleIds)
 		if err != nil {
 			return err
 		}
@@ -158,12 +148,12 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 	return nil
 }
 
-func (c *BaselineClient) BatchTransfer(requestID string, transferInfo []contracts.RewardTransferInfo) error {
+func (c *BaselineClient) BatchTransfer(requestID string, users []common.Address, values []*big.Int, vehicleIds []*big.Int) error {
 	abi, err := contracts.RewardMetaData.GetAbi()
 	if err != nil {
 		return err
 	}
-	data, err := abi.Pack("batchTransfer", transferInfo)
+	data, err := abi.Pack("batchTransfer", users, values, vehicleIds)
 	if err != nil {
 		return err
 	}

@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	_ "github.com/lib/pq"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -363,45 +361,7 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}
-	case "migrate-rewards":
-		if len(os.Args) < 2 || os.Args[2] == "" {
-			logger.Fatal().Msg("invalid value provided for week")
-		}
 
-		week, err := strconv.Atoi(os.Args[2])
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Could not parse week number.")
-		}
-
-		logger := logger.With().Int("week", week).Str("subCommand", "migrate-rewards").Logger()
-
-		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)
-		totalTime := 0
-		for !pdb.IsReady() {
-			if totalTime > 30 {
-				logger.Fatal().Msg("could not connect to postgres after 30 seconds")
-			}
-			time.Sleep(time.Second)
-			totalTime++
-		}
-
-		definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Msg("Failed to create device-definitions-api connection.")
-		}
-		defer definitionsConn.Close()
-
-		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
-
-		allIntegrations, err := definitionsClient.GetIntegrations(ctx, &emptypb.Empty{})
-		if err != nil {
-			logger.Fatal().Msg("could not fetch integrations")
-		}
-
-		err = services.MigrateRewardsService(ctx, &logger, pdb, allIntegrations, week)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Error occurred completing reward migrations")
-		}
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
