@@ -123,7 +123,7 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 			esquery.Bool().
 				Filter(
 					esquery.Term("subject", userDeviceID),
-					esquery.Range("data.timestamp").Gte(start).Lt(end),
+					esquery.Range("time").Gte(start).Lt(end),
 				).
 				Should(activityFieldExists...).
 				MinimumShouldMatch(1),
@@ -198,7 +198,7 @@ func (c *elasticDeviceDataClient) DescribeActiveDevices(start, end time.Time) ([
 		query := esquery.Search().
 			Query(
 				esquery.Bool().
-					Filter(esquery.Range("data.timestamp").Gte(start).Lt(end)).
+					Filter(esquery.Range("time").Gte(start).Lt(end)).
 					Should(activityFieldExists...).
 					MinimumShouldMatch(1),
 			).
