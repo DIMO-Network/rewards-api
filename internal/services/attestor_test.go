@@ -1,10 +1,10 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog"
@@ -12,30 +12,39 @@ import (
 )
 
 func TestMerkleTreeGeneration(t *testing.T) {
-	ctx := context.Background()
 	assert := assert.New(t)
 	logger := zerolog.Nop()
 	witness := NewAttestor(&logger)
 
-	sampleValues := [][]interface{}{}
-	for i := 1; i < 10; i++ {
-		usr := []interface{}{}
-		usr = append(usr, uint64(i))
-		usr = append(usr, "test")
-		usr = append(usr, "test")
-		usr = append(usr, "test")
-
-		sampleValues = append(sampleValues, usr)
+	attestationData := make(map[string]map[string]interface{}, 0)
+	for i := 1; i < 5; i++ {
+		dummyVin := fmt.Sprintf("vin%d", i)
+		currentVCExpiration := time.Now()
+		earningVehicle, ok := attestationData[fmt.Sprintf("vin%d", i)]
+		if ok {
+			credExp, ok := earningVehicle[CredentialExpiresAt]
+			if ok {
+				if credExp.(time.Time).Before(currentVCExpiration) {
+					attestationData[dummyVin] = map[string]interface{}{
+						CredentialExpiresAt: currentVCExpiration,
+						Values:              []interface{}{uint64(i), "deviceDefinitionId", "latestVinCredentialId", "signature"},
+					}
+				}
+			}
+		}
+		attestationData[dummyVin] = map[string]interface{}{
+			CredentialExpiresAt: currentVCExpiration,
+			Values:              []interface{}{uint64(i), "deviceDefinitionId", "latestVinCredentialId", "signature"},
+		}
 	}
 
 	sampleTypes := []string{"uint64", "string", "string", "string"}
-	fmt.Println(sampleValues)
-	tree, err := witness.GenerateMerkleTree(ctx, sampleValues, sampleTypes)
+	tree, err := witness.GenerateMerkleTree(attestationData, sampleTypes)
 	assert.NoError(err)
 
 	encodedLeaves := [][]byte{}
-	for _, d := range sampleValues {
-		codeBytes, err := abiEncode(sampleTypes, d)
+	for _, device := range attestationData {
+		codeBytes, err := abiEncode(sampleTypes, device[Values].([]interface{}))
 		assert.NoError(err)
 		encodedLeaves = append(encodedLeaves, crypto.Keccak256(crypto.Keccak256(codeBytes)))
 	}
