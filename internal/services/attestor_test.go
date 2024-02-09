@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"testing"
@@ -51,7 +52,7 @@ func TestMerkleTreeGeneration(t *testing.T) {
 
 	// sort values for OpenZeppelin compatibility
 	sort.Slice(encodedLeaves, func(i, j int) bool {
-		return string(encodedLeaves[i]) < string(encodedLeaves[j])
+		return bytes.Compare(encodedLeaves[i], encodedLeaves[j]) < 0
 	})
 
 	assert.Equal(len(tree.Proofs), len(encodedLeaves))
