@@ -288,6 +288,8 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Kafka producer.")
 		}
 
+		attestationService := services.NewAttestor(&logger)
+
 		transferService := services.NewTokenTransferService(&settings, producer, pdb)
 
 		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -306,7 +308,7 @@ func main() {
 
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, services.NewDeviceDataClient(&settings), deviceClient, definitionsClient, week, &logger)
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, services.NewDeviceDataClient(&settings), deviceClient, definitionsClient, attestationService, week, &logger)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")

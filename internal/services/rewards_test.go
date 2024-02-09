@@ -405,9 +405,9 @@ func TestStreak(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
+			attestationService := NewAttestor(&logger)
 			transferService := NewTokenTransferService(&settings, nil, conn)
-
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, attestationService, 5, &logger)
 
 			err = rwBonusService.assignPoints()
 			if err != nil {
@@ -595,8 +595,8 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			}
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
-
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
+			attestationService := NewAttestor(&logger)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, attestationService, 5, &logger)
 
 			err = rwBonusService.assignPoints()
 			assert.NoError(t, err)
@@ -852,9 +852,9 @@ func TestBaselineIssuance(t *testing.T) {
 
 			producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
 
+			attestationService := NewAttestor(&logger)
 			transferService := NewTokenTransferService(&settings, producer, conn)
-
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, attestationService, 5, &logger)
 
 			err = rwBonusService.BaselineIssuance()
 			assert.NoError(t, err)
@@ -1022,10 +1022,14 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 		}
 
 		ud2 := &pb_devices.UserDevice{
-			Id:           ud.ID,
-			TokenId:      tk,
-			Vin:          vin,
-			OwnerAddress: owner,
+			Id:                 ud.ID,
+			TokenId:            tk,
+			Vin:                vin,
+			OwnerAddress:       owner,
+			DeviceDefinitionId: ksuid.New().String(),
+			LatestVinCredential: &pb_devices.VinCredential{
+				Id: ksuid.New().String(),
+			},
 		}
 
 		for _, i := range ud.IntsWithData {
