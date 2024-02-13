@@ -70,6 +70,11 @@ func NewStatusProcessor(pdb db.Store, logger *zerolog.Logger, settings *config.S
 		return nil, err
 	}
 
+	easABI, err := contracts.EasMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
 	return &TransferStatusProcessor{
 		DB:     pdb,
 		Logger: logger,
@@ -85,14 +90,20 @@ func NewStatusProcessor(pdb db.Store, logger *zerolog.Logger, settings *config.S
 			ReferralInvalid:  referralABI.Events["ReferralInvalid"],
 			ReferralComplete: referralABI.Events["ReferralComplete"],
 		},
+		attestationProcessor: &attestationProcessor{
+			Address:  common.HexToAddress(settings.AttestationContract),
+			ABI:      easABI,
+			Attested: easABI.Events["Attested"],
+		},
 	}, nil
 }
 
 type TransferStatusProcessor struct {
-	ReferralsProcessor *ReferralsProcessor
-	BaselineProcessor  *BaselineProcessor
-	DB                 db.Store
-	Logger             *zerolog.Logger
+	ReferralsProcessor   *ReferralsProcessor
+	BaselineProcessor    *BaselineProcessor
+	attestationProcessor *attestationProcessor
+	DB                   db.Store
+	Logger               *zerolog.Logger
 }
 
 type ReferralsProcessor struct {
@@ -109,6 +120,12 @@ type BaselineProcessor struct {
 	TokensTransferredEvent abi.Event
 }
 
+type attestationProcessor struct {
+	Address  common.Address
+	ABI      *abi.ABI
+	Attested abi.Event
+}
+
 func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) error {
 	event := shared.CloudEvent[ceData]{}
 	err := json.Unmarshal(msg.Value, &event)
@@ -122,6 +139,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		models.MetaTransactionRequestWhere.ID.EQ(event.Data.RequestID),
 		qm.Load(models.MetaTransactionRequestRels.TransferMetaTransactionRequestRewards),
 		qm.Load(models.MetaTransactionRequestRels.RequestReferrals),
+		qm.Load(models.MetaTransactionRequestRels.TransactionAttestations),
 	).One(context.TODO(), s.DB.DBS().Reader)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -138,6 +156,11 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		}
 	case len(mtr.R.RequestReferrals) != 0:
 		err := s.processReferralEvent(event)
+		if err != nil {
+			return err
+		}
+	case len(mtr.R.TransactionAttestations) != 0:
+		err := s.processAttestation(event)
 		if err != nil {
 			return err
 		}
@@ -350,6 +373,62 @@ func (s *TransferStatusProcessor) parseLog(out any, event abi.Event, log ceLog, 
 	}
 
 	return nil
+}
+
+func (s *TransferStatusProcessor) processAttestation(cloudEvent shared.CloudEvent[ceData]) error {
+	tx, err := s.DB.DBS().Writer.BeginTx(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint
+
+	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB.DBS().Reader, cloudEvent.Data.RequestID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// TODO(elffjs): This is probably a very bad scenario.
+			return nil
+		}
+		return err
+	}
+
+	txnRow.Hash = null.StringFrom(cloudEvent.Data.Transaction.Hash)
+	txnRow.Status = cloudEvent.Data.Type
+
+	if cloudEvent.Data.Type == "Confirmed" {
+		txnRow.Successful = null.BoolFrom(*cloudEvent.Data.Transaction.Successful)
+
+		if *cloudEvent.Data.Transaction.Successful {
+			for _, log := range cloudEvent.Data.Transaction.Logs {
+				switch log.Topics[0] {
+				case s.attestationProcessor.Attested.ID:
+					var event contracts.EasAttested
+					err := s.parseLog(&event, s.attestationProcessor.Attested, log, s.attestationProcessor.ABI)
+					if err != nil {
+						return err
+					}
+
+					att, err := models.Attestations(models.AttestationWhere.TransactionID.EQ(cloudEvent.Data.RequestID)).One(context.Background(), tx)
+					att.ID = null.BytesFrom(event.Uid[:])
+
+					_, err = att.Update(context.Background(), tx, boil.Whitelist(models.AttestationColumns.ID))
+					if err != nil {
+						return err
+					}
+
+				default:
+					continue
+				}
+
+			}
+		}
+	}
+
+	_, err = txnRow.Update(context.Background(), tx, boil.Infer())
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 type ceLog struct {

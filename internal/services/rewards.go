@@ -17,6 +17,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -100,7 +101,7 @@ func NumToWeekEnd(n int) time.Time {
 	return startTime.Add(time.Duration(n+1) * weekDuration)
 }
 
-func (t *BaselineClient) assignPoints() error {
+func (t *BaselineClient) assignPoints() (string, error) {
 	issuanceWeek := t.Week
 	ctx := context.Background()
 
@@ -112,7 +113,7 @@ func (t *BaselineClient) assignPoints() error {
 	// There shouldn't be anything there. This used to be used when we'd do historical overrides.
 	delCount, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek)).DeleteAll(ctx, t.TransferService.db.DBS().Writer)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if delCount != 0 {
@@ -127,18 +128,18 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	if err := week.Upsert(ctx, t.TransferService.db.DBS().Writer, true, []string{models.IssuanceWeekColumns.ID}, boil.Whitelist(models.IssuanceWeekColumns.JobStatus), boil.Infer()); err != nil {
-		return err
+		return "", err
 	}
 
 	// These describe the active integrations for each device active this week.
 	allActiveDeviceRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	allIntegrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
@@ -156,7 +157,7 @@ func (t *BaselineClient) assignPoints() error {
 
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.TransferService.db.DBS().Reader)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	lastWeekByDevice := make(map[string]*models.Reward)
@@ -174,7 +175,7 @@ func (t *BaselineClient) assignPoints() error {
 				logger.Info().Msg("Device was active during the week but was later deleted.")
 				continue
 			}
-			return err
+			return "", err
 		}
 
 		integsSignalsThisWeek := utils.NewSet[string](deviceActivity.Integrations...)
@@ -292,7 +293,7 @@ func (t *BaselineClient) assignPoints() error {
 				FirstEarningTokenID: types.NewDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
 			}
 			if err := vinRec.Upsert(ctx, t.TransferService.db.DBS().Writer, false, []string{models.VinColumns.Vin}, boil.Infer(), boil.Infer()); err != nil {
-				return err
+				return "", err
 			}
 		}
 
@@ -316,18 +317,8 @@ func (t *BaselineClient) assignPoints() error {
 		}
 
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
-			return err
+			return "", err
 		}
-	}
-
-	// TODO(ae): need to add another string field to data type once vc signature has been added to devices-api vin credential response
-	// Nil check around logging the root for now bc we aren't yet acting on the error, if there is one
-	tree, err := t.AttestationService.GenerateMerkleTree(attestationData, []string{"uint64", "string", "string"})
-	if err != nil {
-		t.Logger.Info().Err(err).Msg("failed to generate merkle tree")
-	}
-	if tree != nil {
-		t.Logger.Info().Int("issuanceWeek", issuanceWeek).Str("root", common.Bytes2Hex(tree.Root)).Msg("generated merkle tree")
 	}
 
 	// We didn't see any data for these remaining devices this week.
@@ -345,11 +336,17 @@ func (t *BaselineClient) assignPoints() error {
 		streak := ComputeStreak(streakInput)
 		setStreakFields(thisWeek, streak)
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
-			return err
+			return "", err
 		}
 	}
 
-	return nil
+	// TODO(ae): need to add another string field to data type once vc signature has been added to devices-api vin credential response
+	reqID, err := t.AttestationService.GenerateAndSubmitAttestation(attestationData, []string{"uint64", "string", "string"})
+	if err != nil {
+		t.Logger.Info().Err(err).Msg("failed to generate merkle tree")
+	}
+
+	return reqID, nil
 }
 
 func (t *BaselineClient) calculateTokens() error {
@@ -358,9 +355,11 @@ func (t *BaselineClient) calculateTokens() error {
 }
 
 func (t *BaselineClient) BaselineIssuance() error {
+	tick := time.NewTicker(2 * time.Second)
+	defer tick.Stop()
 	ctx := context.Background()
 
-	err := t.assignPoints()
+	attestationID, err := t.assignPoints()
 	if err != nil {
 		return fmt.Errorf("failed to assign points to vehicles: %w", err)
 	}
@@ -369,6 +368,25 @@ func (t *BaselineClient) BaselineIssuance() error {
 	err = t.calculateTokens()
 	if err != nil {
 		return fmt.Errorf("failed to convert points into tokens: %w", err)
+	}
+
+	// TODO(ae): what do we do if it fails?
+	var attStatus string
+	for attStatus != models.MetaTransactionRequestStatusConfirmed {
+		select {
+		case <-tick.C:
+			att, err := models.Attestations(
+				models.AttestationWhere.TransactionID.EQ(attestationID),
+				qm.Load(models.AttestationRels.Transaction),
+			).One(ctx, t.TransferService.db.DBS().Reader)
+			if err != nil {
+				return fmt.Errorf("failed to locate attestation transaction id %s: %w", attestationID, err)
+			}
+
+			if att.R != nil {
+				attStatus = att.R.Transaction.Status
+			}
+		}
 	}
 
 	err = t.transferTokens(ctx)
