@@ -408,8 +408,11 @@ func (s *TransferStatusProcessor) processAttestation(cloudEvent shared.CloudEven
 					}
 
 					att, err := models.Attestations(models.AttestationWhere.TransactionID.EQ(cloudEvent.Data.RequestID)).One(context.Background(), tx)
-					att.ID = null.BytesFrom(event.Uid[:])
+					if err != nil {
+						return err
+					}
 
+					att.ID = null.BytesFrom(event.Uid[:])
 					_, err = att.Update(context.Background(), tx, boil.Whitelist(models.AttestationColumns.ID))
 					if err != nil {
 						return err

@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"sort"
 	"testing"
 	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -18,12 +21,20 @@ func TestMerkleTreeGeneration(t *testing.T) {
 	ctx := context.Background()
 	assert := assert.New(t)
 	logger := zerolog.Nop()
+
 	cont, pdb := utils.GetDbConnection(ctx, t, logger)
 	defer func() {
 		err := cont.Terminate(ctx)
 		assert.NoError(err)
 	}()
-	witness, err := NewAttestor(nil, pdb, nil, &logger)
+
+	var settings config.Settings
+	settings.EASSchema = common.BigToHash(big.NewInt(1)).Hex()
+	settings.AttestationContract = common.BigToAddress(big.NewInt(2)).Hex()
+	settings.AttestationRecipient = common.BigToAddress(big.NewInt(3)).Hex()
+	settings.MetaTransactionSendTopic = "topic1"
+
+	witness, err := NewAttestor(nil, pdb, &settings, &logger)
 	if err != nil {
 		t.Fatal(err)
 	}
