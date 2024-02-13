@@ -2,14 +2,19 @@ package services
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"sort"
+	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
+	"github.com/DIMO-Network/shared"
 	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
@@ -49,17 +54,29 @@ func abiEncode(types []string, values []interface{}) ([]byte, error) {
 }
 
 type Attestor struct {
-	config   mt.Config
-	log      *zerolog.Logger
-	abi      *abi.ABI
-	producer sarama.SyncProducer
+	config    mt.Config
+	log       *zerolog.Logger
+	abi       *abi.ABI
+	producer  sarama.SyncProducer
+	schema    [32]byte
+	recipient common.Address
+	contract  common.Address
+	mtxTopic  string
 }
 
-func NewAttestor(producer sarama.SyncProducer, logger *zerolog.Logger) (*Attestor, error) {
+func NewAttestor(producer sarama.SyncProducer, settings *config.Settings, logger *zerolog.Logger) (*Attestor, error) {
 	abi, err := contracts.EasMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
+
+	var byteArray [32]byte
+	schemaSlice, err := hexutil.Decode(settings.EASSchema)
+	if err != nil {
+		return nil, err
+	}
+	copy(byteArray[:], schemaSlice)
+
 	return &Attestor{
 		config: mt.Config{
 			SortSiblingPairs: true, // parameter for OpenZeppelin compatibility
@@ -69,9 +86,13 @@ func NewAttestor(producer sarama.SyncProducer, logger *zerolog.Logger) (*Attesto
 			Mode:               mt.ModeProofGenAndTreeBuild,
 			DisableLeafHashing: true, // also required for OpenZeppelin compatilibity
 		},
-		log:      logger,
-		abi:      abi,
-		producer: producer,
+		log:       logger,
+		abi:       abi,
+		producer:  producer,
+		schema:    byteArray,
+		contract:  common.HexToAddress(settings.AttestationContract),
+		recipient: common.HexToAddress(settings.AttestationRecipient),
+		mtxTopic:  settings.MetaTransactionSendTopic,
 	}, nil
 }
 
@@ -100,33 +121,23 @@ func (a *Attestor) GenerateMerkleTree(data map[string]map[string]interface{}, da
 	return mt.New(&a.config, blocks)
 }
 
-func (a *Attestor) GenerateAttestation(root []byte) ([]byte, error) {
+func (a *Attestor) GenerateAttestation(root [32]byte) ([]byte, error) {
 	args := abi.Arguments{}
-	// TODO ae: this should be bytes
-	abiType, err := abi.NewType("string", "", nil)
+	abiType, err := abi.NewType("bytes32", "", nil)
 	if err != nil {
 		return nil, err
 	}
+
 	args = append(args, abi.Argument{Type: abiType})
-
-	enocodedData, err := args.Pack(common.Bytes2Hex(root)) // TODO ae: double check this work, was using dummy data before
+	enocodedData, err := args.Pack(root)
 	if err != nil {
 		return nil, err
 	}
 
-	var byteArray [32]byte
-
-	// TODO ae: get this from settings and initialize when we make the attestor
-	schemaSlice := common.Hex2Bytes("93dbaf80a47c49a96e9ad6e038a064088d322f9b42d4e4bd8e78efb947b448ad")
-	for i := 0; i < len(schemaSlice) && i < len(byteArray); i++ {
-		byteArray[i] = schemaSlice[i]
-	}
-
-	// TODO ae: who do we want the recipient to be?
 	req := contracts.AttestationRequest{
-		Schema: byteArray,
+		Schema: a.schema,
 		Data: contracts.AttestationRequestData{
-			Recipient: common.HexToAddress("Be396b4B84a4139EA5C4dbaDde98AE8364eB21e8"),
+			Recipient: a.recipient,
 			Data:      enocodedData,
 			Value:     big.NewInt(0),
 		},
@@ -136,12 +147,30 @@ func (a *Attestor) GenerateAttestation(root []byte) ([]byte, error) {
 
 func (a *Attestor) AttestOnChain(data []byte) (string, error) {
 	reqID := ksuid.New().String()
-	// TODO ae: get topic from settings
-	_, _, err := a.producer.SendMessage(
+	event := shared.CloudEvent[transferData]{
+		ID:          reqID,
+		Source:      "rewards-api",
+		SpecVersion: "1.0",
+		Subject:     reqID,
+		Time:        time.Now(),
+		Type:        "zone.dimo.attestation.request",
+		Data: transferData{
+			ID:   reqID,
+			To:   a.contract, // EAS contract
+			Data: data,
+		},
+	}
+
+	b, err := json.Marshal(event)
+	if err != nil {
+		return "", err
+	}
+
+	_, _, err = a.producer.SendMessage(
 		&sarama.ProducerMessage{
-			Topic: "topic.transaction.request.send",
+			Topic: a.mtxTopic,
 			Key:   sarama.StringEncoder(reqID),
-			Value: sarama.ByteEncoder(data),
+			Value: sarama.ByteEncoder(b),
 		},
 	)
 	// TODO ae: use reqID when consuming claim to make sure it goes through

@@ -30,4 +30,7 @@ type Settings struct {
 	TransferBatchSize              int         `yaml:"TRANSFER_BATCH_SIZE"`
 	FirstAutomatedWeek             int         `yaml:"FIRST_AUTOMATED_WEEK"`
 	ContractEventTopic             string      `yaml:"CONTRACT_EVENT_TOPIC"`
+	EASSchema                      string      `yaml:"EAS_SCHEMA"`
+	AttestationContract            string      `yaml:"ATTESTATION_CONTRACT"`
+	AttestationRecipient           string      `yaml:"ATTESTATION_RECIPIENT"`
 }
