@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/shared"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +17,16 @@ import (
 func TestMerkleTreeGeneration(t *testing.T) {
 	assert := assert.New(t)
 	logger := zerolog.Nop()
-	witness := NewAttestor(&logger)
+
+	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	witness, err := NewAttestor(nil, &settings, &logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to create attestation service client")
+	}
 
 	attestationData := map[string]merkleTreeLeaf{}
 	for i := 1; i < 5; i++ {

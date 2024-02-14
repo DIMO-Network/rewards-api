@@ -110,7 +110,7 @@ func TestGetWeekNumForCron(t *testing.T) {
 func TestStreak(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +405,8 @@ func TestStreak(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			attestationService := NewAttestor(&logger)
+			attestationService, err := NewAttestor(nil, &settings, &logger)
+			assert.NoError(t, err)
 			transferService := NewTokenTransferService(&settings, nil, conn)
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, attestationService, 5, &logger)
 
@@ -464,7 +465,7 @@ func TestStreak(t *testing.T) {
 func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -595,7 +596,8 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			}
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
-			attestationService := NewAttestor(&logger)
+			attestationService, err := NewAttestor(nil, &settings, &logger)
+			assert.NoError(t, err)
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, attestationService, 5, &logger)
 
 			err = rwBonusService.assignPoints()
@@ -653,7 +655,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 func TestBaselineIssuance(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -852,7 +854,8 @@ func TestBaselineIssuance(t *testing.T) {
 
 			producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
 
-			attestationService := NewAttestor(&logger)
+			attestationService, err := NewAttestor(nil, &settings, &logger)
+			assert.NoError(t, err)
 			transferService := NewTokenTransferService(&settings, producer, conn)
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, attestationService, 5, &logger)
 

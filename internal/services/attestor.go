@@ -2,18 +2,24 @@ package services
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"math/big"
 	"sort"
 	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/contracts"
+	"github.com/DIMO-Network/shared"
+	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog"
+	"github.com/segmentio/ksuid"
 	mt "github.com/txaty/go-merkletree"
 )
-
-var CredentialExpiresAt = "ExprTime"
-var Values = "Values"
 
 type leaf struct {
 	data []byte
@@ -24,6 +30,9 @@ type merkleTreeLeaf struct {
 	Values       []interface{}
 }
 
+// types we will use to abi encode the data
+var encodeTypes = []string{"uint64", "string", "string"}
+
 func (l *leaf) Serialize() ([]byte, error) {
 	return l.data, nil
 }
@@ -32,7 +41,7 @@ func (l *leaf) Serialize() ([]byte, error) {
 // converts data struct into binary format used by openzep merkle tree library
 func abiEncode(types []string, values []interface{}) ([]byte, error) {
 	if len(types) != len(values) {
-		return nil, fmt.Errorf("type array  and value array must be same length")
+		return nil, fmt.Errorf("type array and value array must be same length")
 	}
 
 	args := abi.Arguments{}
@@ -48,8 +57,15 @@ func abiEncode(types []string, values []interface{}) ([]byte, error) {
 }
 
 type Attestor struct {
-	config mt.Config
-	log    *zerolog.Logger
+	config    mt.Config
+	log       *zerolog.Logger
+	abi       *abi.ABI
+	producer  sarama.SyncProducer
+	abiArgs   abi.Arguments //abi encoding
+	schema    [32]byte
+	recipient common.Address
+	contract  common.Address
+	mtxTopic  string
 }
 
 // NewAttestor creates a new merkle tree attestation service
@@ -60,7 +76,19 @@ type Attestor struct {
 // to sorting hashed sib pairs in later steps)
 // thus, abi encoding and serialization is performed
 // as a first step before we pass any data to the merkle tree func
-func NewAttestor(logger *zerolog.Logger) *Attestor {
+func NewAttestor(producer sarama.SyncProducer, settings *config.Settings, logger *zerolog.Logger) (*Attestor, error) {
+	easABI, err := contracts.EasMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	var byteArray [32]byte
+	schemaSlice, err := hexutil.Decode(settings.EASSchema)
+	if err != nil {
+		return nil, err
+	}
+	copy(byteArray[:], schemaSlice)
+
 	return &Attestor{
 		config: mt.Config{
 			SortSiblingPairs: true, // parameter for OpenZeppelin compatibility
@@ -70,8 +98,14 @@ func NewAttestor(logger *zerolog.Logger) *Attestor {
 			Mode:               mt.ModeProofGenAndTreeBuild,
 			DisableLeafHashing: true, // also required for OpenZeppelin compatilibity
 		},
-		log: logger,
-	}
+		log:       logger,
+		abi:       easABI,
+		producer:  producer,
+		schema:    byteArray,
+		contract:  common.HexToAddress(settings.AttestationContract),
+		recipient: common.HexToAddress(settings.AttestationRecipient),
+		mtxTopic:  settings.MetaTransactionSendTopic,
+	}, nil
 }
 
 func (a *Attestor) GenerateMerkleTree(data map[string]merkleTreeLeaf, dataTypes []string) (*mt.MerkleTree, error) {
@@ -95,6 +129,55 @@ func (a *Attestor) GenerateMerkleTree(data map[string]merkleTreeLeaf, dataTypes 
 	}
 
 	return mt.New(&a.config, blocks)
+}
+
+func (a *Attestor) GenerateAttestation(root [32]byte) ([]byte, error) {
+	enocodedData, err := abiEncode([]string{"bytes32"}, []interface{}{root})
+	if err != nil {
+		return nil, err
+	}
+
+	req := contracts.AttestationRequest{
+		Schema: a.schema,
+		Data: contracts.AttestationRequestData{
+			Recipient: a.recipient,
+			Data:      enocodedData,
+			Value:     big.NewInt(0),
+		},
+	}
+	return a.abi.Pack("attest", req)
+}
+
+func (a *Attestor) AttestOnChain(data []byte) (string, error) {
+	reqID := ksuid.New().String()
+	event := shared.CloudEvent[transferData]{
+		ID:          reqID,
+		Source:      "rewards-api",
+		SpecVersion: "1.0",
+		Subject:     reqID,
+		Time:        time.Now(),
+		Type:        "zone.dimo.attestation.request",
+		Data: transferData{
+			ID:   reqID,
+			To:   a.contract, // EAS contract
+			Data: data,
+		},
+	}
+
+	b, err := json.Marshal(event)
+	if err != nil {
+		return "", err
+	}
+
+	_, _, err = a.producer.SendMessage(
+		&sarama.ProducerMessage{
+			Topic: a.mtxTopic,
+			Key:   sarama.StringEncoder(reqID),
+			Value: sarama.ByteEncoder(b),
+		},
+	)
+	// TODO ae: use reqID when consuming claim to make sure it goes through
+	return reqID, err
 }
 
 func (a *Attestor) VerifyAttestation(root, node []byte, proof [][]byte) (bool, error) {
