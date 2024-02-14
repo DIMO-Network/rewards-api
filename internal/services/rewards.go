@@ -340,13 +340,18 @@ func (t *BaselineClient) assignPoints() (string, error) {
 		}
 	}
 
-	// TODO(ae): need to add another string field to data type once vc signature has been added to devices-api vin credential response
-	reqID, err := t.AttestationService.GenerateAndSubmitAttestation(attestationData, []string{"uint64", "string", "string"})
-	if err != nil {
-		t.Logger.Info().Err(err).Msg("failed to generate merkle tree")
+	if len(attestationData) > 1 {
+		// TODO(ae): need to add another string field to data type once vc signature has been added to devices-api vin credential response
+		reqID, err := t.AttestationService.GenerateAndSubmitAttestation(attestationData, []string{"uint64", "string", "string"})
+		if err != nil {
+			return "", err
+		}
+		return reqID, nil
 	}
 
-	return reqID, nil
+	t.Logger.Info().Msgf("unable to generate merkle tree with data length: %d", len(attestationData))
+
+	return "", nil
 }
 
 func (t *BaselineClient) calculateTokens() error {
@@ -371,20 +376,22 @@ func (t *BaselineClient) BaselineIssuance() error {
 	}
 
 	// TODO(ae): what do we do if it fails?
-	var attStatus string
-	for attStatus != models.MetaTransactionRequestStatusConfirmed {
-		select {
-		case <-tick.C:
-			att, err := models.Attestations(
-				models.AttestationWhere.TransactionID.EQ(attestationID),
-				qm.Load(models.AttestationRels.Transaction),
-			).One(ctx, t.TransferService.db.DBS().Reader)
-			if err != nil {
-				return fmt.Errorf("failed to locate attestation transaction id %s: %w", attestationID, err)
-			}
+	if attestationID != "" { // putting this here so tests don't blow up
+		var attStatus string
+		for attStatus != models.MetaTransactionRequestStatusConfirmed {
+			select {
+			case <-tick.C:
+				att, err := models.Attestations(
+					models.AttestationWhere.TransactionID.EQ(attestationID),
+					qm.Load(models.AttestationRels.Transaction),
+				).One(ctx, t.TransferService.db.DBS().Reader)
+				if err != nil {
+					return fmt.Errorf("failed to locate attestation transaction id %s: %w", attestationID, err)
+				}
 
-			if att.R != nil {
-				attStatus = att.R.Transaction.Status
+				if att.R != nil {
+					attStatus = att.R.Transaction.Status
+				}
 			}
 		}
 	}

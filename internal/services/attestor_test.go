@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/utils"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/DIMO-Network/shared"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -28,16 +27,11 @@ func TestMerkleTreeGeneration(t *testing.T) {
 		assert.NoError(err)
 	}()
 
-	var settings config.Settings
-	settings.EASSchema = common.BigToHash(big.NewInt(1)).Hex()
-	settings.AttestationContract = common.BigToAddress(big.NewInt(2)).Hex()
-	settings.AttestationRecipient = common.BigToAddress(big.NewInt(3)).Hex()
-	settings.MetaTransactionSendTopic = "topic1"
+	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
+	assert.NoError(err)
 
 	witness, err := NewAttestor(nil, pdb, &settings, &logger)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(err)
 
 	attestationData := make(map[string]map[string]interface{}, 0)
 	for i := 1; i < 5; i++ {

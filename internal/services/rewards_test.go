@@ -110,7 +110,7 @@ func TestGetWeekNumForCron(t *testing.T) {
 func TestStreak(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +405,7 @@ func TestStreak(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			attestationService, err := NewAttestor(nil, conn, nil, &logger)
+			attestationService, err := NewAttestor(nil, conn, &settings, &logger)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -467,7 +467,7 @@ func TestStreak(t *testing.T) {
 func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -598,7 +598,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			}
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
-			attestationService, err := NewAttestor(nil, conn, nil, &logger)
+			attestationService, err := NewAttestor(nil, conn, &settings, &logger)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -659,7 +659,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 func TestBaselineIssuance(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -858,7 +858,7 @@ func TestBaselineIssuance(t *testing.T) {
 
 			producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
 
-			attestationService, err := NewAttestor(nil, conn, nil, &logger)
+			attestationService, err := NewAttestor(nil, conn, &settings, &logger)
 			if err != nil {
 				t.Fatal(err)
 			}
