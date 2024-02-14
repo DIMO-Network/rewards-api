@@ -2,12 +2,14 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/shared"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog"
@@ -15,15 +17,20 @@ import (
 )
 
 func TestMerkleTreeGeneration(t *testing.T) {
+	ctx := context.Background()
 	assert := assert.New(t)
 	logger := zerolog.Nop()
 
-	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
+	cont, pdb := utils.GetDbConnection(ctx, t, logger)
+	defer func() {
+		err := cont.Terminate(ctx)
+		assert.NoError(err)
+	}()
 
-	witness, err := NewAttestor(nil, &settings, &logger)
+	settings, err := shared.LoadConfig[config.Settings]("../../settings.yaml")
+	assert.NoError(err)
+
+	witness, err := NewAttestor(nil, pdb, &settings, &logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to create attestation service client")
 	}
@@ -49,7 +56,7 @@ func TestMerkleTreeGeneration(t *testing.T) {
 	}
 
 	sampleTypes := []string{"uint64", "string", "string", "string"}
-	tree, err := witness.GenerateMerkleTree(attestationData, sampleTypes)
+	tree, err := witness.generateMerkleTree(attestationData, sampleTypes)
 	assert.NoError(err)
 
 	encodedLeaves := [][]byte{}

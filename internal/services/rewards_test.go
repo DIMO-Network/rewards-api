@@ -405,12 +405,14 @@ func TestStreak(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			attestationService, err := NewAttestor(nil, &settings, &logger)
-			assert.NoError(t, err)
+			attestationService, err := NewAttestor(nil, conn, &settings, &logger)
+			if err != nil {
+				t.Fatal(err)
+			}
 			transferService := NewTokenTransferService(&settings, nil, conn)
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, attestationService, 5, &logger)
 
-			err = rwBonusService.assignPoints()
+			_, err = rwBonusService.assignPoints()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -596,11 +598,13 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			}
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
-			attestationService, err := NewAttestor(nil, &settings, &logger)
-			assert.NoError(t, err)
+			attestationService, err := NewAttestor(nil, conn, &settings, &logger)
+			if err != nil {
+				t.Fatal(err)
+			}
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, attestationService, 5, &logger)
 
-			err = rwBonusService.assignPoints()
+			_, err = rwBonusService.assignPoints()
 			assert.NoError(t, err)
 
 			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
@@ -854,8 +858,10 @@ func TestBaselineIssuance(t *testing.T) {
 
 			producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
 
-			attestationService, err := NewAttestor(nil, &settings, &logger)
-			assert.NoError(t, err)
+			attestationService, err := NewAttestor(nil, conn, &settings, &logger)
+			if err != nil {
+				t.Fatal(err)
+			}
 			transferService := NewTokenTransferService(&settings, producer, conn)
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, attestationService, 5, &logger)
 
