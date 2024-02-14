@@ -21,9 +21,6 @@ import (
 	mt "github.com/txaty/go-merkletree"
 )
 
-var CredentialExpiresAt = "ExprTime"
-var Values = "Values"
-
 type leaf struct {
 	data []byte
 }
@@ -33,6 +30,9 @@ type merkleTreeLeaf struct {
 	Values       []interface{}
 }
 
+// types we will use to abi encode the data
+var encodeTypes = []string{"uint64", "string", "string"}
+
 func (l *leaf) Serialize() ([]byte, error) {
 	return l.data, nil
 }
@@ -41,7 +41,7 @@ func (l *leaf) Serialize() ([]byte, error) {
 // converts data struct into binary format used by openzep merkle tree library
 func abiEncode(types []string, values []interface{}) ([]byte, error) {
 	if len(types) != len(values) {
-		return nil, fmt.Errorf("type array  and value array must be same length")
+		return nil, fmt.Errorf("type array and value array must be same length")
 	}
 
 	args := abi.Arguments{}
@@ -61,6 +61,7 @@ type Attestor struct {
 	log       *zerolog.Logger
 	abi       *abi.ABI
 	producer  sarama.SyncProducer
+	abiArgs   abi.Arguments //abi encoding
 	schema    [32]byte
 	recipient common.Address
 	contract  common.Address
@@ -76,7 +77,7 @@ type Attestor struct {
 // thus, abi encoding and serialization is performed
 // as a first step before we pass any data to the merkle tree func
 func NewAttestor(producer sarama.SyncProducer, settings *config.Settings, logger *zerolog.Logger) (*Attestor, error) {
-	abi, err := contracts.EasMetaData.GetAbi()
+	easABI, err := contracts.EasMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +99,7 @@ func NewAttestor(producer sarama.SyncProducer, settings *config.Settings, logger
 			DisableLeafHashing: true, // also required for OpenZeppelin compatilibity
 		},
 		log:       logger,
-		abi:       abi,
+		abi:       easABI,
 		producer:  producer,
 		schema:    byteArray,
 		contract:  common.HexToAddress(settings.AttestationContract),
@@ -131,14 +132,7 @@ func (a *Attestor) GenerateMerkleTree(data map[string]merkleTreeLeaf, dataTypes 
 }
 
 func (a *Attestor) GenerateAttestation(root [32]byte) ([]byte, error) {
-	args := abi.Arguments{}
-	abiType, err := abi.NewType("bytes32", "", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	args = append(args, abi.Argument{Type: abiType})
-	enocodedData, err := args.Pack(root)
+	enocodedData, err := abiEncode([]string{"bytes32"}, []interface{}{root})
 	if err != nil {
 		return nil, err
 	}
@@ -193,21 +187,4 @@ func (a *Attestor) VerifyAttestation(root, node []byte, proof [][]byte) (bool, e
 	}
 	return mt.Verify(dataBlock, &p, root, &a.config)
 
-}
-
-func AbiEncode(types []string, values []interface{}) ([]byte, error) {
-	if len(types) != len(values) {
-		return nil, fmt.Errorf("type array  and value array must be same length")
-	}
-
-	args := abi.Arguments{}
-	for _, argType := range types {
-		abiType, err := abi.NewType(argType, "", nil)
-		if err != nil {
-			return nil, err
-		}
-		args = append(args, abi.Argument{Type: abiType})
-	}
-
-	return args.Pack(values...)
 }
