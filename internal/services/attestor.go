@@ -28,14 +28,17 @@ type leaf struct {
 	data []byte
 }
 
+type merkleTreeLeaf struct {
+	VCExpiration time.Time
+	Values       []interface{}
+}
+
 func (l *leaf) Serialize() ([]byte, error) {
-	// since OpenZep will sort bytes before hashing
-	// abi encoding and serialization is performed before
-	// we pass any data to the merkle tree func
-	// thus, we can just return the bytes directly here
 	return l.data, nil
 }
 
+// abiEncode mirrors solidity abi encoding
+// converts data struct into binary format used by openzep merkle tree library
 func abiEncode(types []string, values []interface{}) ([]byte, error) {
 	if len(types) != len(values) {
 		return nil, fmt.Errorf("type array  and value array must be same length")
@@ -64,6 +67,14 @@ type Attestor struct {
 	mtxTopic  string
 }
 
+// NewAttestor creates a new merkle tree attestation service
+// for OpenZep compatilibity:
+// OZ sorts all abi encoded leaves before beginning to build tree
+// as yet, there is no parameter to make this library sort
+// the leaves a priori (sort sibling pairs true refers
+// to sorting hashed sib pairs in later steps)
+// thus, abi encoding and serialization is performed
+// as a first step before we pass any data to the merkle tree func
 func NewAttestor(producer sarama.SyncProducer, settings *config.Settings, logger *zerolog.Logger) (*Attestor, error) {
 	abi, err := contracts.EasMetaData.GetAbi()
 	if err != nil {
@@ -96,19 +107,17 @@ func NewAttestor(producer sarama.SyncProducer, settings *config.Settings, logger
 	}, nil
 }
 
-func (a *Attestor) GenerateMerkleTree(data map[string]map[string]interface{}, dataTypes []string) (*mt.MerkleTree, error) {
+func (a *Attestor) GenerateMerkleTree(data map[string]merkleTreeLeaf, dataTypes []string) (*mt.MerkleTree, error) {
 	encodedLeaves := [][]byte{}
 	for _, device := range data {
-		if _, val := device[Values]; val {
-			codeBytes, err := abiEncode(dataTypes, device[Values].([]interface{}))
-			if err != nil {
-				a.log.Err(err).Msg("failed to abi encode attestation data")
-			}
-			encodedLeaves = append(encodedLeaves, crypto.Keccak256(crypto.Keccak256(codeBytes)))
+		codeBytes, err := abiEncode(dataTypes, device.Values)
+		if err != nil {
+			a.log.Err(err).Msg("failed to abi encode attestation data")
 		}
+		encodedLeaves = append(encodedLeaves, crypto.Keccak256(crypto.Keccak256(codeBytes)))
 	}
 
-	// sort values for OpenZeppelin compatibility
+	// sort abi encoded values for OpenZeppelin compatibility
 	sort.Slice(encodedLeaves, func(i, j int) bool {
 		return bytes.Compare(encodedLeaves[i], encodedLeaves[j]) < 0
 	})
