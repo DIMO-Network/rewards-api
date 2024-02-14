@@ -25,24 +25,27 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
-var CredentialExpiresAt = "ExprTime"
-var Values = "Values"
-
 type leaf struct {
 	data []byte
 }
 
+type merkleTreeLeaf struct {
+	VCExpiration time.Time
+	Values       []interface{}
+}
+
+// types we will use to abi encode the data
+var encodeTypes = []string{"uint64", "string", "string"}
+
 func (l *leaf) Serialize() ([]byte, error) {
-	// since OpenZep will sort bytes before hashing
-	// abi encoding and serialization is performed before
-	// we pass any data to the merkle tree func
-	// thus, we can just return the bytes directly here
 	return l.data, nil
 }
 
+// abiEncode mirrors solidity abi encoding
+// converts data struct into binary format used by openzep merkle tree library
 func abiEncode(types []string, values []interface{}) ([]byte, error) {
 	if len(types) != len(values) {
-		return nil, fmt.Errorf("type array  and value array must be same length")
+		return nil, fmt.Errorf("type array and value array must be same length")
 	}
 
 	args := abi.Arguments{}
@@ -69,8 +72,16 @@ type Attestor struct {
 	log       *zerolog.Logger
 }
 
+// NewAttestor creates a new merkle tree attestation service
+// for OpenZep compatilibity:
+// OZ sorts all abi encoded leaves before beginning to build tree
+// as yet, there is no parameter to make this library sort
+// the leaves a priori (sort sibling pairs true refers
+// to sorting hashed sib pairs in later steps)
+// thus, abi encoding and serialization is performed
+// as a first step before we pass any data to the merkle tree func
 func NewAttestor(producer sarama.SyncProducer, pdb db.Store, settings *config.Settings, logger *zerolog.Logger) (*Attestor, error) {
-	abi, err := contracts.EasMetaData.GetAbi()
+	easABI, err := contracts.EasMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +94,6 @@ func NewAttestor(producer sarama.SyncProducer, pdb db.Store, settings *config.Se
 	copy(byteArray[:], schemaSlice)
 
 	return &Attestor{
-		abi:      abi,
 		producer: producer,
 		pdb:      pdb,
 		schema:   byteArray,
@@ -95,6 +105,7 @@ func NewAttestor(producer sarama.SyncProducer, pdb db.Store, settings *config.Se
 			Mode:               mt.ModeProofGenAndTreeBuild,
 			DisableLeafHashing: true, // also required for OpenZeppelin compatilibity
 		},
+		abi:       easABI,
 		contract:  common.HexToAddress(settings.AttestationContract),
 		recipient: common.HexToAddress(settings.AttestationRecipient),
 		mtxTopic:  settings.MetaTransactionSendTopic,
@@ -102,7 +113,7 @@ func NewAttestor(producer sarama.SyncProducer, pdb db.Store, settings *config.Se
 	}, nil
 }
 
-func (a *Attestor) GenerateAndSubmitAttestation(data map[string]map[string]interface{}, dataTypes []string) (string, error) {
+func (a *Attestor) GenerateAndSubmitAttestation(data map[string]merkleTreeLeaf, dataTypes []string) (string, error) {
 	reqID := ksuid.New().String()
 	tx, err := a.pdb.DBS().Writer.BeginTx(context.Background(), nil)
 	if err != nil {
@@ -169,19 +180,17 @@ func (a *Attestor) GenerateAndSubmitAttestation(data map[string]map[string]inter
 	return reqID, tx.Commit()
 }
 
-func (a *Attestor) generateMerkleTree(data map[string]map[string]interface{}, dataTypes []string) (*mt.MerkleTree, error) {
+func (a *Attestor) generateMerkleTree(data map[string]merkleTreeLeaf, dataTypes []string) (*mt.MerkleTree, error) {
 	encodedLeaves := [][]byte{}
 	for _, device := range data {
-		if _, val := device[Values]; val {
-			codeBytes, err := abiEncode(dataTypes, device[Values].([]interface{}))
-			if err != nil {
-				a.log.Err(err).Msg("failed to abi encode attestation data")
-			}
-			encodedLeaves = append(encodedLeaves, crypto.Keccak256(crypto.Keccak256(codeBytes)))
+		codeBytes, err := abiEncode(dataTypes, device.Values)
+		if err != nil {
+			a.log.Err(err).Msg("failed to abi encode attestation data")
 		}
+		encodedLeaves = append(encodedLeaves, crypto.Keccak256(crypto.Keccak256(codeBytes)))
 	}
 
-	// sort values for OpenZeppelin compatibility
+	// sort abi encoded values for OpenZeppelin compatibility
 	sort.Slice(encodedLeaves, func(i, j int) bool {
 		return bytes.Compare(encodedLeaves[i], encodedLeaves[j]) < 0
 	})
@@ -195,14 +204,7 @@ func (a *Attestor) generateMerkleTree(data map[string]map[string]interface{}, da
 }
 
 func (a *Attestor) prepareAttestationRequest(root [32]byte) ([]byte, error) {
-	args := abi.Arguments{}
-	abiType, err := abi.NewType("bytes32", "", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	args = append(args, abi.Argument{Type: abiType})
-	enocodedData, err := args.Pack(root)
+	enocodedData, err := abiEncode([]string{"bytes32"}, []interface{}{root})
 	if err != nil {
 		return nil, err
 	}
@@ -225,21 +227,4 @@ func (a *Attestor) VerifyAttestation(root, node []byte, proof [][]byte) (bool, e
 	}
 	return mt.Verify(dataBlock, &p, root, &a.config)
 
-}
-
-func AbiEncode(types []string, values []interface{}) ([]byte, error) {
-	if len(types) != len(values) {
-		return nil, fmt.Errorf("type array  and value array must be same length")
-	}
-
-	args := abi.Arguments{}
-	for _, argType := range types {
-		abiType, err := abi.NewType(argType, "", nil)
-		if err != nil {
-			return nil, err
-		}
-		args = append(args, abi.Argument{Type: abiType})
-	}
-
-	return args.Pack(values...)
 }

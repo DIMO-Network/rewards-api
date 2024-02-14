@@ -165,7 +165,8 @@ func (t *BaselineClient) assignPoints() (string, error) {
 		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
 
-	attestationData := map[string]map[string]interface{}{}
+	attestationData := map[string]merkleTreeLeaf{}
+
 	for _, deviceActivity := range allActiveDeviceRecords {
 		logger := t.Logger.With().Str("userDeviceId", deviceActivity.ID).Logger()
 
@@ -298,22 +299,19 @@ func (t *BaselineClient) assignPoints() (string, error) {
 		}
 
 		// TODO(ae): need to add signature here still, must update devicees-api grpc response to do so
-		earningVehicle, ok := attestationData[*ud.Vin]
+		potentialEarner, ok := attestationData[*ud.Vin]
 		if ok {
-			credExp, ok := earningVehicle[CredentialExpiresAt]
-			if ok {
-				if credExp.(time.Time).Before(ud.LatestVinCredential.Expiration.AsTime()) {
-					attestationData[*ud.Vin] = map[string]interface{}{
-						CredentialExpiresAt: ud.LatestVinCredential.Expiration.AsTime(),
-						Values:              []interface{}{*ud.TokenId, ud.DeviceDefinitionId, ud.LatestVinCredential.Id},
-					}
+			if potentialEarner.VCExpiration.Before(ud.LatestVinCredential.Expiration.AsTime()) {
+				attestationData[*ud.Vin] = merkleTreeLeaf{
+					VCExpiration: ud.LatestVinCredential.Expiration.AsTime(),
+					Values:       []interface{}{*ud.TokenId, ud.DeviceDefinitionId, ud.LatestVinCredential.Id},
 				}
-
 			}
-		}
-		attestationData[*ud.Vin] = map[string]interface{}{
-			CredentialExpiresAt: ud.LatestVinCredential.Expiration.AsTime(),
-			Values:              []interface{}{*ud.TokenId, ud.DeviceDefinitionId, ud.LatestVinCredential.Id},
+		} else {
+			attestationData[*ud.Vin] = merkleTreeLeaf{
+				VCExpiration: ud.LatestVinCredential.Expiration.AsTime(),
+				Values:       []interface{}{*ud.TokenId, ud.DeviceDefinitionId, ud.LatestVinCredential.Id},
+			}
 		}
 
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {

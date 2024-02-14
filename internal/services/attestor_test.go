@@ -31,27 +31,27 @@ func TestMerkleTreeGeneration(t *testing.T) {
 	assert.NoError(err)
 
 	witness, err := NewAttestor(nil, pdb, &settings, &logger)
-	assert.NoError(err)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to create attestation service client")
+	}
 
-	attestationData := make(map[string]map[string]interface{}, 0)
+	attestationData := map[string]merkleTreeLeaf{}
 	for i := 1; i < 5; i++ {
 		dummyVin := fmt.Sprintf("vin%d", i)
 		currentVCExpiration := time.Now()
-		earningVehicle, ok := attestationData[fmt.Sprintf("vin%d", i)]
+		potentialEarner, ok := attestationData[fmt.Sprintf("vin%d", i)]
 		if ok {
-			credExp, ok := earningVehicle[CredentialExpiresAt]
-			if ok {
-				if credExp.(time.Time).Before(currentVCExpiration) {
-					attestationData[dummyVin] = map[string]interface{}{
-						CredentialExpiresAt: currentVCExpiration,
-						Values:              []interface{}{uint64(i), "deviceDefinitionId", "latestVinCredentialId", "signature"},
-					}
+			if potentialEarner.VCExpiration.Before(currentVCExpiration) {
+				attestationData[dummyVin] = merkleTreeLeaf{
+					VCExpiration: currentVCExpiration,
+					Values:       []interface{}{uint64(i), "deviceDefinitionId", "latestVinCredentialId", "signature"},
 				}
 			}
-		}
-		attestationData[dummyVin] = map[string]interface{}{
-			CredentialExpiresAt: currentVCExpiration,
-			Values:              []interface{}{uint64(i), "deviceDefinitionId", "latestVinCredentialId", "signature"},
+		} else {
+			attestationData[dummyVin] = merkleTreeLeaf{
+				VCExpiration: currentVCExpiration,
+				Values:       []interface{}{uint64(i), "deviceDefinitionId", "latestVinCredentialId", "signature"},
+			}
 		}
 	}
 
@@ -61,7 +61,7 @@ func TestMerkleTreeGeneration(t *testing.T) {
 
 	encodedLeaves := [][]byte{}
 	for _, device := range attestationData {
-		codeBytes, err := abiEncode(sampleTypes, device[Values].([]interface{}))
+		codeBytes, err := abiEncode(sampleTypes, device.Values)
 		assert.NoError(err)
 		encodedLeaves = append(encodedLeaves, crypto.Keccak256(crypto.Keccak256(codeBytes)))
 	}
