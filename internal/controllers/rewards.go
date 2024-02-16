@@ -390,7 +390,6 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		weeks[i].Tokens = big.NewInt(0)
 	}
 
-	tkns := big.NewInt(0)
 	for _, r := range rs {
 		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.AftermarketDevicePoints + r.SyntheticDevicePoints
 
@@ -398,6 +397,7 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 			continue
 		}
 
+		tkns := big.NewInt(0)
 		tkns.Add(tkns, r.StreakTokens.Int(nil))
 		tkns.Add(tkns, r.SyntheticDeviceTokens.Int(nil))
 		tkns.Add(tkns, r.AftermarketDeviceTokens.Int(nil))
