@@ -165,13 +165,12 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 				Vendor:               integr.Vendor,
 				DataThisWeek:         false,
 				Points:               0,
-				OnChainPairingStatus: "Unpaired",
+				OnChainPairingStatus: "Paired",
 			}
 
 			if vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
 				uri.Points = int(integr.Points)
 				uri.DataThisWeek = true
-				uri.OnChainPairingStatus = "Paired"
 			}
 
 			outInts = append(outInts, uri)
