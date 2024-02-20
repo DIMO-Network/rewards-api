@@ -39,10 +39,15 @@ func (r *DeviceController) GetDevice(c *fiber.Ctx) error {
 	out := make([]DeviceWeek, len(rs))
 
 	for i, r := range rs {
+		tokens := big.NewInt(0)
+		tokens.Add(tokens, r.AftermarketTokenID.Int(nil))
+		tokens.Add(tokens, r.SyntheticDeviceTokens.Int(nil))
+		tokens.Add(tokens, r.StreakTokens.Int(nil))
+
 		out[i] = DeviceWeek{
 			Start:     services.NumToWeekStart(r.IssuanceWeekID),
 			End:       services.NumToWeekEnd(r.IssuanceWeekID),
-			Tokens:    r.Tokens.Int(nil),
+			Tokens:    tokens,
 			VehicleID: r.UserDeviceTokenID.Int(nil),
 		}
 	}
