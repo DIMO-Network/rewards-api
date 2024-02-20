@@ -27,6 +27,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/swaggo/swag v1.16.2
 	github.com/testcontainers/testcontainers-go v0.26.0
+	github.com/txaty/go-merkletree v0.2.2
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.15.0
 	github.com/volatiletech/strmangle v0.0.5

@@ -37,6 +37,7 @@ type BaselineClient struct {
 	Week               int
 	Logger             *zerolog.Logger
 	FirstAutomatedWeek int
+	AttestationService *Attestor
 }
 
 type DeviceActivityClient interface {
@@ -57,6 +58,7 @@ func NewBaselineRewardService(
 	dataService DeviceActivityClient,
 	devicesClient DevicesClient,
 	defsClient IntegrationsGetter,
+	attestationService *Attestor,
 	week int,
 	logger *zerolog.Logger,
 ) *BaselineClient {
@@ -65,6 +67,7 @@ func NewBaselineRewardService(
 		DataService:        dataService,
 		DevicesClient:      devicesClient,
 		DefsClient:         defsClient,
+		AttestationService: attestationService,
 		ContractAddress:    common.HexToAddress(settings.IssuanceContractAddress),
 		Week:               week,
 		Logger:             logger,
@@ -160,6 +163,8 @@ func (t *BaselineClient) assignPoints() error {
 	for _, reward := range lastWeekRewards {
 		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
+
+	attestationData := map[string]merkleTreeLeaf{}
 
 	for _, deviceActivity := range allActiveDeviceRecords {
 		logger := t.Logger.With().Str("userDeviceId", deviceActivity.ID).Logger()
@@ -292,9 +297,35 @@ func (t *BaselineClient) assignPoints() error {
 			}
 		}
 
+		// TODO(ae): need to add signature here still, must update devicees-api grpc response to do so
+		potentialEarner, ok := attestationData[*ud.Vin]
+		if ok {
+			if potentialEarner.VCExpiration.Before(ud.LatestVinCredential.Expiration.AsTime()) {
+				attestationData[*ud.Vin] = merkleTreeLeaf{
+					VCExpiration: ud.LatestVinCredential.Expiration.AsTime(),
+					Values:       []interface{}{*ud.TokenId, ud.DeviceDefinitionId, ud.LatestVinCredential.Id},
+				}
+			}
+		} else {
+			attestationData[*ud.Vin] = merkleTreeLeaf{
+				VCExpiration: ud.LatestVinCredential.Expiration.AsTime(),
+				Values:       []interface{}{*ud.TokenId, ud.DeviceDefinitionId, ud.LatestVinCredential.Id},
+			}
+		}
+
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
+	}
+
+	// TODO(ae): need to add another string field to data type once vc signature has been added to devices-api vin credential response
+	// Nil check around logging the root for now bc we aren't yet acting on the error, if there is one
+	tree, err := t.AttestationService.GenerateMerkleTree(attestationData, []string{"uint64", "string", "string"})
+	if err != nil {
+		t.Logger.Info().Err(err).Msg("failed to generate merkle tree")
+	}
+	if tree != nil {
+		t.Logger.Info().Int("issuanceWeek", issuanceWeek).Str("root", common.Bytes2Hex(tree.Root)).Msg("generated merkle tree")
 	}
 
 	// We didn't see any data for these remaining devices this week.
