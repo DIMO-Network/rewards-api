@@ -142,7 +142,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 				OnChainPairingStatus: "Paired",
 			}
 
-			if vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
+			if device.VinConfirmed && vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
 				uri.Points = int(integr.Points)
 				uri.DataThisWeek = true
 			}
@@ -168,7 +168,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 				OnChainPairingStatus: "Paired",
 			}
 
-			if vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
+			if device.VinConfirmed && vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
 				uri.Points = int(integr.Points)
 				uri.DataThisWeek = true
 			}
@@ -223,8 +223,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			ConnectionStreak:     connectionStreak,
 			DisconnectionStreak:  disconnectionStreak,
 			Level:                *getLevelResp(lvl),
-			Minted:               device.TokenId != nil,
+			Minted:               vehicleMinted,
 			OptedIn:              true,
+			VinConfirmed:         device.VinConfirmed,
 		}
 	}
 
@@ -299,7 +300,8 @@ type UserResponseDevice struct {
 	// Minted is true if the device has been minted on-chain.
 	Minted bool `json:"minted"`
 	// OptedIn is true if the user has agreed to the terms of service.
-	OptedIn bool `json:"optedIn"`
+	OptedIn      bool `json:"optedIn"`
+	VinConfirmed bool `json:"vinConfirmed"`
 }
 
 type UserResponseThisWeek struct {

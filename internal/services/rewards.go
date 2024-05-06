@@ -182,6 +182,11 @@ func (t *BaselineClient) assignPoints() error {
 			continue
 		}
 
+		if !ud.VinConfirmed {
+			logger.Info().Msg("Device does not have confirmed VIN.")
+			continue
+		}
+
 		if len(ud.OwnerAddress) != 20 {
 			logger.Info().Msg("User has minted a car but has no owner address?")
 			continue
