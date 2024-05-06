@@ -13,7 +13,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	github.com/ericlagergren/decimal v0.0.0-20221120152707-495c53812d05
-	github.com/ethereum/go-ethereum v1.13.5
+	github.com/ethereum/go-ethereum v1.13.15
 	github.com/friendsofgo/errors v0.9.2
 	github.com/gofiber/fiber/v2 v2.51.0
 	github.com/gofiber/jwt/v3 v3.3.10
@@ -140,7 +140,7 @@ require (
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.16.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
