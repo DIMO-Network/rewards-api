@@ -267,7 +267,7 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 		txnRow.Hash = null.StringFrom(cloudEvent.Data.Transaction.Hash)
 	}
 
-	if cloudEvent.Data.Type == "Confirmed" {
+	if cloudEvent.Data.Type == models.MetaTransactionRequestStatusConfirmed {
 		txnRow.Successful = null.BoolFrom(*cloudEvent.Data.Transaction.Successful)
 
 		if *cloudEvent.Data.Transaction.Successful {
