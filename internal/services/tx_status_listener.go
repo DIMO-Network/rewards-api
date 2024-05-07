@@ -164,10 +164,13 @@ func (s *TransferStatusProcessor) processBaselineEvent(event shared.CloudEvent[c
 		return err
 	}
 
-	txnRow.Hash = null.StringFrom(event.Data.Transaction.Hash)
 	txnRow.Status = event.Data.Type
 
-	if event.Data.Type == "Confirmed" {
+	if event.Data.Type != models.MetaTransactionRequestStatusFailed {
+		txnRow.Hash = null.StringFrom(event.Data.Transaction.Hash)
+	}
+
+	if event.Data.Type == models.MetaTransactionRequestStatusConfirmed {
 		txnRow.Successful = null.BoolFrom(*event.Data.Transaction.Successful)
 
 		if *event.Data.Transaction.Successful {
@@ -258,10 +261,13 @@ func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEv
 		return err
 	}
 
-	txnRow.Hash = null.StringFrom(cloudEvent.Data.Transaction.Hash)
 	txnRow.Status = cloudEvent.Data.Type
 
-	if cloudEvent.Data.Type == "Confirmed" {
+	if cloudEvent.Data.Type != models.MetaTransactionRequestStatusFailed {
+		txnRow.Hash = null.StringFrom(cloudEvent.Data.Transaction.Hash)
+	}
+
+	if cloudEvent.Data.Type == models.MetaTransactionRequestStatusConfirmed {
 		txnRow.Successful = null.BoolFrom(*cloudEvent.Data.Transaction.Successful)
 
 		if *cloudEvent.Data.Transaction.Successful {
