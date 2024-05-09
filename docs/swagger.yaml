@@ -178,6 +178,8 @@ definitions:
           across all weeks.
         example: 5000
         type: number
+      vinConfirmed:
+        type: boolean
     type: object
   github.com_DIMO-Network_rewards-api_internal_controllers.UserResponseIntegration:
     properties:
@@ -419,6 +421,8 @@ definitions:
           across all weeks.
         example: 5000
         type: number
+      vinConfirmed:
+        type: boolean
     type: object
   internal_controllers.UserResponseIntegration:
     properties:
@@ -534,7 +538,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.TransactionHistory'
+            $ref: '#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.TransactionHistory'
       security:
       - BearerAuth: []
   /user/referrals:

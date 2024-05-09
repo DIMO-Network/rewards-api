@@ -225,7 +225,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			Level:                *getLevelResp(lvl),
 			Minted:               vehicleMinted,
 			OptedIn:              true,
-			VinConfirmed:         device.VinConfirmed,
+			VINConfirmed:         device.VinConfirmed,
 		}
 	}
 
@@ -301,7 +301,7 @@ type UserResponseDevice struct {
 	Minted bool `json:"minted"`
 	// OptedIn is true if the user has agreed to the terms of service.
 	OptedIn      bool `json:"optedIn"`
-	VinConfirmed bool `json:"vinConfirmed"`
+	VINConfirmed bool `json:"vinConfirmed"`
 }
 
 type UserResponseThisWeek struct {

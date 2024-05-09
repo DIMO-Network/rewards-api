@@ -87,7 +87,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_controllers.TransactionHistory"
+                            "$ref": "#/definitions/github.com_DIMO-Network_rewards-api_internal_controllers.TransactionHistory"
                         }
                     }
                 }
@@ -316,6 +316,9 @@
                     "description": "Tokens is the total number of tokens that the device has earned across all weeks.",
                     "type": "number",
                     "example": 5000
+                },
+                "vinConfirmed": {
+                    "type": "boolean"
                 }
             }
         },
@@ -595,6 +598,9 @@
                     "description": "Tokens is the total number of tokens that the device has earned across all weeks.",
                     "type": "number",
                     "example": 5000
+                },
+                "vinConfirmed": {
+                    "type": "boolean"
                 }
             }
         },
