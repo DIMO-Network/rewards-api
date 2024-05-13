@@ -5,13 +5,15 @@ linters:
     - prealloc
     - revive
     - goimports
-    - deadcode
     - errcheck
     - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - structcheck
     - typecheck
     - unused
-    - varcheck
+
+issues:
+  fix: true
+
+linters-settings: {}
