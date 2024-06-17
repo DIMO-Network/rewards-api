@@ -258,12 +258,6 @@ func (t *BaselineClient) assignPoints() error {
 			continue
 		}
 
-		if vc := ud.LatestVinCredential; vc == nil {
-			logger.Debug().Msg("Earning vehicle has never had a VIN credential.")
-		} else if !vc.Expiration.AsTime().After(weekEnd) {
-			logger.Debug().Msgf("Earning vehicle's VIN credential expired on %s.", vc.Expiration.AsTime())
-		}
-
 		// Streak rewards.
 		streakInput := StreakInput{
 			ConnectedThisWeek:           true,
