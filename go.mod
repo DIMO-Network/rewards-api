@@ -15,7 +15,7 @@ require (
 	github.com/ericlagergren/decimal v0.0.0-20221120152707-495c53812d05
 	github.com/ethereum/go-ethereum v1.14.0
 	github.com/friendsofgo/errors v0.9.2
-	github.com/gofiber/fiber/v2 v2.52.4
+	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gofiber/jwt/v3 v3.3.10
 	github.com/gofiber/swagger v0.1.14
 	github.com/golang-jwt/jwt/v4 v4.5.0
