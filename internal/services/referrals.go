@@ -16,7 +16,8 @@ import (
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -52,38 +53,27 @@ func NewReferralBonusService(
 	}
 }
 
+const level2Weeks = 4
+
 // CollectReferrals returns address pairs for referrals completed in the given week.
 // These will come from referees who are earning for the first time and have a referrer
 // attached to their account.
 func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
 	var refs Referrals
 
-	var res []struct {
-		UserID string `boil:"r1.user_id"`
-	}
-
-	var rCols = models.RewardColumns
-
-	err := queries.Raw(
-		"SELECT DISTINCT ON (r1."+rCols.UserEthereumAddress+")"+
-			" r1."+rCols.UserID+
-			" FROM "+models.TableNames.Rewards+" r1"+
-			" LEFT OUTER JOIN "+models.TableNames.Rewards+" r2 ON r1."+rCols.UserEthereumAddress+" = r2."+rCols.UserEthereumAddress+" AND r2."+rCols.IssuanceWeekID+" < $1"+
-			" LEFT JOIN "+models.TableNames.Vins+" v on r1."+rCols.UserDeviceTokenID+" = v."+models.VinColumns.FirstEarningTokenID+
-			" WHERE r1."+rCols.IssuanceWeekID+" = $1 AND r1."+rCols.UserEthereumAddress+" IS NOT NULL AND r2."+rCols.UserDeviceID+" IS NULL"+
-			" AND v."+models.VinColumns.FirstEarningWeek+" = $1"+
-			" ORDER BY r1."+rCols.UserEthereumAddress+", r1."+rCols.UserID,
-		issuanceWeek,
-	).Bind(ctx, c.TransferService.db.DBS().Reader, &res)
+	maybeTriggering, err := models.Rewards(
+		models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
+		models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
+		models.RewardWhere.DisconnectionStreak.EQ(0),
+	).All(ctx, c.TransferService.db.DBS().Reader)
 	if err != nil {
-		return Referrals{}, err
+		return Referrals{}, nil
 	}
 
-	for _, r := range res {
+	for _, r := range maybeTriggering {
 		user, err := c.UsersClient.GetUser(ctx, &pb.GetUserRequest{Id: r.UserID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				c.Logger.Info().Str("userId", r.UserID).Msg("User was new this week but deleted their account.")
 				continue
 			}
 			return refs, err
@@ -94,21 +84,59 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 		}
 
 		if user.EthereumAddress == nil {
-			c.Logger.Info().Str("userId", r.UserID).Msg("Referred user does not have a valid ethereum address.")
+			c.Logger.Warn().Str("userId", r.UserID).Msg("Referred user does not have a valid ethereum address.")
 			continue
 		}
 
 		if !user.ReferredBy.ReferrerValid {
 			c.Logger.Info().Str("userId", r.UserID).Msg("Referring user has deleted their account or no longer has a confirmed ethereum address.")
 			// referring eth addr is set to the referrals contract
-			user.ReferredBy.EthereumAddress = c.ContractAddress[:]
+			user.ReferredBy.EthereumAddress = c.ContractAddress.Bytes()
+		}
+
+		first, err := models.Vins(
+			models.VinWhere.FirstEarningTokenID.EQ(types.NewDecimal(r.UserDeviceTokenID.Big)),
+		).Exists(ctx, c.TransferService.db.DBS().Reader)
+		if err != nil {
+			return refs, err
+		} else if !first {
+			continue
+		}
+
+		vehicleFirst, err := models.Rewards(
+			models.RewardWhere.UserDeviceTokenID.EQ(r.UserDeviceTokenID),
+			qm.OrderBy(models.RewardColumns.IssuanceWeekID),
+		).One(ctx, c.TransferService.db.DBS().Reader)
+		if err != nil {
+			return refs, err
+		}
+
+		userSeenBefore, err := models.Rewards(
+			models.RewardWhere.UserEthereumAddress.EQ(null.StringFrom(*user.EthereumAddress)),
+			models.RewardWhere.IssuanceWeekID.LT(vehicleFirst.IssuanceWeekID),
+		).Exists(ctx, c.TransferService.db.DBS().Reader)
+		if err != nil {
+			return refs, err
+		} else if userSeenBefore {
+			continue
+		}
+
+		hitLevel2Before, err := models.Rewards(
+			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
+			models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
+			models.RewardWhere.UserDeviceTokenID.EQ(r.UserDeviceTokenID),
+		).Exists(ctx, c.TransferService.db.DBS().Reader)
+		if err != nil {
+			return refs, err
+		} else if hitLevel2Before {
+			continue
 		}
 
 		refereeAddr := common.HexToAddress(*user.EthereumAddress)
 		referrerAddr := common.BytesToAddress(user.ReferredBy.EthereumAddress)
 
 		if refereeAddr == referrerAddr {
-			c.Logger.Info().Str("userId", r.UserID).Msg("Referred users ethereum address is same as referring users.")
+			c.Logger.Warn().Str("userId", r.UserID).Msg("Referred user's ethereum address is same as referring user's.")
 			continue
 		}
 
