@@ -17,8 +17,6 @@ import (
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type ReferralsClient struct {
@@ -54,109 +52,104 @@ func NewReferralBonusService(
 
 const level2Weeks = 4
 
+type UserTuple struct {
+	ID      string
+	Address common.Address
+}
+
 // CollectReferrals returns address pairs for referrals completed in the given week.
 // These will come from referees who are earning for the first time and have a referrer
 // attached to their account.
 func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int) (Referrals, error) {
 	var refs Referrals
 
-	covered := make(map[common.Address]struct{})
+	logger := c.Logger.With().Int("issuanceWeek", issuanceWeek).Logger()
 
-	maybeTriggering, err := models.Rewards(
+	vehicleNFTsHittingLevel2, err := models.Rewards(
 		models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek),
 		models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
 		models.RewardWhere.DisconnectionStreak.EQ(0),
 	).All(ctx, c.TransferService.db.DBS().Reader)
 	if err != nil {
-		return Referrals{}, nil
+		return refs, nil
 	}
 
-	for _, r := range maybeTriggering {
-		user, err := c.UsersClient.GetUser(ctx, &pb.GetUserRequest{Id: r.UserID})
-		if err != nil {
-			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-				continue
-			}
-			return refs, err
-		}
+	logger.Info().Msgf("Had %d vehicle NFTs hit level 2.", len(vehicleNFTsHittingLevel2))
 
-		if user.ReferredBy == nil {
-			continue
-		}
+	numVehiclesLevel2FirstTime := 0
+	ownersOfLevel2FirstTimeVehicles := make(map[common.Address]struct{})
 
-		if user.EthereumAddress == nil {
-			c.Logger.Warn().Str("userId", r.UserID).Msg("Referred user does not have a valid ethereum address.")
-			continue
-		}
-
-		refereeAddr := common.HexToAddress(*user.EthereumAddress)
-
-		if _, ok := covered[refereeAddr]; ok {
-			continue
-		}
-
-		referredBefore, err := models.Referrals(
-			models.ReferralWhere.Referee.EQ(refereeAddr.Bytes()),
-		).Exists(ctx, c.TransferService.db.DBS().Reader)
-		if err != nil {
-			return refs, err
-		} else if referredBefore {
-			covered[refereeAddr] = struct{}{}
-			continue
-		}
-
-		if !user.ReferredBy.ReferrerValid {
-			c.Logger.Info().Str("userId", r.UserID).Msg("Referring user has deleted their account or no longer has a confirmed ethereum address.")
-			// referring eth addr is set to the referrals contract
-			user.ReferredBy.EthereumAddress = c.ContractAddress.Bytes()
-		}
-
-		userHitBefore, err := models.Rewards(
-			models.RewardWhere.UserEthereumAddress.EQ(null.StringFrom(*user.EthereumAddress)),
-			models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
+	for _, r := range vehicleNFTsHittingLevel2 {
+		if vehicleHitLevel2Before, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
-		).Exists(ctx, c.TransferService.db.DBS().Reader)
-		if err != nil {
+			models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
+			models.RewardWhere.UserDeviceTokenID.EQ(r.UserDeviceTokenID),
+		).Exists(ctx, c.TransferService.db.DBS().Reader); err != nil {
 			return refs, err
-		} else if userHitBefore {
-			covered[refereeAddr] = struct{}{}
+		} else if vehicleHitLevel2Before {
 			continue
 		}
 
-		first, err := models.Vins(
+		firstTimeVIN, err := models.Vins(
 			models.VinWhere.FirstEarningTokenID.EQ(types.NewDecimal(r.UserDeviceTokenID.Big)),
 		).Exists(ctx, c.TransferService.db.DBS().Reader)
 		if err != nil {
 			return refs, err
-		} else if !first {
+		} else if !firstTimeVIN {
 			continue
 		}
 
-		carHitLevel2Before, err := models.Rewards(
+		ownersOfLevel2FirstTimeVehicles[common.HexToAddress(r.UserEthereumAddress.String)] = struct{}{}
+		numVehiclesLevel2FirstTime++
+	}
+
+	logger.Info().Msgf("Had %d VINs hit level 2 for the first time, with %d owners.", numVehiclesLevel2FirstTime, len(ownersOfLevel2FirstTimeVehicles))
+
+	for user := range ownersOfLevel2FirstTimeVehicles {
+		if userLevel2Before, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
 			models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
-			models.RewardWhere.UserDeviceTokenID.EQ(r.UserDeviceTokenID),
-		).Exists(ctx, c.TransferService.db.DBS().Reader)
+			models.RewardWhere.UserEthereumAddress.EQ(null.StringFrom(user.Hex())),
+		).Exists(ctx, c.TransferService.db.DBS().Reader); err != nil {
+			return refs, err
+		} else if userLevel2Before {
+			continue
+		}
+
+		if referredBefore, err := models.Referrals(models.ReferralWhere.Referee.EQ(user.Bytes())).Exists(ctx, c.TransferService.db.DBS().Reader); err != nil {
+			return refs, err
+		} else if referredBefore {
+			continue
+		}
+
+		resp, err := c.UsersClient.GetUsersByEthereumAddress(ctx, &pb.GetUsersByEthereumAddressRequest{EthereumAddress: user.Bytes()})
 		if err != nil {
 			return refs, err
-		} else if carHitLevel2Before {
-			continue
 		}
 
-		referrerAddr := common.BytesToAddress(user.ReferredBy.EthereumAddress)
+		for _, potUser := range resp.Users {
+			if potUser.ReferredBy == nil {
+				continue
+			}
 
-		if refereeAddr == referrerAddr {
-			c.Logger.Warn().Str("userId", r.UserID).Msg("Referred user's ethereum address is same as referring user's.")
-			continue
+			referrerID := "DELETED"
+			referrerAddr := c.ContractAddress
+
+			if potUser.ReferredBy.ReferrerValid && common.BytesToAddress(potUser.ReferredBy.EthereumAddress) != user {
+				referrerID = potUser.ReferredBy.Id
+				referrerAddr = common.BytesToAddress(potUser.ReferredBy.EthereumAddress)
+			}
+
+			refs.RefereeUserIDs = append(refs.RefereeUserIDs, potUser.Id)
+			refs.Referees = append(refs.Referees, user)
+			refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, referrerID)
+			refs.Referrers = append(refs.Referrers, referrerAddr)
+
+			break
 		}
-
-		covered[refereeAddr] = struct{}{}
-
-		refs.Referees = append(refs.Referees, refereeAddr)
-		refs.Referrers = append(refs.Referrers, referrerAddr)
-		refs.RefereeUserIDs = append(refs.RefereeUserIDs, user.Id)
-		refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, user.ReferredBy.Id)
 	}
+
+	logger.Info().Msgf("Sending out %d referrals.", numVehiclesLevel2FirstTime, len(ownersOfLevel2FirstTimeVehicles))
 
 	return refs, nil
 }
