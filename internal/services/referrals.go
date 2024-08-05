@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -16,6 +18,7 @@ import (
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
@@ -80,13 +83,19 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 	ownersOfLevel2FirstTimeVehicles := make(map[common.Address]struct{})
 
 	for _, r := range vehicleNFTsHittingLevel2 {
-		if vehicleHitLevel2Before, err := models.Rewards(
+		logger := c.Logger.With().Int64("vehicleId", r.UserDeviceTokenID.Int(nil).Int64()).Str("user", r.UserEthereumAddress.String).Logger()
+
+		if beforeHit, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
 			models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
 			models.RewardWhere.UserDeviceTokenID.EQ(r.UserDeviceTokenID),
-		).Exists(ctx, c.TransferService.db.DBS().Reader); err != nil {
-			return refs, err
-		} else if vehicleHitLevel2Before {
+			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
+		).One(ctx, c.TransferService.db.DBS().Reader); err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return refs, err
+			}
+		} else {
+			logger.Debug().Msgf("Vehicle hit Level 2 before, in week %d.", beforeHit.IssuanceWeekID)
 			continue
 		}
 
@@ -96,6 +105,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 		if err != nil {
 			return refs, err
 		} else if !firstTimeVIN {
+			logger.Debug().Msgf("Vehicle was not the first to earn with this VIN.")
 			continue
 		}
 
@@ -106,19 +116,28 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 	logger.Info().Msgf("Had %d VINs hit level 2 for the first time, with %d owners.", numVehiclesLevel2FirstTime, len(ownersOfLevel2FirstTimeVehicles))
 
 	for user := range ownersOfLevel2FirstTimeVehicles {
-		if userLevel2Before, err := models.Rewards(
+		logger := c.Logger.With().Str("user", user.Hex()).Logger()
+
+		if userHitBefore, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
 			models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
 			models.RewardWhere.UserEthereumAddress.EQ(null.StringFrom(user.Hex())),
-		).Exists(ctx, c.TransferService.db.DBS().Reader); err != nil {
-			return refs, err
-		} else if userLevel2Before {
+			qm.OrderBy(models.RewardColumns.IssuanceWeekID),
+		).One(ctx, c.TransferService.db.DBS().Reader); err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return refs, err
+			}
+		} else {
+			logger.Debug().Msgf("User hit Level 2 before in week %d with vehicle %d.", userHitBefore.IssuanceWeekID, userHitBefore.UserDeviceTokenID.Big)
 			continue
 		}
 
-		if referredBefore, err := models.Referrals(models.ReferralWhere.Referee.EQ(user.Bytes())).Exists(ctx, c.TransferService.db.DBS().Reader); err != nil {
-			return refs, err
-		} else if referredBefore {
+		if oldReferral, err := models.Referrals(models.ReferralWhere.Referee.EQ(user.Bytes())).One(ctx, c.TransferService.db.DBS().Reader); err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return refs, err
+			}
+		} else {
+			logger.Debug().Msgf("User already referred in week %d by %s.", oldReferral.IssuanceWeekID, common.BytesToAddress(oldReferral.Referrer).Hex())
 			continue
 		}
 
@@ -127,6 +146,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			return refs, err
 		}
 
+		referred := false
 		for _, potUser := range resp.Users {
 			if potUser.ReferredBy == nil {
 				continue
@@ -135,9 +155,12 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			referrerID := "DELETED"
 			referrerAddr := c.ContractAddress
 
-			if potUser.ReferredBy.ReferrerValid && common.BytesToAddress(potUser.ReferredBy.EthereumAddress) != user {
+			if potUser.ReferredBy.ReferrerValid {
+				logger.Debug().Str("referrer", common.BytesToAddress(potUser.ReferredBy.EthereumAddress).Hex()).Msg("User referred.")
 				referrerID = potUser.ReferredBy.Id
 				referrerAddr = common.BytesToAddress(potUser.ReferredBy.EthereumAddress)
+			} else {
+				logger.Debug().Msg("User referred by another user who was later deleted.")
 			}
 
 			refs.RefereeUserIDs = append(refs.RefereeUserIDs, potUser.Id)
@@ -145,11 +168,17 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, referrerID)
 			refs.Referrers = append(refs.Referrers, referrerAddr)
 
+			referred = true
+
 			break
+		}
+
+		if !referred {
+			logger.Debug().Msg("User had no referrers.")
 		}
 	}
 
-	logger.Info().Msgf("Sending out %d referrals.", numVehiclesLevel2FirstTime, len(ownersOfLevel2FirstTimeVehicles))
+	logger.Info().Msgf("Sending out %d referrals.", len(refs.Referees))
 
 	return refs, nil
 }
