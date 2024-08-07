@@ -182,6 +182,11 @@ func (t *BaselineClient) assignPoints() error {
 			continue
 		}
 
+		if !ud.VinConfirmed {
+			logger.Info().Msg("Device does not have confirmed VIN.")
+			continue
+		}
+
 		if len(ud.OwnerAddress) != 20 {
 			logger.Info().Msg("User has minted a car but has no owner address?")
 			continue
@@ -251,12 +256,6 @@ func (t *BaselineClient) assignPoints() error {
 		if len(thisWeek.IntegrationIds) == 0 {
 			logger.Warn().Msg("All integrations sending signals failed on-chain checks.")
 			continue
-		}
-
-		if vc := ud.LatestVinCredential; vc == nil {
-			logger.Debug().Msg("Earning vehicle has never had a VIN credential.")
-		} else if !vc.Expiration.AsTime().After(weekEnd) {
-			logger.Debug().Msgf("Earning vehicle's VIN credential expired on %s.", vc.Expiration.AsTime())
 		}
 
 		// Streak rewards.

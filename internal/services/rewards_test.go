@@ -1025,6 +1025,7 @@ func (d *FakeDevClient) GetUserDevice(_ context.Context, in *pb_devices.GetUserD
 			Id:           ud.ID,
 			TokenId:      tk,
 			Vin:          vin,
+			VinConfirmed: vin != nil,
 			OwnerAddress: owner,
 		}
 
