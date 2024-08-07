@@ -495,7 +495,3 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	assert.ElementsMatch(t, []Referral{{Referee: mkAddr(1), Referrer: mkAddr(2)}}, r)
 }
-
-func ref[A any](a A) *A {
-	return &a
-}
