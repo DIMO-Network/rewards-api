@@ -20,14 +20,20 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
+	"google.golang.org/grpc"
 )
+
+//go:generate mockgen -source=./referrals.go -destination=users_client_mock_test.go -package=services
+type UsersClient interface {
+	GetUsersByEthereumAddress(ctx context.Context, in *pb.GetUsersByEthereumAddressRequest, opts ...grpc.CallOption) (*pb.GetUsersByEthereumAddressResponse, error)
+}
 
 type ReferralsClient struct {
 	TransferService *TransferService
 	ContractAddress common.Address
 	Week            int
 	Logger          *zerolog.Logger
-	UsersClient     pb.UserServiceClient
+	UsersClient     UsersClient
 }
 
 type Referrals struct {
@@ -42,7 +48,7 @@ func NewReferralBonusService(
 	transferService *TransferService,
 	week int,
 	logger *zerolog.Logger,
-	userClient pb.UserServiceClient) *ReferralsClient {
+	userClient UsersClient) *ReferralsClient {
 
 	return &ReferralsClient{
 		TransferService: transferService,
@@ -156,6 +162,11 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			referrerAddr := c.ContractAddress
 
 			if potUser.ReferredBy.ReferrerValid {
+				if common.BytesToAddress(potUser.ReferredBy.EthereumAddress) == user {
+					logger.Warn().Msg("User referred by his own address.")
+					continue
+				}
+
 				logger.Debug().Str("referrer", common.BytesToAddress(potUser.ReferredBy.EthereumAddress).Hex()).Msg("User referred.")
 				referrerID = potUser.ReferredBy.Id
 				referrerAddr = common.BytesToAddress(potUser.ReferredBy.EthereumAddress)

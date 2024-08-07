@@ -32,6 +32,7 @@ require (
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.16.2
 	github.com/volatiletech/strmangle v0.0.6
+	go.uber.org/mock v0.4.0
 	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
