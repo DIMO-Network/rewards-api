@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/DIMO-Network/shared/db"
@@ -29,5 +30,5 @@ func MigrateDatabase(_ zerolog.Logger, settings *db.Settings, command string, di
 
 	goose.SetTableName("rewards_api.migrations")
 
-	return goose.Run(command, db, dir)
+	return goose.RunContext(context.Background(), command, db, dir)
 }

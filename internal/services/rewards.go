@@ -8,6 +8,7 @@ import (
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -40,7 +41,7 @@ type BaselineClient struct {
 }
 
 type DeviceActivityClient interface {
-	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
+	DescribeActiveDevices(start, end time.Time) ([]*ch.Devices, error)
 }
 
 type IntegrationsGetter interface {
@@ -48,7 +49,7 @@ type IntegrationsGetter interface {
 }
 
 type DevicesClient interface {
-	GetUserDevice(ctx context.Context, in *pb_devices.GetUserDeviceRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error)
+	GetUserDeviceByTokenId(ctx context.Context, in *pb_devices.GetUserDeviceByTokenIdRequest, opts ...grpc.CallOption) (*pb_devices.UserDevice, error)
 }
 
 func NewBaselineRewardService(
@@ -128,7 +129,7 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	// These describe the active integrations for each device active this week.
-	allActiveDeviceRecords, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
+	activeDevices, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
 	if err != nil {
 		return err
 	}
@@ -156,15 +157,17 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	lastWeekByDevice := make(map[string]*models.Reward)
+	lastWeekByDevice := make(map[int64]*models.Reward)
 	for _, reward := range lastWeekRewards {
-		lastWeekByDevice[reward.UserDeviceID] = reward
+		if tknID, valid := reward.UserDeviceTokenID.Uint64(); valid {
+			lastWeekByDevice[int64(tknID)] = reward
+		}
 	}
 
-	for _, deviceActivity := range allActiveDeviceRecords {
-		logger := t.Logger.With().Str("userDeviceId", deviceActivity.ID).Logger()
+	for _, device := range activeDevices {
+		logger := t.Logger.With().Int64("vehicleTokenId", device.VehicleTokenID).Logger()
 
-		ud, err := t.DevicesClient.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{Id: deviceActivity.ID})
+		ud, err := t.DevicesClient.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{TokenId: device.VehicleTokenID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
 				logger.Info().Msg("Device was active during the week but was later deleted.")
@@ -173,14 +176,9 @@ func (t *BaselineClient) assignPoints() error {
 			return err
 		}
 
-		integsSignalsThisWeek := utils.NewSet[string](deviceActivity.Integrations...)
+		integsSignalsThisWeek := utils.NewSet[string](device.Integrations...)
 
 		logger = logger.With().Str("userId", ud.UserId).Logger()
-
-		if ud.TokenId == nil {
-			logger.Info().Msg("Device not minted.")
-			continue
-		}
 
 		if !ud.VinConfirmed {
 			logger.Info().Msg("Device does not have confirmed VIN.")
@@ -195,7 +193,7 @@ func (t *BaselineClient) assignPoints() error {
 		vOwner := common.BytesToAddress(ud.OwnerAddress)
 
 		thisWeek := &models.Reward{
-			UserDeviceID:                   deviceActivity.ID,
+			UserDeviceID:                   ud.Id,
 			IssuanceWeekID:                 issuanceWeek,
 			UserID:                         ud.UserId,
 			UserDeviceTokenID:              types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
@@ -264,7 +262,7 @@ func (t *BaselineClient) assignPoints() error {
 			ExistingConnectionStreak:    0,
 			ExistingDisconnectionStreak: 0,
 		}
-		if lastWeek, ok := lastWeekByDevice[deviceActivity.ID]; ok {
+		if lastWeek, ok := lastWeekByDevice[device.VehicleTokenID]; ok {
 			streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
 			streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
 		}
@@ -275,7 +273,7 @@ func (t *BaselineClient) assignPoints() error {
 
 		// Anything left in this map is considered disconnected.
 		// This is a no-op if the device doesn't have a record from last week.
-		delete(lastWeekByDevice, deviceActivity.ID)
+		delete(lastWeekByDevice, device.VehicleTokenID)
 
 		// If this VIN has never earned before, make note of that.
 		// Used by referrals, not this job. Have to be careful about VINs because
