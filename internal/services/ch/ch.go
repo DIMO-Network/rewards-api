@@ -19,6 +19,15 @@ type Client struct {
 	conn clickhouse.Conn
 }
 
+const (
+	integPrefix = "dimo/integration/"
+)
+
+var dialect = drivers.Dialect{
+	LQ: '`',
+	RQ: '`',
+}
+
 // NewClient creates a new ClickHouse client.
 func NewClient(settings *config.Settings) (*Client, error) {
 	conn, err := connect.GetClickhouseConn(&settings.Clickhouse)
@@ -32,12 +41,6 @@ func NewClient(settings *config.Settings) (*Client, error) {
 	}
 	return &Client{conn: conn}, nil
 }
-
-var dialect = drivers.Dialect{
-	LQ: '`',
-	RQ: '`',
-}
-var integPrefix = "dimo/integration/"
 
 // DescribeActiveDevices returns list of vehicles and associated vehicle integrations that have signals in Clickhouse during specified time period
 func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*Vehicle, error) {
@@ -80,6 +83,36 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 	}
 
 	return vehicles, nil
+}
+
+// GetIntegrations returns list of integrations from Clickhouse for a given vehicle
+func (s *Client) GetIntegrations(ctx context.Context, tokenID uint64, start, end time.Time) ([]string, error) {
+	q := &queries.Query{}
+	queries.SetDialect(q, &dialect)
+	qm.Apply(q, []qm.QueryMod{
+		qm.Select("groupUniqArray(source)"),
+		qm.From("signal"),
+		qm.Where("timestamp >= ?", start),
+		qm.And("timestamp < ?", end),
+		qm.And("token_id = ?", tokenID),
+	}...)
+	query, args := queries.BuildQuery(q)
+	row := s.conn.QueryRow(ctx, query, args...)
+
+	var vehIntegs []string
+	if err := row.Scan(&vehIntegs); err != nil {
+		return nil, fmt.Errorf("failed to scan clickhouse row: %w", err)
+	}
+
+	if row.Err() != nil {
+		return nil, fmt.Errorf("failed to query clickhouse: %w", row.Err())
+	}
+
+	for i := range vehIntegs {
+		vehIntegs[i] = strings.TrimPrefix(vehIntegs[i], integPrefix)
+	}
+
+	return vehIntegs, nil
 }
 
 type Vehicle struct {

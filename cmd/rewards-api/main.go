@@ -106,8 +106,6 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
 		}
 
-		dataClient := services.NewDeviceDataClient(&settings, chClient)
-
 		f, err := os.Open("config.yaml")
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Couldn't load config.")
@@ -147,7 +145,7 @@ func main() {
 			Logger:            &logger,
 			DefinitionsClient: definitionsClient,
 			DevicesClient:     deviceClient,
-			DataClient:        dataClient,
+			ChClient:          chClient,
 			Settings:          &settings,
 			Tokens:            tks,
 			UsersClient:       usersClient,
@@ -315,7 +313,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
 		}
 
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, services.NewDeviceDataClient(&settings, chClient), deviceClient, definitionsClient, week, &logger)
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, week, &logger)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")

@@ -13,6 +13,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
@@ -27,7 +28,7 @@ import (
 type RewardsController struct {
 	DB                db.Store
 	Logger            *zerolog.Logger
-	DataClient        services.DeviceDataClient
+	ChClient          *ch.Client
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
 	UsersClient       pb_users.UserServiceClient
@@ -113,8 +114,12 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		outInts := []UserResponseIntegration{}
 
 		vehicleMinted := device.TokenId != nil
+		if !vehicleMinted {
+			dlog.Info().Msg("Vehicle not minted.")
+			continue
+		}
 
-		vehicleIntegsWithSignals, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
+		vehicleIntegsWithSignals, err := r.ChClient.GetIntegrations(c.Context(), *device.TokenId, weekStart, now)
 		if err != nil {
 			dlog.Err(err).Msg("Error querying for this week's integrations.")
 			return opaqueInternalError

@@ -967,14 +967,14 @@ const (
 	macaronIntegration  = "2ULfuC8U9dOqRshZBAi0lMM1Rrx"
 )
 
-func (v Views) DescribeActiveDevices(_, _ time.Time) ([]*ch.Devices, error) {
-	out := []*ch.Devices{}
+func (v Views) DescribeActiveDevices(ctx context.Context, _, _ time.Time) ([]*ch.Vehicle, error) {
+	out := []*ch.Vehicle{}
 	for _, d := range v.devices {
 		if len(d.IntsWithData) == 0 {
 			continue
 		}
-		out = append(out, &ch.Devices{
-			VehicleTokenID: int64(d.TokenID), Integrations: d.IntsWithData,
+		out = append(out, &ch.Vehicle{
+			TokenID: int64(d.TokenID), Integrations: d.IntsWithData,
 		})
 	}
 	return out, nil
