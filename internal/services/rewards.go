@@ -41,7 +41,7 @@ type BaselineClient struct {
 }
 
 type DeviceActivityClient interface {
-	DescribeActiveDevices(start, end time.Time) ([]*ch.Devices, error)
+	DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*ch.Vehicle, error)
 }
 
 type IntegrationsGetter interface {
@@ -129,7 +129,7 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	// These describe the active integrations for each device active this week.
-	activeDevices, err := t.DataService.DescribeActiveDevices(weekStart, weekEnd)
+	activeDevices, err := t.DataService.DescribeActiveDevices(ctx, weekStart, weekEnd)
 	if err != nil {
 		return err
 	}
@@ -159,15 +159,15 @@ func (t *BaselineClient) assignPoints() error {
 
 	lastWeekByDevice := make(map[int64]*models.Reward)
 	for _, reward := range lastWeekRewards {
-		if tknID, valid := reward.UserDeviceTokenID.Uint64(); valid {
-			lastWeekByDevice[int64(tknID)] = reward
+		if tknID, valid := reward.UserDeviceTokenID.Int64(); valid {
+			lastWeekByDevice[tknID] = reward
 		}
 	}
 
 	for _, device := range activeDevices {
-		logger := t.Logger.With().Int64("vehicleTokenId", device.VehicleTokenID).Logger()
+		logger := t.Logger.With().Int64("vehicleTokenId", device.TokenID).Logger()
 
-		ud, err := t.DevicesClient.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{TokenId: device.VehicleTokenID})
+		ud, err := t.DevicesClient.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{TokenId: device.TokenID})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
 				logger.Info().Msg("Device was active during the week but was later deleted.")
@@ -262,7 +262,7 @@ func (t *BaselineClient) assignPoints() error {
 			ExistingConnectionStreak:    0,
 			ExistingDisconnectionStreak: 0,
 		}
-		if lastWeek, ok := lastWeekByDevice[device.VehicleTokenID]; ok {
+		if lastWeek, ok := lastWeekByDevice[device.TokenID]; ok {
 			streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
 			streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
 		}
@@ -273,7 +273,7 @@ func (t *BaselineClient) assignPoints() error {
 
 		// Anything left in this map is considered disconnected.
 		// This is a no-op if the device doesn't have a record from last week.
-		delete(lastWeekByDevice, device.VehicleTokenID)
+		delete(lastWeekByDevice, device.TokenID)
 
 		// If this VIN has never earned before, make note of that.
 		// Used by referrals, not this job. Have to be careful about VINs because

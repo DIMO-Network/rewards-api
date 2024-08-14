@@ -17,7 +17,7 @@ import (
 const integPrefix = "dimo/integration/"
 
 type DeviceDataClient interface {
-	DescribeActiveDevices(start, end time.Time) ([]*ch.Devices, error)
+	DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*ch.Vehicle, error)
 	GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, err error)
 }
 
@@ -124,8 +124,7 @@ func (c *deviceDataClient) GetIntegrations(userDeviceID string, start, end time.
 	return integrations, nil
 }
 
-func (c *deviceDataClient) DescribeActiveDevices(start, end time.Time) ([]*ch.Devices, error) {
-	ctx := context.Background()
+func (c *deviceDataClient) DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*ch.Vehicle, error) {
 	devices, err := c.chClient.DescribeActiveDevices(ctx, start, end)
 	if err != nil {
 		return nil, err
