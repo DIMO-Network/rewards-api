@@ -10,8 +10,8 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
-	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
+	"github.com/DIMO-Network/shared/set"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/volatiletech/null/v8"
@@ -176,7 +176,7 @@ func (t *BaselineClient) assignPoints() error {
 			return err
 		}
 
-		integsSignalsThisWeek := utils.NewSet[string](device.Integrations...)
+		integsSignalsThisWeek := set.New[string](device.Integrations...)
 
 		logger = logger.With().Str("userId", ud.UserId).Logger()
 

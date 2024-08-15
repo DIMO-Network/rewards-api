@@ -14,9 +14,9 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
-	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/set"
 	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -125,7 +125,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			return opaqueInternalError
 		}
 
-		integSignalsThisWeek := utils.NewSet[string](vehicleIntegsWithSignals...)
+		integSignalsThisWeek := set.New[string](vehicleIntegsWithSignals...)
 
 		if ad := device.AftermarketDevice; ad != nil {
 			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
