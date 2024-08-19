@@ -176,7 +176,7 @@ func (t *BaselineClient) assignPoints() error {
 			return err
 		}
 
-		integsSignalsThisWeek := set.New[string](device.Integrations...)
+		integsSignalsThisWeek := set.New(device.Integrations...)
 
 		logger = logger.With().Str("userId", ud.UserId).Logger()
 

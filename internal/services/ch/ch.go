@@ -46,13 +46,13 @@ func NewClient(settings *config.Settings) (*Client, error) {
 func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*Vehicle, error) {
 	q := &queries.Query{}
 	queries.SetDialect(q, &dialect)
-	qm.Apply(q, []qm.QueryMod{
+	qm.Apply(q,
 		qm.Select("token_id", "groupUniqArray(source)"),
 		qm.From("signal"),
 		qm.Where("timestamp >= ?", start),
 		qm.And("timestamp < ?", end),
 		qm.GroupBy("token_id"),
-	}...)
+	)
 	query, args := queries.BuildQuery(q)
 	rows, err := s.conn.Query(ctx, query, args...)
 	if err != nil {
@@ -89,27 +89,31 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 func (s *Client) GetIntegrations(ctx context.Context, tokenID uint64, start, end time.Time) ([]string, error) {
 	q := &queries.Query{}
 	queries.SetDialect(q, &dialect)
-	qm.Apply(q, []qm.QueryMod{
-		qm.Select("groupUniqArray(source)"),
+	qm.Apply(q,
+		qm.Distinct("source"),
 		qm.From("signal"),
 		qm.Where("timestamp >= ?", start),
 		qm.And("timestamp < ?", end),
 		qm.And("token_id = ?", tokenID),
-	}...)
+	)
 	query, args := queries.BuildQuery(q)
-	row := s.conn.QueryRow(ctx, query, args...)
+	rows, err := s.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query clickhouse: %w", err)
+	}
+	defer rows.Close()
 
 	var vehIntegs []string
-	if err := row.Scan(&vehIntegs); err != nil {
-		return nil, fmt.Errorf("failed to scan clickhouse row: %w", err)
+	for rows.Next() {
+		var integ string
+		if err := rows.Scan(&integ); err != nil {
+			return nil, fmt.Errorf("failed to scan clickhouse row: %w", err)
+		}
+		vehIntegs = append(vehIntegs, strings.TrimPrefix(integ, integPrefix))
 	}
 
-	if row.Err() != nil {
-		return nil, fmt.Errorf("failed to query clickhouse: %w", row.Err())
-	}
-
-	for i := range vehIntegs {
-		vehIntegs[i] = strings.TrimPrefix(vehIntegs[i], integPrefix)
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("clickhouse row error: %w", rows.Err())
 	}
 
 	return vehIntegs, nil

@@ -2,8 +2,12 @@ package ch
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
+
+	"math/rand/v2"
 
 	chconfig "github.com/DIMO-Network/clickhouse-infra/pkg/connect/config"
 	"github.com/DIMO-Network/clickhouse-infra/pkg/container"
@@ -14,9 +18,14 @@ import (
 
 type CHTestSuite struct {
 	suite.Suite
-	chClient  *Client
-	container *container.Container
+	chClient       *Client
+	container      *container.Container
+	tokenSourceMap map[int64][]string
 }
+
+var sources = []string{"2ULfuC8U9dOqRshZBAi0lMM1Rrx", "27qftVRWQYpVDcO5DltO5Ojbjxk", "22N2xaPOq2WW2gAHBHd0Ikn4Zob"}
+
+const dummyTokens int64 = 10
 
 func TestCHService(t *testing.T) {
 	suite.Run(t, new(CHTestSuite))
@@ -36,16 +45,25 @@ func (c *CHTestSuite) SetupSuite() {
 	conn, err := container.GetClickHouseAsConn()
 	c.Require().NoError(err, "Failed to get clickhouse connection")
 
-	err = conn.Exec(ctx, createSignalStmt)
-	c.Require().NoError(err, "Failed to insert dummy data")
+	batch, err := conn.PrepareBatch(ctx, fmt.Sprintf("INSERT INTO signal"))
+	c.Require().NoError(err, "Failed to prepare batch")
 
-	err = conn.Exec(ctx, dummyData)
-	c.Require().NoError(err, "Failed to insert dummy data")
+	c.tokenSourceMap = make(map[int64][]string)
+	dummyData := generateRandomData(dummyTokens)
+	for _, d := range dummyData {
+		err := batch.AppendStruct(&d)
+		c.Require().NoError(err, "Failed to append struct")
+		if _, ok := c.tokenSourceMap[d.TokenID]; !ok {
+			c.tokenSourceMap[d.TokenID] = []string{}
+		}
+		c.tokenSourceMap[d.TokenID] = append(c.tokenSourceMap[d.TokenID], strings.TrimPrefix(d.Source, integPrefix))
+	}
 
-	chClient := &Client{conn: conn}
+	err = batch.Send()
+	c.Require().NoError(err, "Failed to send batch")
 
-	c.chClient = chClient
 	c.container = container
+	c.chClient = &Client{conn: conn}
 }
 
 func (c *CHTestSuite) TearDownSuite() {
@@ -58,45 +76,46 @@ func (c *CHTestSuite) Test_DescribeActiveDevices() {
 	end := time.Now().AddDate(0, 0, 1)
 	resp, err := c.chClient.DescribeActiveDevices(ctx, start, end)
 	c.Require().NoError(err)
-	c.Require().Equal(10, len(resp))
+	c.Require().Equal(len(c.tokenSourceMap), len(resp))
+	for _, r := range resp {
+		c.Require().ElementsMatch(c.tokenSourceMap[r.TokenID], r.Integrations)
+	}
 }
 
 func (c *CHTestSuite) Test_GetIntegrations() {
 	ctx := context.Background()
 	start := time.Now().AddDate(0, 0, -6)
 	end := time.Now().AddDate(0, 0, 1)
-	resp, err := c.chClient.GetIntegrations(ctx, 1, start, end)
-	c.Require().NoError(err)
-	c.Require().Equal(3, len(resp))
+
+	for k, s := range c.tokenSourceMap {
+		resp, err := c.chClient.GetIntegrations(ctx, uint64(k), start, end)
+		c.Require().NoError(err)
+		c.Require().ElementsMatch(s, resp)
+	}
 }
 
-const createSignalStmt = `
-CREATE TABLE IF NOT EXISTS signal
-(
-	token_id UInt32 COMMENT 'token_id of this device data.',
-	timestamp DateTime64(6, 'UTC') COMMENT 'timestamp of when this data was collected.',
-	name LowCardinality(String) COMMENT 'name of the signal collected.',
-	source String COMMENT 'source of the signal collected.',
-	value_number Float64 COMMENT 'float64 value of the signal collected.',
-	value_string String COMMENT 'string value of the signal collected.'
-)
-ENGINE = ReplacingMergeTree
-ORDER BY (token_id, timestamp, name)
-`
+type data struct {
+	TokenID   int64     `ch:"token_id"`
+	Timestamp time.Time `ch:"timestamp"`
+	Name      string    `ch:"name"`
+	Source    string    `ch:"source"`
+	ValueN    float64   `ch:"value_number"`
+	ValueS    string    `ch:"value_string"`
+}
 
-const dummyData = `
-INSERT INTO signal (token_id, timestamp, name, source, value_number, value_string) 
-VALUES 
-(1, now(), 'garbagename1', 'dimo/integration/1', 0, 'garbagevalue1'),
-(1, now(), 'garbagename2', 'dimo/integration/2', 0, 'garbagevalue2'),
-(1, now(), 'garbagename3', 'dimo/integration/3', 0, 'garbagevalue3'),
-(2, now(), 'garbagename1', 'dimo/integration/1', 0, 'garbagevalue1'),
-(3, now(), 'garbagename1', 'dimo/integration/2', 0, 'garbagevalue1'), 
-(4, now(), 'garbagename1', 'dimo/integration/3', 0, 'garbagevalue1'),
-(5, now(), 'garbagename1', 'dimo/integration/1', 0, 'garbagevalue1'), 
-(6, now(), 'garbagename1', 'dimo/integration/2', 0, 'garbagevalue1'),
-(7, now(), 'garbagename1', 'dimo/integration/3', 0, 'garbagevalue1'), 
-(8, now(), 'garbagename1', 'dimo/integration/1', 0, 'garbagevalue1'),
-(9, now(), 'garbagename1', 'dimo/integration/2', 0, 'garbagevalue1'), 
-(10, now(), 'garbagename1', 'dimo/integration/3', 0, 'garbagevalue1');
-`
+func generateRandomData(all int64) []data {
+	d := []data{}
+	for tokenID := range all {
+		for n, s := range sources[:rand.IntN(len(sources))] {
+			d = append(d, data{
+				TokenID:   tokenID,
+				Timestamp: time.Now(),
+				Name:      fmt.Sprintf("name%d", n),
+				Source:    fmt.Sprintf("dimo/integration/%s", s),
+				ValueS:    fmt.Sprintf("value%d", n),
+			})
+		}
+	}
+
+	return d
+}

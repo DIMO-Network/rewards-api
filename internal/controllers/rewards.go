@@ -125,7 +125,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			return opaqueInternalError
 		}
 
-		integSignalsThisWeek := set.New[string](vehicleIntegsWithSignals...)
+		integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
 
 		if ad := device.AftermarketDevice; ad != nil {
 			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
