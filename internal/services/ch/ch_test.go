@@ -45,7 +45,7 @@ func (c *CHTestSuite) SetupSuite() {
 	conn, err := container.GetClickHouseAsConn()
 	c.Require().NoError(err, "Failed to get clickhouse connection")
 
-	batch, err := conn.PrepareBatch(ctx, fmt.Sprintf("INSERT INTO signal"))
+	batch, err := conn.PrepareBatch(ctx, "INSERT INTO signal")
 	c.Require().NoError(err, "Failed to prepare batch")
 
 	c.tokenSourceMap = make(map[int64][]string)
