@@ -12,6 +12,7 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/drivers"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/queries/qmhelper"
 )
 
 // Client is a ClickHouse client that interacts with the ClickHouse database.
@@ -49,8 +50,8 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 	qm.Apply(q,
 		qm.Select("token_id", "groupUniqArray(source)"),
 		qm.From("signal"),
-		qm.Where("timestamp >= ?", start),
-		qm.And("timestamp < ?", end),
+		qmhelper.Where("timestamp", qmhelper.GTE, start),
+		qmhelper.Where("timestamp", qmhelper.LT, end),
 		qm.GroupBy("token_id"),
 	)
 	query, args := queries.BuildQuery(q)
@@ -92,8 +93,8 @@ func (s *Client) GetIntegrations(ctx context.Context, tokenID uint64, start, end
 	qm.Apply(q,
 		qm.Distinct("source"),
 		qm.From("signal"),
-		qm.Where("timestamp >= ?", start),
-		qm.And("timestamp < ?", end),
+		qmhelper.Where("timestamp", qmhelper.GTE, start),
+		qmhelper.Where("timestamp", qmhelper.LT, end),
 		qm.And("token_id = ?", tokenID),
 	)
 	query, args := queries.BuildQuery(q)
