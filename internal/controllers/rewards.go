@@ -13,9 +13,10 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/services"
-	"github.com/DIMO-Network/rewards-api/internal/utils"
+	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/set"
 	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -27,7 +28,7 @@ import (
 type RewardsController struct {
 	DB                db.Store
 	Logger            *zerolog.Logger
-	DataClient        services.DeviceDataClient
+	ChClient          *ch.Client
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
 	UsersClient       pb_users.UserServiceClient
@@ -113,14 +114,18 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		outInts := []UserResponseIntegration{}
 
 		vehicleMinted := device.TokenId != nil
+		if !vehicleMinted {
+			dlog.Info().Msg("Vehicle not minted.")
+			continue
+		}
 
-		vehicleIntegsWithSignals, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
+		vehicleIntegsWithSignals, err := r.ChClient.GetIntegrations(c.Context(), *device.TokenId, weekStart, now)
 		if err != nil {
 			dlog.Err(err).Msg("Error querying for this week's integrations.")
 			return opaqueInternalError
 		}
 
-		integSignalsThisWeek := utils.NewSet[string](vehicleIntegsWithSignals...)
+		integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
 
 		if ad := device.AftermarketDevice; ad != nil {
 			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
