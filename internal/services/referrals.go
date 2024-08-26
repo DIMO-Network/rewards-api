@@ -96,7 +96,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 				return refs, err
 			}
 		} else {
-			logger.Debug().Msgf("Vehicle hit Level 2 before, in week %d.", beforeHit.IssuanceWeekID)
+			logger.Debug().Msgf("Vehicle hit Level 2 this week, but had streak %d in week %d.", beforeHit.ConnectionStreak, beforeHit.IssuanceWeekID)
 			continue
 		}
 
