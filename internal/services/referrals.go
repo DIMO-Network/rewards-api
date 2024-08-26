@@ -124,6 +124,13 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 	for user := range ownersOfLevel2FirstTimeVehicles {
 		logger := c.Logger.With().Str("user", user.Hex()).Logger()
 
+		if blacklisted, err := models.BlacklistExists(ctx, c.TransferService.db.DBS().Reader, user.Hex()); err != nil {
+			return refs, err
+		} else if blacklisted {
+			logger.Warn().Msg("User blacklisted.")
+			continue
+		}
+
 		if userHitBefore, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
 			models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
@@ -144,13 +151,6 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			}
 		} else {
 			logger.Debug().Msgf("User already referred in week %d by %s.", oldReferral.IssuanceWeekID, common.BytesToAddress(oldReferral.Referrer).Hex())
-			continue
-		}
-
-		if blacklisted, err := models.BlacklistExists(ctx, c.TransferService.db.DBS().Reader, user.Hex()); err != nil {
-			return refs, err
-		} else if blacklisted {
-			logger.Warn().Msg("User blacklisted.")
 			continue
 		}
 
