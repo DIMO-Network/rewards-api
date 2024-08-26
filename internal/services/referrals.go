@@ -61,11 +61,6 @@ func NewReferralBonusService(
 
 const level2Weeks = 4
 
-type UserTuple struct {
-	ID      string
-	Address common.Address
-}
-
 // CollectReferrals returns address pairs for referrals completed in the given week.
 // These will come from referees who are earning for the first time and have a referrer
 // attached to their account.
