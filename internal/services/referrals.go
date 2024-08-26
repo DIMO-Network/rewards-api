@@ -88,7 +88,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 
 		if beforeHit, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
-			models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
+			models.RewardWhere.ConnectionStreak.GTE(level2Weeks),
 			models.RewardWhere.UserDeviceTokenID.EQ(r.UserDeviceTokenID),
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
 		).One(ctx, c.TransferService.db.DBS().Reader); err != nil {
@@ -164,8 +164,16 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			referrerAddr := c.ContractAddress
 
 			if potUser.ReferredBy.ReferrerValid {
-				if common.BytesToAddress(potUser.ReferredBy.EthereumAddress) == user {
+				referrerAddr = common.BytesToAddress(potUser.ReferredBy.EthereumAddress)
+				if referrerAddr == user {
 					logger.Warn().Msg("User referred by his own address.")
+					continue
+				}
+
+				if blacklisted, err := models.BlacklistExists(ctx, c.TransferService.db.DBS().Reader, referrerAddr.Hex()); err != nil {
+					return refs, err
+				} else if blacklisted {
+					logger.Warn().Msg("Referring user blacklisted.")
 					continue
 				}
 
