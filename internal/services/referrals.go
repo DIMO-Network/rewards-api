@@ -147,6 +147,13 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			continue
 		}
 
+		if blacklisted, err := models.BlacklistExists(ctx, c.TransferService.db.DBS().Reader, user.Hex()); err != nil {
+			return refs, err
+		} else if blacklisted {
+			logger.Warn().Msg("User blacklisted.")
+			continue
+		}
+
 		resp, err := c.UsersClient.GetUsersByEthereumAddress(ctx, &pb.GetUsersByEthereumAddressRequest{EthereumAddress: user.Bytes()})
 		if err != nil {
 			return refs, err
