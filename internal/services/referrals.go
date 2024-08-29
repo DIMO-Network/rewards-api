@@ -18,7 +18,6 @@ import (
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
 )
@@ -88,15 +87,12 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 
 		if beforeHit, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
-			models.RewardWhere.ConnectionStreak.GTE(level2Weeks),
+			models.RewardWhere.ConnectionStreak.GTE(level2Weeks), // The GTE is an edge case--we used to do "overrides".
 			models.RewardWhere.UserDeviceTokenID.EQ(r.UserDeviceTokenID),
-			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
-		).One(ctx, c.TransferService.db.DBS().Reader); err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				return refs, err
-			}
-		} else {
-			logger.Debug().Msgf("Vehicle hit Level 2 this week, but had streak %d in week %d.", beforeHit.ConnectionStreak, beforeHit.IssuanceWeekID)
+		).Exists(ctx, c.TransferService.db.DBS().Reader); err != nil {
+			return refs, err
+		} else if beforeHit {
+			logger.Debug().Msgf("Vehicle previously hit Level 2.")
 			continue
 		}
 
@@ -106,7 +102,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 		if err != nil {
 			return refs, err
 		} else if !firstTimeVIN {
-			logger.Debug().Msgf("Vehicle was not the first to earn with this VIN.")
+			logger.Debug().Msgf("Vehicle was not the first to earn with its VIN.")
 			continue
 		}
 
@@ -114,7 +110,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 		numVehiclesLevel2FirstTime++
 	}
 
-	logger.Info().Msgf("Had %d VINs hit level 2 for the first time, with %d owners.", numVehiclesLevel2FirstTime, len(ownersOfLevel2FirstTimeVehicles))
+	logger.Info().Msgf("Had %d VINs hit Level 2 for the first time, with %d owners.", numVehiclesLevel2FirstTime, len(ownersOfLevel2FirstTimeVehicles))
 
 	for user := range ownersOfLevel2FirstTimeVehicles {
 		logger := c.Logger.With().Str("user", user.Hex()).Logger()
@@ -128,15 +124,15 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 
 		if userHitBefore, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
-			models.RewardWhere.ConnectionStreak.EQ(level2Weeks),
+			models.RewardWhere.ConnectionStreak.GTE(level2Weeks),
 			models.RewardWhere.UserEthereumAddress.EQ(null.StringFrom(user.Hex())),
-			qm.OrderBy(models.RewardColumns.IssuanceWeekID),
 		).One(ctx, c.TransferService.db.DBS().Reader); err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return refs, err
 			}
+			// This is the good case.
 		} else {
-			logger.Debug().Msgf("User hit Level 2 before in week %d with vehicle %d.", userHitBefore.IssuanceWeekID, userHitBefore.UserDeviceTokenID.Big)
+			logger.Debug().Msgf("User owned a vehicle %d which previously hit Level 2.", userHitBefore.UserDeviceTokenID.Big)
 			continue
 		}
 
@@ -144,6 +140,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			if !errors.Is(err, sql.ErrNoRows) {
 				return refs, err
 			}
+			// This is the good case.
 		} else {
 			logger.Debug().Msgf("User already referred in week %d by %s.", oldReferral.IssuanceWeekID, common.BytesToAddress(oldReferral.Referrer).Hex())
 			continue
@@ -155,7 +152,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 		}
 
 		referred := false
-		for _, potUser := range resp.Users {
+		for _, potUser := range resp.Users { // These are ordered by creation time, descending.
 			if potUser.ReferredBy == nil {
 				continue
 			}
@@ -173,7 +170,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 				if blacklisted, err := models.BlacklistExists(ctx, c.TransferService.db.DBS().Reader, referrerAddr.Hex()); err != nil {
 					return refs, err
 				} else if blacklisted {
-					logger.Warn().Msg("Referring user blacklisted.")
+					logger.Warn().Msgf("Referring user %s blacklisted.", referrerAddr)
 					continue
 				}
 
@@ -181,7 +178,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 				referrerID = potUser.ReferredBy.Id
 				referrerAddr = common.BytesToAddress(potUser.ReferredBy.EthereumAddress)
 			} else {
-				logger.Debug().Msg("User referred by another user who was later deleted.")
+				logger.Debug().Msg("Referring user deleted.")
 			}
 
 			refs.RefereeUserIDs = append(refs.RefereeUserIDs, potUser.Id)
