@@ -79,19 +79,19 @@ func main() {
 			return c.SendStatus(fiber.StatusOK)
 		})
 
-		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		devicesConn, err := grpc.NewClient(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
 		}
 		defer devicesConn.Close()
 
-		definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		definitionsConn, err := grpc.NewClient(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
 		}
 		defer definitionsConn.Close()
 
-		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		usersConn, err := grpc.NewClient(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create users API client.")
 		}
@@ -290,7 +290,7 @@ func main() {
 
 		transferService := services.NewTokenTransferService(&settings, producer, pdb)
 
-		devicesConn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		devicesConn, err := grpc.NewClient(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create devices-api connection.")
 		}
@@ -298,7 +298,7 @@ func main() {
 
 		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
 
-		definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		definitionsConn, err := grpc.NewClient(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create device-definitions-api connection.")
 		}
@@ -350,7 +350,7 @@ func main() {
 
 		transferService := services.NewTokenTransferService(&settings, producer, pdb)
 
-		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		usersConn, err := grpc.NewClient(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create users API client.")
 		}
@@ -385,7 +385,7 @@ func main() {
 			totalTime++
 		}
 
-		definitionsConn, err := grpc.Dial(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		definitionsConn, err := grpc.NewClient(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logger.Fatal().Msg("Failed to create device-definitions-api connection.")
 		}
