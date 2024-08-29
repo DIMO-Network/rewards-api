@@ -24,7 +24,7 @@ rewardsCronJob:
   enabled: true
   schedule: 0 5 * * 1
 referralsCronJob:
-  enabled: false
+  enabled: true
   schedule: 0 6 * * 1
 env:
   ENVIRONMENT: dev
