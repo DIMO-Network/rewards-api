@@ -136,6 +136,7 @@ func (s *rewardsService) GetBlacklistStatus(ctx context.Context, req *pb.GetBlac
 		return nil, status.Errorf(codes.Internal, "Database lookup failed: %v", err)
 	}
 
+	// TODO(elffjs): Return note and creation time.
 	return &pb.GetBlacklistStatusResponse{
 		IsBlacklisted: isBlacklisted,
 	}, nil
@@ -149,16 +150,19 @@ func (s *rewardsService) SetBlacklistStatus(ctx context.Context, req *pb.SetBlac
 	addr := common.BytesToAddress(req.EthereumAddress).Hex()
 
 	bl := models.Blacklist{
-		UserEthereumAddress: addr,
+		UserEthereumAddress: addr, // Only field used for removal.
 		CreatedAt:           time.Now(),
 		Note:                req.Note,
 	}
 
 	if req.IsBlacklisted {
+		// Only upserting here so that we can do nothing if the address is already in the list.
+		// TODO(elffjs): Tell the caller about this case.
 		if err := bl.Upsert(ctx, s.dbs.DBS().Writer, false, []string{models.BlacklistColumns.UserEthereumAddress}, boil.Infer(), boil.Infer()); err != nil {
 			return nil, status.Errorf(codes.Internal, "Database insert failed: %v", err)
 		}
 	} else {
+		// TODO(elfjjs): Tell the caller whether the address was in there to begin with.
 		if _, err := bl.Delete(ctx, s.dbs.DBS().Writer); err != nil {
 			return nil, status.Errorf(codes.Internal, "Deletion failed: %v", err)
 		}
