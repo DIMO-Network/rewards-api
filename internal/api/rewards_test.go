@@ -73,17 +73,6 @@ func TestGetBlacklist(t *testing.T) {
 	addr1 := common.HexToAddress("0x1")
 	addr2 := common.HexToAddress("0x2")
 
-	// bl := models.Blacklist{
-	// 	UserEthereumAddress: addr1.Hex(),
-	// 	CreatedAt:           time.Now(),
-	// 	Note:                "xdd",
-	// }
-
-	// err = bl.Insert(ctx, dbs.DBS().Writer, boil.Infer())
-	// if err != nil {
-	// 	panic(err)
-	// }
-
 	serv := NewRewardsService(dbs, &logger)
 
 	_, err = serv.SetBlacklistStatus(ctx, &rewards.SetBlacklistStatusRequest{
