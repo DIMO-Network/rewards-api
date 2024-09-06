@@ -147,7 +147,6 @@ func (s *rewardsService) GetBlacklistStatus(ctx context.Context, req *pb.GetBlac
 		return nil, status.Errorf(codes.Internal, "Database lookup failed: %v", err)
 	}
 
-	// TODO(elffjs): Return note and creation time.
 	return &pb.GetBlacklistStatusResponse{
 		IsBlacklisted: true,
 		Note:          bl.Note,
