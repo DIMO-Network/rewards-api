@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"math/big"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
@@ -131,16 +134,28 @@ func (s *rewardsService) GetBlacklistStatus(ctx context.Context, req *pb.GetBlac
 
 	addr := common.BytesToAddress(req.EthereumAddress).Hex()
 
-	isBlacklisted, err := models.BlacklistExists(ctx, s.dbs.DBS().Reader, addr)
+	bl, err := models.FindBlacklist(ctx, s.dbs.DBS().Reader, addr)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			var t timestamppb.Timestamp
+			return &pb.GetBlacklistStatusResponse{
+				IsBlacklisted: false,
+				Note:          "",
+				CreatedAt:     &t,
+			}, nil
+		}
 		return nil, status.Errorf(codes.Internal, "Database lookup failed: %v", err)
 	}
 
 	// TODO(elffjs): Return note and creation time.
 	return &pb.GetBlacklistStatusResponse{
-		IsBlacklisted: isBlacklisted,
+		IsBlacklisted: true,
+		Note:          bl.Note,
+		CreatedAt:     timestamppb.New(bl.CreatedAt),
 	}, nil
 }
+
+var timeNow = time.Now
 
 func (s *rewardsService) SetBlacklistStatus(ctx context.Context, req *pb.SetBlacklistStatusRequest) (*pb.SetBlacklistStatusResponse, error) {
 	if len(req.EthereumAddress) != common.AddressLength {
@@ -151,7 +166,7 @@ func (s *rewardsService) SetBlacklistStatus(ctx context.Context, req *pb.SetBlac
 
 	bl := models.Blacklist{
 		UserEthereumAddress: addr, // Only field used for removal.
-		CreatedAt:           time.Now(),
+		CreatedAt:           timeNow(),
 		Note:                req.Note,
 	}
 

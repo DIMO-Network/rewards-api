@@ -72,8 +72,8 @@ github.com/DIMO-Network/device-definitions-api v1.2.14 h1:A2+wTF40lUSFNiG8mD3n63
 github.com/DIMO-Network/device-definitions-api v1.2.14/go.mod h1:45B53wI7VX+WHMWiGmf2+W/4qWrBJqo/Ga3xvQwefmI=
 github.com/DIMO-Network/devices-api v1.27.12 h1:G3r8UFxVgd2O5K0AGKW+LtpNuRv6dP2E2Xgng2cxVZ4=
 github.com/DIMO-Network/devices-api v1.27.12/go.mod h1:wI2tlvLAdRMinv1Tbck/h+QYlo6DcctyOwUeSZfDH5U=
-github.com/DIMO-Network/shared v0.12.3 h1:C01zkq/zGoC4HrCMQfQwOT9vZ+gYdKTJL8hUJfUQ/o0=
-github.com/DIMO-Network/shared v0.12.3/go.mod h1:dtoa/pN19FFR/ghTsUWJynQClwvc+cIlf2mPDaUBDsE=
+github.com/DIMO-Network/shared v0.12.4 h1:gEQuJva1V0CNDXIX32n9d5daZydRUtJTTSdmy+v0YrA=
+github.com/DIMO-Network/shared v0.12.4/go.mod h1:dtoa/pN19FFR/ghTsUWJynQClwvc+cIlf2mPDaUBDsE=
 github.com/DIMO-Network/users-api v0.7.6 h1:R9CXS2G/0IQ/ZhxAJzOu5BtiKPgnE9Hja5CQLg+WY08=
 github.com/DIMO-Network/users-api v0.7.6/go.mod h1:NTh+02AJuCZH+Q+wRdFKh228OmNpUeZu40m8ZKRGOSg=
 github.com/DIMO-Network/yaml v0.1.0 h1:KQ3oKHUZETchR6Pxbmmol3e4ewrPv/q8cEwqxfwyZbU=

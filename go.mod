@@ -7,7 +7,7 @@ toolchain go1.23.0
 require (
 	github.com/DIMO-Network/device-definitions-api v1.2.14
 	github.com/DIMO-Network/devices-api v1.27.12
-	github.com/DIMO-Network/shared v0.12.3
+	github.com/DIMO-Network/shared v0.12.4
 	github.com/DIMO-Network/users-api v0.7.6
 	github.com/Shopify/sarama v1.38.1
 	github.com/aquasecurity/esquery v0.2.0

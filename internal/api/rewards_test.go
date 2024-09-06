@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/shared/api/rewards"
@@ -75,6 +76,12 @@ func TestGetBlacklist(t *testing.T) {
 
 	serv := NewRewardsService(dbs, &logger)
 
+	creatTime := time.Date(2024, 3, 2, 0, 0, 0, 0, time.UTC)
+
+	timeNow = func() time.Time {
+		return creatTime
+	}
+
 	_, err = serv.SetBlacklistStatus(ctx, &rewards.SetBlacklistStatusRequest{
 		EthereumAddress: addr1.Bytes(),
 		IsBlacklisted:   true,
@@ -92,7 +99,15 @@ func TestGetBlacklist(t *testing.T) {
 	}
 
 	if !res.IsBlacklisted {
-		t.Errorf("should have been ")
+		t.Errorf("%s should have been blacklisted", addr1)
+	}
+
+	if res.Note != "xdd" {
+		t.Errorf("should return the note for %s", addr1)
+	}
+
+	if res.CreatedAt.AsTime() != creatTime {
+		t.Errorf("wrong timestamp %s for creation", res.CreatedAt.AsTime())
 	}
 
 	res, err = serv.GetBlacklistStatus(ctx, &rewards.GetBlacklistStatusRequest{
