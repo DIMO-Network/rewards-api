@@ -108,6 +108,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	userTokens := big.NewInt(0)
 
 	var integrCheckTime time.Duration
+	var tokenCheckTime time.Duration
 
 	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
@@ -180,6 +181,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			outInts = append(outInts, uri)
 		}
 
+		dbStart := time.Now()
 		rewards, err := models.Rewards(
 			models.RewardWhere.UserDeviceID.EQ(device.Id),
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
@@ -188,6 +190,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			dlog.Err(err).Msg("Failed to retrieve previously earned rewards.")
 			return opaqueInternalError
 		}
+		tokenCheckTime += time.Since(dbStart)
 
 		pts := 0
 		for _, r := range rewards {
@@ -233,7 +236,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	r.Logger.Info().Str("userId", userID).Msgf("Checking integrations for %d cars took %s.", len(devices.UserDevices), integrCheckTime)
+	r.Logger.Info().Str("userId", userID).Msgf("Checking integrations for %d cars took %s. Checking tokens took %s.", len(devices.UserDevices), integrCheckTime, tokenCheckTime)
 
 	out := UserResponse{
 		Points:        userPts,
