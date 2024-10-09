@@ -107,6 +107,8 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	userPts := 0
 	userTokens := big.NewInt(0)
 
+	var integrCheckTime time.Duration
+
 	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
 
@@ -114,11 +116,13 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		vehicleMinted := device.TokenId != nil
 
+		queryStart := time.Now()
 		vehicleIntegsWithSignals, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
 		if err != nil {
 			dlog.Err(err).Msg("Error querying for this week's integrations.")
 			return opaqueInternalError
 		}
+		integrCheckTime += time.Since(queryStart)
 
 		integSignalsThisWeek := utils.NewSet[string](vehicleIntegsWithSignals...)
 
@@ -228,6 +232,8 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			VINConfirmed:         device.VinConfirmed,
 		}
 	}
+
+	r.Logger.Info().Str("userId", userID).Msgf("Checking integrations for %d cars took %s.", len(devices.UserDevices), integrCheckTime)
 
 	out := UserResponse{
 		Points:        userPts,
