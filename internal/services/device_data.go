@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -200,8 +201,15 @@ func (c *elasticDeviceDataClient) GetIntegrationsMultiple(userDeviceIDs []string
 		return nil, fmt.Errorf("status code %d", code)
 	}
 
+	bb, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(string(bb))
+
 	var respb DevicesIntegrationsMultResp
-	if err := json.NewDecoder(res.Body).Decode(&respb); err != nil {
+	if err := json.Unmarshal(bb, &respb); err != nil {
 		return nil, err
 	}
 
