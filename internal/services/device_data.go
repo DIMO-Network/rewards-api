@@ -216,7 +216,7 @@ func (c *elasticDeviceDataClient) GetIntegrationsMultiple(userDeviceIDs []string
 	out := make([]GetIntegsMultResp, 0, len(userDeviceIDs))
 
 	for _, subjectsBucket := range respb.Aggregations.Subjects.Buckets {
-		sourcesBuckets := subjectsBucket.Aggregations.Sources.Buckets
+		sourcesBuckets := subjectsBucket.Sources.Buckets
 		integrations := make([]string, len(sourcesBuckets))
 		for i, sourceBucket := range sourcesBuckets {
 			integrations[i] = strings.TrimPrefix(sourceBucket.Key, integPrefix)
@@ -234,14 +234,12 @@ type DevicesIntegrationsMultResp struct {
 	Aggregations struct {
 		Subjects struct {
 			Buckets []struct {
-				Key          string `json:"key"`
-				Aggregations struct {
-					Sources struct {
-						Buckets []struct {
-							Key string `json:"key"`
-						} `json:"buckets"`
-					} `json:"sources"`
-				} `json:"aggregations"`
+				Key     string `json:"key"`
+				Sources struct {
+					Buckets []struct {
+						Key string `json:"key"`
+					} `json:"buckets"`
+				} `json:"sources"`
 			} `json:"buckets"`
 		} `json:"subjects"`
 	} `json:"aggregations"`
