@@ -108,12 +108,13 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
+	comparisonList := make([]services.GetIntegsMultResp, 0)
+
 	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
 	userPts := 0
 	userTokens := big.NewInt(0)
 
 	var integrCheckTime time.Duration
-	var tokenCheckTime time.Duration
 
 	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
@@ -129,6 +130,8 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			return opaqueInternalError
 		}
 		integrCheckTime += time.Since(queryStart)
+
+		comparisonList = append(comparisonList, services.GetIntegsMultResp{UserDeviceID: device.Id, IntegrationIDs: vehicleIntegsWithSignals})
 
 		integSignalsThisWeek := utils.NewSet[string](vehicleIntegsWithSignals...)
 
@@ -186,7 +189,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			outInts = append(outInts, uri)
 		}
 
-		dbStart := time.Now()
 		rewards, err := models.Rewards(
 			models.RewardWhere.UserDeviceID.EQ(device.Id),
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
@@ -195,7 +197,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			dlog.Err(err).Msg("Failed to retrieve previously earned rewards.")
 			return opaqueInternalError
 		}
-		tokenCheckTime += time.Since(dbStart)
 
 		pts := 0
 		for _, r := range rewards {
@@ -241,8 +242,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	r.Logger.Info().Str("userId", userID).Msgf("Checking integrations for %d cars took %s. Checking tokens took %s.", len(devices.UserDevices), integrCheckTime, tokenCheckTime)
-
 	out := UserResponse{
 		Points:        userPts,
 		Tokens:        userTokens,
@@ -259,7 +258,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		if resp, err := r.DataClient.GetIntegrationsMultiple(userDeviceIDs, weekStart, now); err != nil {
 			r.Logger.Warn().Err(err).Str("userId", userID).Msg("Multi-query didn't work.")
 		} else {
-			r.Logger.Info().Str("userId", userID).Interface("response", resp).Msgf("Multi-query worked, took %s.", time.Since(start))
+			r.Logger.Info().Str("userId", userID).Interface("response", resp).Interface("comparison", comparisonList).Msgf("Multi-query worked, took %s. Old system took %s.", time.Since(start), integrCheckTime)
 		}
 	}()
 

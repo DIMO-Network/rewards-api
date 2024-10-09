@@ -206,8 +206,6 @@ func (c *elasticDeviceDataClient) GetIntegrationsMultiple(userDeviceIDs []string
 		return nil, err
 	}
 
-	fmt.Println(string(bb))
-
 	var respb DevicesIntegrationsMultResp
 	if err := json.Unmarshal(bb, &respb); err != nil {
 		return nil, err
