@@ -108,13 +108,14 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	comparisonList := make([]services.GetIntegsMultResp, 0)
-
 	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
 	userPts := 0
 	userTokens := big.NewInt(0)
 
-	var integrCheckTime time.Duration
+	resp, err := r.DataClient.GetIntegrationsMultiple(userDeviceIDs, weekStart, now)
+	if err != nil {
+		return err
+	}
 
 	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
@@ -123,15 +124,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		vehicleMinted := device.TokenId != nil
 
-		queryStart := time.Now()
-		vehicleIntegsWithSignals, err := r.DataClient.GetIntegrations(device.Id, weekStart, now)
-		if err != nil {
-			dlog.Err(err).Msg("Error querying for this week's integrations.")
-			return opaqueInternalError
-		}
-		integrCheckTime += time.Since(queryStart)
-
-		comparisonList = append(comparisonList, services.GetIntegsMultResp{UserDeviceID: device.Id, IntegrationIDs: vehicleIntegsWithSignals})
+		vehicleIntegsWithSignals := resp[device.Id]
 
 		integSignalsThisWeek := utils.NewSet[string](vehicleIntegsWithSignals...)
 
@@ -252,15 +245,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		},
 		Devices: outLi,
 	}
-
-	go func() {
-		start := time.Now()
-		if resp, err := r.DataClient.GetIntegrationsMultiple(userDeviceIDs, weekStart, now); err != nil {
-			r.Logger.Warn().Err(err).Str("userId", userID).Msg("Multi-query didn't work.")
-		} else {
-			r.Logger.Info().Str("userId", userID).Interface("response", resp).Interface("comparison", comparisonList).Msgf("Multi-query worked, took %s. Old system took %s.", time.Since(start), integrCheckTime)
-		}
-	}()
 
 	return c.JSON(out)
 }

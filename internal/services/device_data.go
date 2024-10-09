@@ -18,7 +18,7 @@ type DeviceDataClient interface {
 	GetLastActivity(userDeviceID string) (lastActivity time.Time, seen bool, err error)
 	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
 	GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, err error)
-	GetIntegrationsMultiple(userDeviceIDs []string, start, end time.Time) ([]GetIntegsMultResp, error)
+	GetIntegrationsMultiple(userDeviceIDs []string, start, end time.Time) (map[string][]string, error)
 }
 
 type elasticDeviceDataClient struct {
@@ -166,7 +166,7 @@ type GetIntegsMultResp struct {
 	IntegrationIDs []string
 }
 
-func (c *elasticDeviceDataClient) GetIntegrationsMultiple(userDeviceIDs []string, start, end time.Time) ([]GetIntegsMultResp, error) {
+func (c *elasticDeviceDataClient) GetIntegrationsMultiple(userDeviceIDs []string, start, end time.Time) (map[string][]string, error) {
 	ctx := context.Background()
 
 	udsErased := make([]any, len(userDeviceIDs))
@@ -211,7 +211,7 @@ func (c *elasticDeviceDataClient) GetIntegrationsMultiple(userDeviceIDs []string
 		return nil, err
 	}
 
-	out := make([]GetIntegsMultResp, 0, len(userDeviceIDs))
+	out := make(map[string][]string)
 
 	for _, subjectsBucket := range respb.Aggregations.Subjects.Buckets {
 		sourcesBuckets := subjectsBucket.Sources.Buckets
@@ -219,10 +219,7 @@ func (c *elasticDeviceDataClient) GetIntegrationsMultiple(userDeviceIDs []string
 		for i, sourceBucket := range sourcesBuckets {
 			integrations[i] = strings.TrimPrefix(sourceBucket.Key, integPrefix)
 		}
-		out = append(out, GetIntegsMultResp{
-			UserDeviceID:   subjectsBucket.Key,
-			IntegrationIDs: integrations,
-		})
+		out[subjectsBucket.Key] = integrations
 	}
 
 	return out, nil
