@@ -90,6 +90,11 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
+	userDeviceIDs := make([]string, len(devices.UserDevices))
+	for i, ud := range devices.UserDevices {
+		userDeviceIDs[i] = ud.Id
+	}
+
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
 	swIntegrsByTokenID := make(map[uint64]*pb_defs.Integration)
 
@@ -248,6 +253,15 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		},
 		Devices: outLi,
 	}
+
+	go func() {
+		start := time.Now()
+		if resp, err := r.DataClient.GetIntegrationsMultiple(userDeviceIDs, weekStart, now); err != nil {
+			r.Logger.Warn().Err(err).Str("userId", userID).Msg("Multi-query didn't work.")
+		} else {
+			r.Logger.Info().Str("userId", userID).Interface("response", resp).Msgf("Multi-query worked, took %s.", time.Since(start))
+		}
+	}()
 
 	return c.JSON(out)
 }

@@ -17,6 +17,7 @@ type DeviceDataClient interface {
 	GetLastActivity(userDeviceID string) (lastActivity time.Time, seen bool, err error)
 	DescribeActiveDevices(start, end time.Time) ([]*DeviceData, error)
 	GetIntegrations(userDeviceID string, start, end time.Time) (ints []string, err error)
+	GetIntegrationsMultiple(userDeviceIDs []string, start, end time.Time) ([]GetIntegsMultResp, error)
 }
 
 type elasticDeviceDataClient struct {
@@ -157,6 +158,85 @@ func (c *elasticDeviceDataClient) GetIntegrations(userDeviceID string, start, en
 	}
 
 	return integrations, nil
+}
+
+type GetIntegsMultResp struct {
+	UserDeviceID   string
+	IntegrationIDs []string
+}
+
+func (c *elasticDeviceDataClient) GetIntegrationsMultiple(userDeviceIDs []string, start, end time.Time) ([]GetIntegsMultResp, error) {
+	ctx := context.Background()
+
+	udsErased := make([]any, len(userDeviceIDs))
+	for i, x := range userDeviceIDs {
+		udsErased[i] = x
+	}
+
+	query := esquery.Search().
+		Query(
+			esquery.Bool().
+				Filter(
+					esquery.Terms("subject", udsErased...),
+					esquery.Range("time").Gte(start).Lt(end),
+				).
+				Should(activityFieldExists...).
+				MinimumShouldMatch(1),
+		).
+		Aggs(
+			esquery.TermsAgg("subjects", "subject").Aggs(
+				esquery.TermsAgg("sources", "source"),
+			).Size(2000), // Will we hit this? Colin might hit this.
+		).
+		Size(0)
+
+	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if code := res.StatusCode; code != http.StatusOK {
+		return nil, fmt.Errorf("status code %d", code)
+	}
+
+	var respb DevicesIntegrationsMultResp
+	if err := json.NewDecoder(res.Body).Decode(&respb); err != nil {
+		return nil, err
+	}
+
+	out := make([]GetIntegsMultResp, 0, len(userDeviceIDs))
+
+	for _, subjectsBucket := range respb.Aggregations.Subjects.Buckets {
+		sourcesBuckets := subjectsBucket.Aggregations.Sources.Buckets
+		integrations := make([]string, len(sourcesBuckets))
+		for i, sourceBucket := range sourcesBuckets {
+			integrations[i] = strings.TrimPrefix(sourceBucket.Key, integPrefix)
+		}
+		out = append(out, GetIntegsMultResp{
+			UserDeviceID:   subjectsBucket.Key,
+			IntegrationIDs: integrations,
+		})
+	}
+
+	return out, nil
+}
+
+type DevicesIntegrationsMultResp struct {
+	Aggregations struct {
+		Subjects struct {
+			Buckets []struct {
+				Key          string `json:"key"`
+				Aggregations struct {
+					Sources struct {
+						Buckets []struct {
+							Key string `json:"key"`
+						} `json:"buckets"`
+					} `json:"sources"`
+				} `json:"aggregations"`
+			} `json:"buckets"`
+		} `json:"subjects"`
+	} `json:"aggregations"`
 }
 
 type DeviceIntegrationsResp struct {
