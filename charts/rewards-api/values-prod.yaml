@@ -2,7 +2,7 @@ replicaCount: 2
 image:
   repository: dimozone/rewards-api
   pullPolicy: IfNotPresent
-  tag: 1.21.4
+  tag: 1.21.5
 cronJob:
   enabled: true
   schedule: 0 5 * * 1
