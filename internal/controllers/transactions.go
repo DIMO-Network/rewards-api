@@ -70,10 +70,14 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 		}
 	}
 
+	queryStart := time.Now()
 	err = models.NewQuery(mods...).Bind(c.Context(), r.DB.DBS().Reader, &txes)
 	if err != nil {
 		logger.Err(err).Msg("Database failure retrieving incoming transactions.")
 		return opaqueInternalError
+	}
+	if queryDur := time.Since(queryStart); queryDur >= 5*time.Second {
+		logger.Info().Msgf("Long transaction history query: took %s.", queryDur)
 	}
 
 	for _, tx := range txes {
