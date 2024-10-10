@@ -18,7 +18,7 @@ env:
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys
   DEPLOYMENT_BASE_URL: https://rewards-api.dimo.zone
   DEVICE_DATA_INDEX_NAME: device-status-prod*
-  DEVICE_DATA_INDEX_NAME: device-status-prod-
+  DEVICE_DATA_INDEX_PREFIX: device-status-prod-
   DEVICES_API_GRPC_ADDR: devices-api-prod:8086
   USERS_API_GRPC_ADDR: users-api-prod:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-prod:8086
