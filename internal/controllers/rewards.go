@@ -112,13 +112,13 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	userPts := 0
 	userTokens := big.NewInt(0)
 
-	esQueryStart := time.Now()
+	integQueryStart := time.Now()
 	resp, err := r.DataClient.GetIntegrationsMultiple(c.Context(), userDeviceIDs, weekStart, now)
 	if err != nil {
 		return err
 	}
-	if dur := time.Since(esQueryStart); dur > 4*time.Second {
-		logger.Warn().Msgf("Querying Elastic for %d vehicles took %s.", len(userDeviceIDs), dur)
+	if integQueryDur := time.Since(integQueryStart); integQueryDur >= 5*time.Second {
+		logger.Info().Msgf("Long integrations query: took %s for %d vehicles.", integQueryDur, len(devices.UserDevices))
 	}
 
 	for i, device := range devices.UserDevices {
