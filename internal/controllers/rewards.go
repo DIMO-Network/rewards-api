@@ -115,7 +115,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	integQueryStart := time.Now()
 	resp, err := r.DataClient.GetIntegrationsMultiple(c.Context(), userDeviceIDs, weekStart, now)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to grab integration activity data for user vehicles: %w", err)
 	}
 	if integQueryDur := time.Since(integQueryStart); integQueryDur >= 5*time.Second {
 		logger.Info().Msgf("Long integrations query: took %s for %d vehicles.", integQueryDur, len(devices.UserDevices))
