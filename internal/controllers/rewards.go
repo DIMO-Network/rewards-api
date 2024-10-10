@@ -69,7 +69,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		for _, tk := range r.Tokens {
 			val, err := tk.BalanceOf(nil, common.HexToAddress(*addr))
 			if err != nil {
-				return err
+				return fmt.Errorf("failed checking balance: %w", err)
 			}
 			addrBalance.Add(addrBalance, val)
 		}
