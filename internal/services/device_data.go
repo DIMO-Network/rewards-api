@@ -22,8 +22,9 @@ type DeviceDataClient interface {
 }
 
 type elasticDeviceDataClient struct {
-	client *elasticsearch.Client
-	index  string
+	client      *elasticsearch.Client
+	index       string
+	indexPrefix string
 }
 
 func NewDeviceDataClient(settings *config.Settings) DeviceDataClient {
@@ -40,8 +41,9 @@ func NewDeviceDataClient(settings *config.Settings) DeviceDataClient {
 		panic(err)
 	}
 	return &elasticDeviceDataClient{
-		client: client,
-		index:  settings.DeviceDataIndexName,
+		client:      client,
+		index:       settings.DeviceDataIndexName,
+		indexPrefix: settings.DeviceDataIndexPrefix,
 	}
 }
 
@@ -171,9 +173,21 @@ func (c *elasticDeviceDataClient) GetIntegrationsMultiple(ctx context.Context, u
 	if len(userDeviceIDs) == 0 {
 		return out, nil
 	}
-	
+
+	var indices []string
+
+	startYear, startMonth, startDay := start.UTC().Date()
+	endYear, endMonth, endDay := end.UTC().Date()
+	startDateTime := time.Date(startYear, startMonth, startDay, 0, 0, 0, 0, time.UTC)
+	endDateTime := time.Date(endYear, endMonth, endDay, 0, 0, 0, 0, time.UTC)
+
+	for date := startDateTime; !date.After(endDateTime); date = date.AddDate(0, 0, 1) {
+		indices = append(indices, c.indexPrefix+date.Format(time.DateOnly))
+	}
+
 	udsErased := make([]any, len(userDeviceIDs))
 	for i, x := range userDeviceIDs {
+		fmt.Println("Indices", indices)
 		udsErased[i] = x
 	}
 
@@ -194,7 +208,8 @@ func (c *elasticDeviceDataClient) GetIntegrationsMultiple(ctx context.Context, u
 		).
 		Size(0)
 
-	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(c.index))
+	c.client.Search.WithIndex()
+	res, err := query.Run(c.client, c.client.Search.WithContext(ctx), c.client.Search.WithIndex(indices...))
 	if err != nil {
 		return nil, err
 	}
