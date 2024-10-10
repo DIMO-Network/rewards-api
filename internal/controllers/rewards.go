@@ -65,6 +65,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	var addrBalance *big.Int
 
 	if addr := user.EthereumAddress; addr != nil {
+		balanceStart := time.Now()
 		addrBalance = big.NewInt(0)
 		for _, tk := range r.Tokens {
 			val, err := tk.BalanceOf(nil, common.HexToAddress(*addr))
@@ -72,6 +73,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 				return fmt.Errorf("failed checking balance: %w", err)
 			}
 			addrBalance.Add(addrBalance, val)
+		}
+		if balDur := time.Since(balanceStart); balDur >= 5*time.Second {
+			logger.Warn().Msgf("Long token balance checks: took %s.", balDur)
 		}
 	}
 
@@ -118,7 +122,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return fmt.Errorf("failed to grab integration activity data for user vehicles: %w", err)
 	}
 	if integQueryDur := time.Since(integQueryStart); integQueryDur >= 5*time.Second {
-		logger.Info().Msgf("Long integrations query: took %s for %d vehicles.", integQueryDur, len(devices.UserDevices))
+		logger.Warn().Msgf("Long integrations query: took %s for %d vehicles.", integQueryDur, len(devices.UserDevices))
 	}
 
 	for i, device := range devices.UserDevices {
