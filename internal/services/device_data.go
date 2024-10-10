@@ -187,7 +187,6 @@ func (c *elasticDeviceDataClient) GetIntegrationsMultiple(ctx context.Context, u
 
 	udsErased := make([]any, len(userDeviceIDs))
 	for i, x := range userDeviceIDs {
-		fmt.Println("Indices", indices)
 		udsErased[i] = x
 	}
 
