@@ -105,6 +105,7 @@ func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint
 		qmhelper.Where("timestamp", qmhelper.GTE, start),
 		qmhelper.Where("timestamp", qmhelper.LT, end),
 		qm.WhereIn("token_id IN ?", anyIDs...),
+		qm.GroupBy("token_id"),
 	)
 	query, args := queries.BuildQuery(q)
 	rows, err := s.conn.Query(ctx, query, args...)

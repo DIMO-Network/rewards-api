@@ -33,6 +33,4 @@ type Settings struct {
 	ContractEventTopic             string          `yaml:"CONTRACT_EVENT_TOPIC"`
 	DeviceDataIndexPrefix          string          `yaml:"DEVICE_DATA_INDEX_PREFIX"`
 	Clickhouse                     config.Settings `yaml:",inline"`
-	ClickhouseFileIndexDatabase    string          `yaml:"CLICKHOUSE_FILE_INDEX_DATABASE"`
-	MaxRequestDuration             string          `yaml:"MAX_REQUEST_DURATION"`
 }
