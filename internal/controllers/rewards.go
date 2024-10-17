@@ -95,9 +95,23 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
-	userDeviceIDs := make([]string, len(devices.UserDevices))
-	for i, ud := range devices.UserDevices {
-		userDeviceIDs[i] = ud.Id
+	var vehicleIDs []uint64
+
+	for _, ud := range devices.UserDevices {
+		if ud.TokenId != nil {
+			vehicleIDs = append(vehicleIDs, *ud.TokenId)
+		}
+	}
+
+	integrationsByTokenID := make(map[uint64][]string)
+
+	vehicles, err := r.ChClient.GetIntegrationsForVehicles(c.Context(), vehicleIDs, weekStart, now)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range vehicles {
+		integrationsByTokenID[uint64(v.TokenID)] = v.Integrations
 	}
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
@@ -128,10 +142,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			continue
 		}
 
-		vehicleIntegsWithSignals, err := r.ChClient.GetIntegrations(c.Context(), *device.TokenId, weekStart, now)
-		if err != nil {
-			dlog.Err(err).Msg("Error querying for this week's integrations.")
-			return opaqueInternalError
+		var vehicleIntegsWithSignals []string
+		if device.TokenId != nil {
+			vehicleIntegsWithSignals = integrationsByTokenID[*device.TokenId]
 		}
 
 		integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
@@ -156,7 +169,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 				OnChainPairingStatus: "Paired",
 			}
 
-			if device.VinConfirmed && vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
+			if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
 				uri.Points = int(integr.Points)
 				uri.DataThisWeek = true
 			}
@@ -182,7 +195,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 				OnChainPairingStatus: "Paired",
 			}
 
-			if device.VinConfirmed && vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
+			if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
 				uri.Points = int(integr.Points)
 				uri.DataThisWeek = true
 			}

@@ -86,16 +86,25 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 	return vehicles, nil
 }
 
-// GetIntegrations returns list of integrations from Clickhouse for a given vehicle
-func (s *Client) GetIntegrations(ctx context.Context, tokenID uint64, start, end time.Time) ([]string, error) {
+func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint64, start, end time.Time) ([]*Vehicle, error) {
+	if len(tokenIDs) == 0 {
+		return nil, nil
+	}
+
+	// Need to convert to []any for the query mod to work.
+	anyIDs := make([]any, len(tokenIDs))
+	for i, x := range tokenIDs {
+		anyIDs[i] = x
+	}
+
 	q := &queries.Query{}
 	queries.SetDialect(q, &dialect)
 	qm.Apply(q,
-		qm.Distinct("source"),
+		qm.Select("token_id", "groupUniqArray(source)"),
 		qm.From("signal"),
 		qmhelper.Where("timestamp", qmhelper.GTE, start),
 		qmhelper.Where("timestamp", qmhelper.LT, end),
-		qm.And("token_id = ?", tokenID),
+		qm.WhereIn("token_id IN ?", anyIDs...),
 	)
 	query, args := queries.BuildQuery(q)
 	rows, err := s.conn.Query(ctx, query, args...)
@@ -104,20 +113,29 @@ func (s *Client) GetIntegrations(ctx context.Context, tokenID uint64, start, end
 	}
 	defer rows.Close()
 
-	var vehIntegs []string
+	var vehicles []*Vehicle
 	for rows.Next() {
-		var integ string
-		if err := rows.Scan(&integ); err != nil {
-			return nil, fmt.Errorf("failed to scan clickhouse row: %w", err)
+		var tokenID uint32
+		var integrations []string
+		if err := rows.Scan(&tokenID, &integrations); err != nil {
+			return nil, fmt.Errorf("failed to scan rows: %w", err)
 		}
-		vehIntegs = append(vehIntegs, strings.TrimPrefix(integ, integPrefix))
+
+		for i := range integrations {
+			integrations[i] = strings.TrimPrefix(integrations[i], integPrefix)
+		}
+
+		vehicles = append(vehicles, &Vehicle{
+			TokenID:      int64(tokenID),
+			Integrations: integrations,
+		})
 	}
 
 	if rows.Err() != nil {
 		return nil, fmt.Errorf("clickhouse row error: %w", rows.Err())
 	}
 
-	return vehIntegs, nil
+	return vehicles, nil
 }
 
 type Vehicle struct {

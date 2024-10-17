@@ -100,12 +100,16 @@ func (c *CHTestSuite) Test_DescribeActiveDevices() {
 
 func (c *CHTestSuite) Test_GetIntegrations() {
 	ctx := context.Background()
-	for _, v := range c.tokenMap {
-		for tkn, sources := range v.values {
-			resp, err := c.chClient.GetIntegrations(ctx, uint64(tkn), v.start, v.end)
-			c.Require().NoError(err)
-			c.Require().ElementsMatch(sources, resp)
-		}
+	tokList := make([]uint64, 0)
+	for k := range c.tokenMap {
+		tokList = append(tokList, uint64(k))
+	}
+
+	varresp, err := c.chClient.GetIntegrationsForVehicles(ctx, tokList, time.Now().AddDate(0, 0, -7), time.Now())
+	c.Require().NoError(err)
+
+	for _, v := range varresp {
+		c.Require().ElementsMatch(sources, v.Integrations)
 	}
 }
 
