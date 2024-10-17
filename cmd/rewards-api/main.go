@@ -27,7 +27,7 @@ import (
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
 	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/burdiyan/kafkautil"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"

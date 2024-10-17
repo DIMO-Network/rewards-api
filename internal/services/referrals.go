@@ -12,7 +12,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	pb "github.com/DIMO-Network/users-api/pkg/grpc"
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"

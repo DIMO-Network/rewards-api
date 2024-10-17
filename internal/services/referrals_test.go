@@ -18,7 +18,7 @@ import (
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
 
-	"github.com/Shopify/sarama/mocks"
+	"github.com/IBM/sarama/mocks"
 	"github.com/docker/go-connections/nat"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
