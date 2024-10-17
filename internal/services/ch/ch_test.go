@@ -11,7 +11,6 @@ import (
 
 	chconfig "github.com/DIMO-Network/clickhouse-infra/pkg/connect/config"
 	"github.com/DIMO-Network/clickhouse-infra/pkg/container"
-	dimo_ch "github.com/DIMO-Network/clickhouse-infra/pkg/container"
 	"github.com/DIMO-Network/model-garage/pkg/migrations"
 	"github.com/stretchr/testify/suite"
 )
@@ -38,7 +37,7 @@ func TestCHService(t *testing.T) {
 
 func (c *CHTestSuite) SetupSuite() {
 	ctx := context.Background()
-	container, err := dimo_ch.CreateClickHouseContainer(ctx, chconfig.Settings{})
+	container, err := container.CreateClickHouseContainer(ctx, chconfig.Settings{})
 	c.Require().NoError(err, "Failed to create clickhouse container")
 
 	db, err := container.GetClickhouseAsDB()
