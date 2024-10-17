@@ -24,10 +24,11 @@ type CHTestSuite struct {
 }
 
 var sources = []string{"2ULfuC8U9dOqRshZBAi0lMM1Rrx", "27qftVRWQYpVDcO5DltO5Ojbjxk", "22N2xaPOq2WW2gAHBHd0Ikn4Zob"}
-var timeRanges = map[int]tknDtValues{
-	1: {start: time.Now().AddDate(0, 0, -6), end: time.Now().AddDate(0, 0, 1)},
-	2: {start: time.Now().AddDate(0, 0, -14), end: time.Now().AddDate(0, 0, -7)},
-}
+
+// var timeRanges = map[int]tknDtValues{
+// 	1: {start: time.Now().AddDate(0, 0, -6), end: time.Now().AddDate(0, 0, 1)},
+// 	2: {start: time.Now().AddDate(0, 0, -14), end: time.Now().AddDate(0, 0, -7)},
+// }
 
 const dummyTokens int64 = 10
 
