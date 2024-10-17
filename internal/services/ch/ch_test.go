@@ -2,12 +2,8 @@ package ch
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"testing"
 	"time"
-
-	"math/rand/v2"
 
 	chconfig "github.com/DIMO-Network/clickhouse-infra/pkg/connect/config"
 	"github.com/DIMO-Network/clickhouse-infra/pkg/container"
@@ -19,21 +15,27 @@ type CHTestSuite struct {
 	suite.Suite
 	chClient  *Client
 	container *container.Container
-	tokenMap  map[int]tknDtValues
 }
 
-var sources = []string{"2ULfuC8U9dOqRshZBAi0lMM1Rrx", "27qftVRWQYpVDcO5DltO5Ojbjxk", "22N2xaPOq2WW2gAHBHd0Ikn4Zob"}
-
-// var timeRanges = map[int]tknDtValues{
-// 	1: {start: time.Now().AddDate(0, 0, -6), end: time.Now().AddDate(0, 0, 1)},
-// 	2: {start: time.Now().AddDate(0, 0, -14), end: time.Now().AddDate(0, 0, -7)},
-// }
-
-const dummyTokens int64 = 10
+var Integrations = struct {
+	Macaron  string
+	AutoPi   string
+	Smartcar string
+	Tesla    string
+}{
+	"2ULfuC8U9dOqRshZBAi0lMM1Rrx", // Macaron
+	"27qftVRWQYpVDcO5DltO5Ojbjxk", // AutoPi
+	"22N2xaPOq2WW2gAHBHd0Ikn4Zob", // Smartcar
+	"26A5Dk3vvvQutjSyF0Jka2DP5lg", // Tesla
+}
 
 func TestCHService(t *testing.T) {
 	suite.Run(t, new(CHTestSuite))
 }
+
+const day = 24 * time.Hour
+
+var weekEnd = time.Date(2024, 10, 14, 5, 0, 0, 0, time.UTC)
 
 func (c *CHTestSuite) SetupSuite() {
 	ctx := context.Background()
@@ -52,28 +54,21 @@ func (c *CHTestSuite) SetupSuite() {
 	batch, err := conn.PrepareBatch(ctx, "INSERT INTO signal")
 	c.Require().NoError(err, "Failed to prepare batch")
 
-	c.tokenMap = map[int]tknDtValues{
-		1: {start: time.Now().AddDate(0, 0, -6), end: time.Now().AddDate(0, 0, 1), values: map[int64][]string{}},
-		2: {start: time.Now().AddDate(0, 0, -14), end: time.Now().AddDate(0, 0, -7), values: map[int64][]string{}},
+	mustAppend := func(v any) {
+		err := batch.AppendStruct(v)
+		c.Require().NoError(err)
 	}
 
-	for n, daterange := range c.tokenMap {
-		dummyData := generateRandomData(dummyTokens, daterange)
-		for _, d := range dummyData {
-			err := batch.AppendStruct(&d)
-			c.Require().NoError(err, "Failed to append struct")
-			if _, ok := c.tokenMap[n].values[d.TokenID]; !ok {
-				c.tokenMap[n].values[d.TokenID] = []string{}
-			}
-			c.tokenMap[n].values[d.TokenID] = append(c.tokenMap[n].values[d.TokenID], strings.TrimPrefix(d.Source, integPrefix))
-		}
-	}
+	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
+	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
+	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-2 * day), Name: "xdd2", Source: "dimo/integration/" + Integrations.Macaron, ValueNumber: 10.55})
+	mustAppend(&signalRow{TokenID: 5, Timestamp: weekEnd.Add(-3 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
+	mustAppend(&signalRow{TokenID: 7, Timestamp: weekEnd.Add(-10 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
 
-	// for k, v := range c.tokenMap {
-	// 	fmt.Println(
-	// 		v.start.Format("2006-01-02"), v.end.Format("2006-01-02"),
-	// 	)
-	// }
+	c.Require().NoError(err, "Failed to append struct")
+
+	err = batch.Send()
+	c.Require().NoError(err, "Failed to insert rows")
 
 	err = batch.Send()
 	c.Require().NoError(err, "Failed to send batch")
@@ -88,67 +83,40 @@ func (c *CHTestSuite) TearDownSuite() {
 
 func (c *CHTestSuite) Test_DescribeActiveDevices() {
 	ctx := context.Background()
-	for n, v := range c.tokenMap {
-		resp, err := c.chClient.DescribeActiveDevices(ctx, v.start, v.end)
-		c.Require().NoError(err)
-		c.Require().Equal(len(c.tokenMap[n].values), len(resp))
-		for _, r := range resp {
-			c.Require().ElementsMatch(c.tokenMap[n].values[r.TokenID], r.Integrations)
-		}
+
+	resp, err := c.chClient.DescribeActiveDevices(ctx, weekEnd.Add(-7*day), weekEnd)
+	c.Require().NoError(err)
+
+	c.Len(resp, 2)
+
+	vehicleIDToIntegrations := make(map[int64][]string)
+	for _, r := range resp {
+		vehicleIDToIntegrations[r.TokenID] = r.Integrations
 	}
+
+	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
+	c.Require().ElementsMatch(vehicleIDToIntegrations[5], []string{Integrations.Tesla})
 }
 
 func (c *CHTestSuite) Test_GetIntegrations() {
-	ctx := context.Background()
-	tokList := make([]uint64, 0)
-	for k := range c.tokenMap {
-		tokList = append(tokList, uint64(k))
-	}
-
-	varresp, err := c.chClient.GetIntegrationsForVehicles(ctx, tokList, time.Now().AddDate(0, 0, -7), time.Now())
+	resp, err := c.chClient.GetIntegrationsForVehicles(context.TODO(), []uint64{3, 7}, weekEnd.Add(-7*day), weekEnd)
 	c.Require().NoError(err)
 
-	for _, v := range varresp {
-		c.Require().ElementsMatch(sources, v.Integrations)
-	}
-}
+	c.Len(resp, 1)
 
-func generateRandomData(allTokens int64, dateRangeValues tknDtValues) []data {
-	d := []data{}
-
-	for tokenID := range allTokens {
-		for n, s := range sources[:rand.IntN(len(sources))] {
-			d = append(d, data{
-				TokenID:   tokenID,
-				Timestamp: dateRangeValues.randomDate(),
-				Name:      fmt.Sprintf("name%d", n),
-				Source:    fmt.Sprintf("dimo/integration/%s", s),
-				ValueS:    fmt.Sprintf("value%d", n),
-			})
-		}
+	vehicleIDToIntegrations := make(map[int64][]string)
+	for _, r := range resp {
+		vehicleIDToIntegrations[r.TokenID] = r.Integrations
 	}
 
-	return d
+	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
 }
 
-type data struct {
-	TokenID   int64     `ch:"token_id"`
-	Timestamp time.Time `ch:"timestamp"`
-	Name      string    `ch:"name"`
-	Source    string    `ch:"source"`
-	ValueN    float64   `ch:"value_number"`
-	ValueS    string    `ch:"value_string"`
-}
-
-type tknDtValues struct {
-	start  time.Time
-	end    time.Time
-	values map[int64][]string
-}
-
-func (d *tknDtValues) randomDate() time.Time {
-	delta := d.end.Unix() - d.start.Unix()
-
-	sec := rand.Int64N(delta) + d.start.Unix()
-	return time.Unix(sec, 0)
+type signalRow struct {
+	TokenID     int64     `ch:"token_id"`
+	Timestamp   time.Time `ch:"timestamp"`
+	Name        string    `ch:"name"`
+	Source      string    `ch:"source"`
+	ValueNumber float64   `ch:"value_number"`
+	ValueString string    `ch:"value_string"`
 }
