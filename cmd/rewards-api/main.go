@@ -431,8 +431,6 @@ func startGRPCServer(settings *config.Settings, dbs db.Store, logger *zerolog.Lo
 
 // logging stuff here
 
-const skipErrorLogKey = "skipErrorLog"
-
 func GetLogger(c *fiber.Ctx, d *zerolog.Logger) *zerolog.Logger {
 	m := c.Locals("logger")
 	if m == nil {
