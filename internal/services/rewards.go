@@ -157,11 +157,9 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	lastWeekByDevice := make(map[int64]*models.Reward)
+	lastWeekByDevice := make(map[string]*models.Reward)
 	for _, reward := range lastWeekRewards {
-		if tknID, valid := reward.UserDeviceTokenID.Int64(); valid {
-			lastWeekByDevice[tknID] = reward
-		}
+		lastWeekByDevice[reward.UserDeviceID] = reward
 	}
 
 	for _, device := range activeDevices {
@@ -262,7 +260,7 @@ func (t *BaselineClient) assignPoints() error {
 			ExistingConnectionStreak:    0,
 			ExistingDisconnectionStreak: 0,
 		}
-		if lastWeek, ok := lastWeekByDevice[device.TokenID]; ok {
+		if lastWeek, ok := lastWeekByDevice[ud.Id]; ok {
 			streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
 			streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
 		}
@@ -273,7 +271,7 @@ func (t *BaselineClient) assignPoints() error {
 
 		// Anything left in this map is considered disconnected.
 		// This is a no-op if the device doesn't have a record from last week.
-		delete(lastWeekByDevice, device.TokenID)
+		delete(lastWeekByDevice, ud.Id)
 
 		// If this VIN has never earned before, make note of that.
 		// Used by referrals, not this job. Have to be careful about VINs because
