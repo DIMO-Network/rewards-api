@@ -66,13 +66,17 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	var addrBalance *big.Int
 
 	if addr := user.EthereumAddress; addr != nil {
+		balanceStart := time.Now()
 		addrBalance = big.NewInt(0)
 		for _, tk := range r.Tokens {
 			val, err := tk.BalanceOf(nil, common.HexToAddress(*addr))
 			if err != nil {
-				return err
+				return fmt.Errorf("failed checking balance: %w", err)
 			}
 			addrBalance.Add(addrBalance, val)
+		}
+		if balDur := time.Since(balanceStart); balDur >= 5*time.Second {
+			logger.Warn().Msgf("Long token balance checks: took %s.", balDur)
 		}
 	}
 
@@ -89,6 +93,11 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	allIntegrations, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
 	if err != nil {
 		return opaqueInternalError
+	}
+
+	userDeviceIDs := make([]string, len(devices.UserDevices))
+	for i, ud := range devices.UserDevices {
+		userDeviceIDs[i] = ud.Id
 	}
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)

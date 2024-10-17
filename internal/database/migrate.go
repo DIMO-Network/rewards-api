@@ -30,5 +30,5 @@ func MigrateDatabase(_ zerolog.Logger, settings *db.Settings, command string, di
 
 	goose.SetTableName("rewards_api.migrations")
 
-	return goose.RunContext(context.Background(), command, db, dir)
+	return goose.RunContext(context.TODO(), command, db, dir)
 }

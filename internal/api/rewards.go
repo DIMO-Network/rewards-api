@@ -2,18 +2,24 @@ package api
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"math/big"
+	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
@@ -119,4 +125,62 @@ func (s *rewardsService) GetDeviceRewards(ctx context.Context, req *pb.GetDevice
 	}
 
 	return &resp, nil
+}
+
+func (s *rewardsService) GetBlacklistStatus(ctx context.Context, req *pb.GetBlacklistStatusRequest) (*pb.GetBlacklistStatusResponse, error) {
+	if len(req.EthereumAddress) != common.AddressLength {
+		return nil, status.Errorf(codes.InvalidArgument, "Ethereum address had length %d instead of the required %d.", len(req.EthereumAddress), common.AddressLength)
+	}
+
+	addr := common.BytesToAddress(req.EthereumAddress).Hex()
+
+	bl, err := models.FindBlacklist(ctx, s.dbs.DBS().Reader, addr)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			var t timestamppb.Timestamp
+			return &pb.GetBlacklistStatusResponse{
+				IsBlacklisted: false,
+				Note:          "",
+				CreatedAt:     &t,
+			}, nil
+		}
+		return nil, status.Errorf(codes.Internal, "Database lookup failed: %v", err)
+	}
+
+	return &pb.GetBlacklistStatusResponse{
+		IsBlacklisted: true,
+		Note:          bl.Note,
+		CreatedAt:     timestamppb.New(bl.CreatedAt),
+	}, nil
+}
+
+var timeNow = time.Now
+
+func (s *rewardsService) SetBlacklistStatus(ctx context.Context, req *pb.SetBlacklistStatusRequest) (*pb.SetBlacklistStatusResponse, error) {
+	if len(req.EthereumAddress) != common.AddressLength {
+		return nil, status.Errorf(codes.InvalidArgument, "Ethereum address had length %d instead of the required %d.", len(req.EthereumAddress), common.AddressLength)
+	}
+
+	addr := common.BytesToAddress(req.EthereumAddress).Hex()
+
+	bl := models.Blacklist{
+		UserEthereumAddress: addr, // Only field used for removal.
+		CreatedAt:           timeNow(),
+		Note:                req.Note,
+	}
+
+	if req.IsBlacklisted {
+		// Only upserting here so that we can do nothing if the address is already in the list.
+		// TODO(elffjs): Tell the caller about this case.
+		if err := bl.Upsert(ctx, s.dbs.DBS().Writer, false, []string{models.BlacklistColumns.UserEthereumAddress}, boil.Infer(), boil.Infer()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Database insert failed: %v", err)
+		}
+	} else {
+		// TODO(elfjjs): Tell the caller whether the address was in there to begin with.
+		if _, err := bl.Delete(ctx, s.dbs.DBS().Writer); err != nil {
+			return nil, status.Errorf(codes.Internal, "Deletion failed: %v", err)
+		}
+	}
+
+	return &pb.SetBlacklistStatusResponse{}, nil
 }

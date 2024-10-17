@@ -31,6 +31,7 @@ type Settings struct {
 	TransferBatchSize              int             `yaml:"TRANSFER_BATCH_SIZE"`
 	FirstAutomatedWeek             int             `yaml:"FIRST_AUTOMATED_WEEK"`
 	ContractEventTopic             string          `yaml:"CONTRACT_EVENT_TOPIC"`
+	DeviceDataIndexPrefix          string          `yaml:"DEVICE_DATA_INDEX_PREFIX"`
 	Clickhouse                     config.Settings `yaml:",inline"`
 	ClickhouseFileIndexDatabase    string          `yaml:"CLICKHOUSE_FILE_INDEX_DATABASE"`
 	MaxRequestDuration             string          `yaml:"MAX_REQUEST_DURATION"`

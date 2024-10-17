@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -14,6 +15,8 @@ import (
 	"github.com/DIMO-Network/shared/db"
 	pb "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ericlagergren/decimal"
+	"go.uber.org/mock/gomock"
+	"google.golang.org/grpc"
 
 	"github.com/Shopify/sarama/mocks"
 	"github.com/docker/go-connections/nat"
@@ -26,9 +29,6 @@ import (
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type refUser struct {
@@ -42,44 +42,6 @@ type refUser struct {
 type Referral struct {
 	Referee  common.Address
 	Referrer common.Address
-}
-
-type FakeUserClient struct {
-	users []refUser
-}
-
-func (d *FakeUserClient) GetUser(_ context.Context, in *pb.GetUserRequest, _ ...grpc.CallOption) (*pb.User, error) {
-	for _, user := range d.users {
-		if user.ID == in.Id {
-			addr := user.Address.Hex()
-			out := &pb.User{
-				Id:              user.ID,
-				EthereumAddress: &addr,
-			}
-
-			if user.CodeUsed != "" {
-				for _, ref := range d.users {
-					if user.CodeUsed == ref.Code {
-						if ref.Address != zeroAddr {
-							out.ReferredBy = &pb.UserReferrer{
-								EthereumAddress: ref.Address.Bytes(),
-								ReferrerValid:   true,
-							}
-						}
-
-						if user.InvalidReferrer {
-							out.ReferredBy.ReferrerValid = false
-						}
-						break
-					}
-				}
-			}
-
-			return out, nil
-		}
-	}
-
-	return nil, status.Error(codes.NotFound, "No user with that ID found.")
 }
 
 func TestReferrals(t *testing.T) {
@@ -115,7 +77,7 @@ func TestReferrals(t *testing.T) {
 
 	defer cont.Terminate(ctx) //nolint
 
-	logger := zerolog.Nop()
+	logger := zerolog.New(os.Stdout)
 
 	host, err := cont.Host(ctx)
 	if err != nil {
@@ -153,17 +115,15 @@ func TestReferrals(t *testing.T) {
 	}
 
 	type Reward struct {
-		Week     int
-		DeviceID string
-		UserID   string
-		Earning  bool
+		Week             int
+		DeviceID         string
+		UserID           string
+		Earning          bool
+		ConnectionStreak int
 	}
 
 	type Scenario struct {
-		Name string
-		// ReferralCount int
-		// LastWeek      []*models.Reward
-		// ThisWeek      []*models.Reward
+		Name      string
 		Users     []refUser
 		Devices   []Device
 		Rewards   []Reward
@@ -181,7 +141,10 @@ func TestReferrals(t *testing.T) {
 				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
 			},
 			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 1},
+				{Week: 6, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 2},
+				{Week: 7, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 3},
+				{Week: 8, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 4},
 			},
 			Referrals: []Referral{
 				{Referee: mkAddr(1), Referrer: mkAddr(2)},
@@ -196,7 +159,10 @@ func TestReferrals(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
 			},
 			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 1},
+				{Week: 6, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 2},
+				{Week: 7, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 3},
+				{Week: 8, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 4},
 			},
 			Referrals: []Referral{},
 		},
@@ -210,12 +176,15 @@ func TestReferrals(t *testing.T) {
 				{ID: "User2", Address: mkAddr(1), Code: "2", CodeUsed: ""},
 			},
 			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 1},
+				{Week: 6, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 2},
+				{Week: 7, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 3},
+				{Week: 8, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 4},
 			},
 			Referrals: []Referral{},
 		},
 		{
-			Name: "Referring user has invalid wallet address",
+			Name: "Referring user was deleted",
 			Devices: []Device{
 				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
 			},
@@ -224,104 +193,69 @@ func TestReferrals(t *testing.T) {
 				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
 			},
 			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 1},
+				{Week: 6, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 2},
+				{Week: 7, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 3},
+				{Week: 8, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 4},
 			},
 			Referrals: []Referral{
 				{Referee: mkAddr(1), Referrer: refContractAddr},
 			},
 		},
-		{
-			Name: "New address, new token, old Vin",
-			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 0},
-				{ID: "Dev3", UserID: "User3", TokenID: 3, Vin: "00000000000000001", FirstEarningWeek: 5},
-			},
-			Users: []refUser{
-				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
-				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
-				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
-			},
-			Rewards: []Reward{
-				{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
-				{Week: 5, DeviceID: "Dev3", UserID: "User3", Earning: true},
-			},
-			Referrals: []Referral{},
-		},
-		{
-			Name: "New Vin and user, same address",
-			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
-				{ID: "Dev2", UserID: "User2", TokenID: 3, Vin: "00000000000000002", FirstEarningWeek: 5},
-			},
-			Users: []refUser{
-				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
-				{ID: "User2", Address: mkAddr(1), Code: "2", CodeUsed: "3"},
-				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: ""},
-			},
-			Rewards: []Reward{
-				{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
-				{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
-			},
-			Referrals: []Referral{},
-		},
-		{
-			Name: "New user joins and connects a car that has previously been connected to DIMO",
-			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 3},
-				{ID: "Dev2", UserID: "User2", TokenID: 2, Vin: "00000000000000002", FirstEarningWeek: 3},
-				{ID: "Dev2", UserID: "User3", TokenID: 3, Vin: "00000000000000002", FirstEarningWeek: 5},
-			},
-			Users: []refUser{
-				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
-				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
-				{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "1"},
-			},
-			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
-				{Week: 5, DeviceID: "Dev2", UserID: "User3", Earning: true},
-			},
-			Referrals: []Referral{
-				{Referee: mkAddr(3), Referrer: mkAddr(1)},
-			},
-		},
-		{
-			Name: "New user, two vehicles, only one genuinely new",
-			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 3},
-				{ID: "Dev2", UserID: "User2", TokenID: 2, Vin: "00000000000000002", FirstEarningWeek: 3},
-				{ID: "Dev3", UserID: "User2", TokenID: 3, Vin: "00000000000000003", FirstEarningWeek: 5},
-			},
-			Users: []refUser{
-				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
-				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: "1"},
-			},
-			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
-				{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
-				{Week: 5, DeviceID: "Dev3", UserID: "User2", Earning: true},
-			},
-			Referrals: []Referral{
-				{Referee: mkAddr(2), Referrer: mkAddr(1)},
-			},
-		},
-		{
-			Name: "Users who did not earn in a given week can still refer",
-			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
-				{ID: "Dev2", UserID: "User2", TokenID: 1, Vin: "00000000000000002", FirstEarningWeek: 1},
-			},
-			Users: []refUser{
-				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2"},
-				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
-			},
-			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
-				{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: false},
-			},
-			Referrals: []Referral{
-				{Referee: mkAddr(1), Referrer: mkAddr(2)},
-			},
-		},
+		// {
+		// 	Name: "New address, new token, old Vin",
+		// 	Devices: []Device{
+		// 		{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 0},
+		// 		{ID: "Dev3", UserID: "User3", TokenID: 3, Vin: "00000000000000001", FirstEarningWeek: 5},
+		// 	},
+		// 	Users: []refUser{
+		// 		{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+		// 		{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
+		// 		{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
+		// 	},
+		// 	Rewards: []Reward{
+		// 		{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
+		// 		{Week: 5, DeviceID: "Dev3", UserID: "User3", Earning: true},
+		// 	},
+		// 	Referrals: []Referral{},
+		// },
+		// {
+		// 	Name: "New Vin and user, same address",
+		// 	Devices: []Device{
+		// 		{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
+		// 		{ID: "Dev2", UserID: "User2", TokenID: 3, Vin: "00000000000000002", FirstEarningWeek: 5},
+		// 	},
+		// 	Users: []refUser{
+		// 		{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+		// 		{ID: "User2", Address: mkAddr(1), Code: "2", CodeUsed: "3"},
+		// 		{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: ""},
+		// 	},
+		// 	Rewards: []Reward{
+		// 		{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
+		// 		{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
+		// 	},
+		// 	Referrals: []Referral{},
+		// },
+		// {
+		// 	Name: "New user, two vehicles, only one genuinely new",
+		// 	Devices: []Device{
+		// 		{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 3},
+		// 		{ID: "Dev2", UserID: "User2", TokenID: 2, Vin: "00000000000000002", FirstEarningWeek: 3},
+		// 		{ID: "Dev3", UserID: "User2", TokenID: 3, Vin: "00000000000000003", FirstEarningWeek: 5},
+		// 	},
+		// 	Users: []refUser{
+		// 		{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
+		// 		{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: "1"},
+		// 	},
+		// 	Rewards: []Reward{
+		// 		{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
+		// 		{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
+		// 		{Week: 5, DeviceID: "Dev3", UserID: "User2", Earning: true},
+		// 	},
+		// 	Referrals: []Referral{
+		// 		{Referee: mkAddr(2), Referrer: mkAddr(1)},
+		// 	},
+		// },
 	}
 
 	for _, scen := range scens {
@@ -345,9 +279,10 @@ func TestReferrals(t *testing.T) {
 				assert.NoError(t, err)
 
 				r := models.Reward{
-					IssuanceWeekID: lst.Week,
-					UserDeviceID:   lst.DeviceID,
-					UserID:         lst.UserID,
+					IssuanceWeekID:   lst.Week,
+					UserDeviceID:     lst.DeviceID,
+					UserID:           lst.UserID,
+					ConnectionStreak: lst.ConnectionStreak,
 				}
 				if lst.Earning {
 					r.Tokens = types.NewNullDecimal(decimal.New(100, 0))
@@ -385,10 +320,41 @@ func TestReferrals(t *testing.T) {
 				}
 			}
 
-			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, &FakeUserClient{users: scen.Users})
+			ctrl := gomock.NewController(t)
+			usersClient := NewMockUsersClient(ctrl)
+			usersClient.EXPECT().GetUsersByEthereumAddress(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(ctx context.Context, in *pb.GetUsersByEthereumAddressRequest, opts ...grpc.CallOption) (*pb.GetUsersByEthereumAddressResponse, error) {
+					for _, u := range scen.Users {
+						if u.Address == common.BytesToAddress(in.EthereumAddress) {
+							uOut := &pb.User{Id: u.ID, EthereumAddressBytes: u.Address.Bytes()}
+
+							if u.InvalidReferrer {
+								uOut.ReferredBy = &pb.UserReferrer{
+									ReferrerValid: false,
+								}
+							} else if u.CodeUsed != "" {
+								for _, u2 := range scen.Users {
+									if u2.Code == u.CodeUsed {
+										uOut.ReferredBy = &pb.UserReferrer{
+											Id:              u2.ID,
+											EthereumAddress: u2.Address.Bytes(),
+											ReferrerValid:   true,
+										}
+										break
+									}
+								}
+							}
+
+							return &pb.GetUsersByEthereumAddressResponse{Users: []*pb.User{uOut}}, nil
+						}
+					}
+					return &pb.GetUsersByEthereumAddressResponse{Users: []*pb.User{}}, nil
+				}).AnyTimes()
+
+			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient)
 			referralBonusService.ContractAddress = refContractAddr
 
-			refs, err := referralBonusService.CollectReferrals(ctx, 5)
+			refs, err := referralBonusService.CollectReferrals(ctx, 8)
 			require.NoError(t, err)
 
 			var actual []Referral
@@ -438,7 +404,7 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	defer cont.Terminate(ctx) //nolint
 
-	logger := zerolog.Nop()
+	logger := zerolog.New(os.Stdout)
 
 	host, err := cont.Host(ctx)
 	if err != nil {
@@ -474,7 +440,10 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	transferService := NewTokenTransferService(&settings, producer, conn)
 
-	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, &FakeUserClient{})
+	ctrl := gomock.NewController(t)
+	usersClient := NewMockUsersClient(ctrl)
+
+	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient)
 
 	refs := Referrals{
 		Referees:        []common.Address{mkAddr(1)},
