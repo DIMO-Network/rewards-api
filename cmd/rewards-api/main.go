@@ -23,6 +23,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/shared"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
@@ -100,8 +101,10 @@ func main() {
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
 		usersClient := pb_users.NewUserServiceClient(usersConn)
-
-		dataClient := services.NewDeviceDataClient(&settings)
+		chClient, err := ch.NewClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
+		}
 
 		f, err := os.Open("config.yaml")
 		if err != nil {
@@ -142,7 +145,7 @@ func main() {
 			Logger:            &logger,
 			DefinitionsClient: definitionsClient,
 			DevicesClient:     deviceClient,
-			DataClient:        dataClient,
+			ChClient:          chClient,
 			Settings:          &settings,
 			Tokens:            tks,
 			UsersClient:       usersClient,
@@ -305,8 +308,12 @@ func main() {
 		defer definitionsConn.Close()
 
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
+		chClient, err := ch.NewClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
+		}
 
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, services.NewDeviceDataClient(&settings), deviceClient, definitionsClient, week, &logger)
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, week, &logger)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
@@ -423,8 +430,6 @@ func startGRPCServer(settings *config.Settings, dbs db.Store, logger *zerolog.Lo
 }
 
 // logging stuff here
-
-const skipErrorLogKey = "skipErrorLog"
 
 func GetLogger(c *fiber.Ctx, d *zerolog.Logger) *zerolog.Logger {
 	m := c.Locals("logger")

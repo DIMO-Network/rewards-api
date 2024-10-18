@@ -13,9 +13,10 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/services"
-	"github.com/DIMO-Network/rewards-api/internal/utils"
+	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/set"
 	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -27,7 +28,7 @@ import (
 type RewardsController struct {
 	DB                db.Store
 	Logger            *zerolog.Logger
-	DataClient        services.DeviceDataClient
+	ChClient          *ch.Client
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
 	UsersClient       pb_users.UserServiceClient
@@ -94,9 +95,23 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
-	userDeviceIDs := make([]string, len(devices.UserDevices))
-	for i, ud := range devices.UserDevices {
-		userDeviceIDs[i] = ud.Id
+	var vehicleIDs []uint64
+
+	for _, ud := range devices.UserDevices {
+		if ud.TokenId != nil {
+			vehicleIDs = append(vehicleIDs, *ud.TokenId)
+		}
+	}
+
+	integrationsByTokenID := make(map[uint64][]string)
+
+	vehicles, err := r.ChClient.GetIntegrationsForVehicles(c.Context(), vehicleIDs, weekStart, now)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range vehicles {
+		integrationsByTokenID[uint64(v.TokenID)] = v.Integrations
 	}
 
 	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
@@ -116,25 +131,23 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	userPts := 0
 	userTokens := big.NewInt(0)
 
-	integQueryStart := time.Now()
-	resp, err := r.DataClient.GetIntegrationsMultiple(c.Context(), userDeviceIDs, weekStart, now)
-	if err != nil {
-		return fmt.Errorf("failed to grab integration activity data for user vehicles: %w", err)
-	}
-	if integQueryDur := time.Since(integQueryStart); integQueryDur >= 5*time.Second {
-		logger.Warn().Msgf("Long integrations query: took %s for %d vehicles.", integQueryDur, len(devices.UserDevices))
-	}
-
 	for i, device := range devices.UserDevices {
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
 
 		outInts := []UserResponseIntegration{}
 
 		vehicleMinted := device.TokenId != nil
+		if !vehicleMinted {
+			dlog.Info().Msg("Vehicle not minted.")
+			continue
+		}
 
-		vehicleIntegsWithSignals := resp[device.Id]
+		var vehicleIntegsWithSignals []string
+		if device.TokenId != nil {
+			vehicleIntegsWithSignals = integrationsByTokenID[*device.TokenId]
+		}
 
-		integSignalsThisWeek := utils.NewSet[string](vehicleIntegsWithSignals...)
+		integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
 
 		if ad := device.AftermarketDevice; ad != nil {
 			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
@@ -156,7 +169,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 				OnChainPairingStatus: "Paired",
 			}
 
-			if device.VinConfirmed && vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
+			if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
 				uri.Points = int(integr.Points)
 				uri.DataThisWeek = true
 			}
@@ -182,7 +195,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 				OnChainPairingStatus: "Paired",
 			}
 
-			if device.VinConfirmed && vehicleMinted && integSignalsThisWeek.Contains(integr.Id) {
+			if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
 				uri.Points = int(integr.Points)
 				uri.DataThisWeek = true
 			}
