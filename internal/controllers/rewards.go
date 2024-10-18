@@ -110,6 +110,8 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return err
 	}
 
+	logger.Info().Interface("vehicles", vehicles).Msg("Got vehicle summary from ClickHouse.")
+
 	for _, v := range vehicles {
 		integrationsByTokenID[uint64(v.TokenID)] = v.Integrations
 	}
