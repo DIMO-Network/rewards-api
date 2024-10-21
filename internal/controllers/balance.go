@@ -18,9 +18,6 @@ import (
 // @Security     BearerAuth
 // @Router       /user/history/balance [get]
 func (r *RewardsController) GetBalanceHistory(c *fiber.Ctx) error {
-	// userID := getUserID(c)
-	// logger := r.Logger.With().Str("userId", userID).Logger()
-
 	maybeAddr, err := r.getCallerEthAddress(c)
 	if err != nil {
 		return err
