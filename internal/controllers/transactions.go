@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/models"
-	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/null/v8"
@@ -23,23 +22,20 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	userID := getUserID(c)
 	logger := r.Logger.With().Str("userId", userID).Logger()
 
-	user, err := r.UsersClient.GetUser(c.Context(), &pb_users.GetUserRequest{
-		Id: userID,
-	})
+	maybeAddr, err := r.getCallerEthAddress(c)
 	if err != nil {
-		logger.Err(err).Msg("Failed to retrieve user data.")
-		return opaqueInternalError
+		return err
 	}
 
 	txHistory := TransactionHistory{
 		Transactions: []APITransaction{},
 	}
 
-	if user.EthereumAddress == nil {
+	if maybeAddr == nil {
 		return c.JSON(txHistory)
 	}
 
-	addr := common.HexToAddress(*user.EthereumAddress)
+	addr := *maybeAddr
 
 	type enrichedTransfer struct {
 		models.TokenTransfer `boil:",bind"`

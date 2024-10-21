@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/models"
-	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
@@ -19,26 +18,23 @@ import (
 // @Security     BearerAuth
 // @Router       /user/history/balance [get]
 func (r *RewardsController) GetBalanceHistory(c *fiber.Ctx) error {
-	userID := getUserID(c)
-	logger := r.Logger.With().Str("userId", userID).Logger()
+	// userID := getUserID(c)
+	// logger := r.Logger.With().Str("userId", userID).Logger()
 
-	user, err := r.UsersClient.GetUser(c.Context(), &pb_users.GetUserRequest{
-		Id: userID,
-	})
+	maybeAddr, err := r.getCallerEthAddress(c)
 	if err != nil {
-		logger.Err(err).Msg("Failed to retrieve user data.")
-		return opaqueInternalError
+		return err
 	}
 
 	balanceHistory := BalanceHistory{
 		BalanceHistory: []Balance{},
 	}
 
-	if user.EthereumAddress == nil {
+	if maybeAddr == nil {
 		return c.JSON(balanceHistory)
 	}
 
-	addr := common.HexToAddress(*user.EthereumAddress)
+	addr := *maybeAddr
 
 	// Terrible no good.
 	tfs, err := models.TokenTransfers(
