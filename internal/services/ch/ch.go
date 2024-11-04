@@ -43,6 +43,19 @@ func NewClient(settings *config.Settings) (*Client, error) {
 	return &Client{conn: conn}, nil
 }
 
+const ruptelaConnAddrChecksummed = "0x3A6603E1065C9b3142403b1b7e349a6Ae936E819"
+
+// ConvertSourceToIntegrationID converts a "source" in ClickHouse to an old-style integration id.
+// For AutoPi, Macaron, Smartcar, Tesla this is just stripping off a prefix; but Ruptela
+// is identified by a "connection address".
+func ConvertSourceToIntegrationID(source string) string {
+	// Ruptela.
+	if source == ruptelaConnAddrChecksummed {
+		return "2lcaMFuCO0HJIUfdq8o780Kx5n3"
+	}
+	return strings.TrimPrefix(source, integPrefix)
+}
+
 // DescribeActiveDevices returns list of vehicles and associated vehicle integrations that have signals in Clickhouse during specified time period
 func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*Vehicle, error) {
 	q := &queries.Query{}
@@ -70,7 +83,7 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 		}
 
 		for i := range integrations {
-			integrations[i] = strings.TrimPrefix(integrations[i], integPrefix)
+			integrations[i] = ConvertSourceToIntegrationID(integrations[i])
 		}
 
 		vehicles = append(vehicles, &Vehicle{
@@ -123,7 +136,7 @@ func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint
 		}
 
 		for i := range integrations {
-			integrations[i] = strings.TrimPrefix(integrations[i], integPrefix)
+			integrations[i] = ConvertSourceToIntegrationID(integrations[i])
 		}
 
 		vehicles = append(vehicles, &Vehicle{
