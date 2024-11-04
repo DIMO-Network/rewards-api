@@ -146,8 +146,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		return err
 	}
 
-	logger.Info().Interface("vehicles", vehicles).Msg("Got vehicle summary from ClickHouse.")
-
 	for _, v := range vehicles {
 		integrationsByTokenID[uint64(v.TokenID)] = v.Integrations
 	}
@@ -175,10 +173,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		outInts := []UserResponseIntegration{}
 
 		vehicleMinted := device.TokenId != nil
-		if !vehicleMinted {
-			dlog.Info().Msg("Vehicle not minted.")
-			continue
-		}
 
 		var vehicleIntegsWithSignals []string
 		if device.TokenId != nil {
