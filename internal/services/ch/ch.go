@@ -17,11 +17,13 @@ import (
 
 // Client is a ClickHouse client that interacts with the ClickHouse database.
 type Client struct {
-	conn clickhouse.Conn
+	conn                clickhouse.Conn
+	ruptelaConnectionID string
 }
 
 const (
-	integPrefix = "dimo/integration/"
+	integPrefix          = "dimo/integration/"
+	ruptelaIntegrationID = "2lcaMFuCO0HJIUfdq8o780Kx5n3"
 )
 
 var dialect = drivers.Dialect{
@@ -40,18 +42,15 @@ func NewClient(settings *config.Settings) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping clickhouse: %w", err)
 	}
-	return &Client{conn: conn}, nil
+	return &Client{conn: conn, ruptelaConnectionID: settings.RuptelaConnectionID}, nil
 }
 
-const ruptelaConnAddrChecksummed = "0x3A6603E1065C9b3142403b1b7e349a6Ae936E819"
-
-// ConvertSourceToIntegrationID converts a "source" in ClickHouse to an old-style integration id.
+// convertSourceToIntegrationID converts a "source" in ClickHouse to an old-style integration id.
 // For AutoPi, Macaron, Smartcar, Tesla this is just stripping off a prefix; but Ruptela
-// is identified by a "connection address".
-func ConvertSourceToIntegrationID(source string) string {
-	// Ruptela.
-	if source == ruptelaConnAddrChecksummed {
-		return "2lcaMFuCO0HJIUfdq8o780Kx5n3"
+// in ClickHouse goes by a "connection id", an address.
+func (s *Client) convertSourceToIntegrationID(source string) string {
+	if source == s.ruptelaConnectionID {
+		return ruptelaIntegrationID
 	}
 	return strings.TrimPrefix(source, integPrefix)
 }
@@ -83,7 +82,7 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 		}
 
 		for i := range integrations {
-			integrations[i] = ConvertSourceToIntegrationID(integrations[i])
+			integrations[i] = s.convertSourceToIntegrationID(integrations[i])
 		}
 
 		vehicles = append(vehicles, &Vehicle{
@@ -136,7 +135,7 @@ func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint
 		}
 
 		for i := range integrations {
-			integrations[i] = ConvertSourceToIntegrationID(integrations[i])
+			integrations[i] = s.convertSourceToIntegrationID(integrations[i])
 		}
 
 		vehicles = append(vehicles, &Vehicle{
