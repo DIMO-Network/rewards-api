@@ -77,7 +77,7 @@ func (c *CHTestSuite) SetupSuite() {
 	c.Require().NoError(err, "Failed to send batch")
 
 	c.container = container
-	c.chClient = &Client{conn: conn}
+	c.chClient = &Client{conn: conn, ruptelaConnectionID: "0x3A6603E1065C9b3142403b1b7e349a6Ae936E819"}
 }
 
 func (c *CHTestSuite) TearDownSuite() {
