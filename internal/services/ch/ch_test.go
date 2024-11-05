@@ -22,11 +22,13 @@ var Integrations = struct {
 	AutoPi   string
 	Smartcar string
 	Tesla    string
+	Ruptela  string
 }{
 	"2ULfuC8U9dOqRshZBAi0lMM1Rrx", // Macaron
 	"27qftVRWQYpVDcO5DltO5Ojbjxk", // AutoPi
 	"22N2xaPOq2WW2gAHBHd0Ikn4Zob", // Smartcar
 	"26A5Dk3vvvQutjSyF0Jka2DP5lg", // Tesla
+	"2lcaMFuCO0HJIUfdq8o780Kx5n3", // Ruptela
 }
 
 func TestCHService(t *testing.T) {
@@ -64,6 +66,7 @@ func (c *CHTestSuite) SetupSuite() {
 	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-2 * day), Name: "xdd2", Source: "dimo/integration/" + Integrations.Macaron, ValueNumber: 10.55})
 	mustAppend(&signalRow{TokenID: 5, Timestamp: weekEnd.Add(-3 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
 	mustAppend(&signalRow{TokenID: 7, Timestamp: weekEnd.Add(-10 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
+	mustAppend(&signalRow{TokenID: 11, Timestamp: weekEnd.Add(-4 * day), Name: "xdd", Source: "0x3A6603E1065C9b3142403b1b7e349a6Ae936E819", ValueNumber: 7.5})
 
 	c.Require().NoError(err, "Failed to append struct")
 
@@ -74,7 +77,7 @@ func (c *CHTestSuite) SetupSuite() {
 	c.Require().NoError(err, "Failed to send batch")
 
 	c.container = container
-	c.chClient = &Client{conn: conn}
+	c.chClient = &Client{conn: conn, ruptelaConnectionID: "0x3A6603E1065C9b3142403b1b7e349a6Ae936E819"}
 }
 
 func (c *CHTestSuite) TearDownSuite() {
@@ -87,7 +90,7 @@ func (c *CHTestSuite) Test_DescribeActiveDevices() {
 	resp, err := c.chClient.DescribeActiveDevices(ctx, weekEnd.Add(-7*day), weekEnd)
 	c.Require().NoError(err)
 
-	c.Len(resp, 2)
+	c.Len(resp, 3)
 
 	vehicleIDToIntegrations := make(map[int64][]string)
 	for _, r := range resp {
@@ -96,13 +99,14 @@ func (c *CHTestSuite) Test_DescribeActiveDevices() {
 
 	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
 	c.Require().ElementsMatch(vehicleIDToIntegrations[5], []string{Integrations.Tesla})
+	c.Require().ElementsMatch(vehicleIDToIntegrations[11], []string{Integrations.Ruptela})
 }
 
 func (c *CHTestSuite) Test_GetIntegrations() {
-	resp, err := c.chClient.GetIntegrationsForVehicles(context.TODO(), []uint64{3, 7}, weekEnd.Add(-7*day), weekEnd)
+	resp, err := c.chClient.GetIntegrationsForVehicles(context.TODO(), []uint64{3, 7, 11}, weekEnd.Add(-7*day), weekEnd)
 	c.Require().NoError(err)
 
-	c.Len(resp, 1)
+	c.Len(resp, 2)
 
 	vehicleIDToIntegrations := make(map[int64][]string)
 	for _, r := range resp {
@@ -110,6 +114,7 @@ func (c *CHTestSuite) Test_GetIntegrations() {
 	}
 
 	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
+	c.Require().ElementsMatch(vehicleIDToIntegrations[11], []string{Integrations.Ruptela})
 }
 
 type signalRow struct {
