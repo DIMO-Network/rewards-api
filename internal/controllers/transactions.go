@@ -12,6 +12,9 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+// Thanks, Jade!
+const transactionLimit = 50
+
 // GetTransactionHistory godoc
 // @Description  A summary of the user's DIMO transaction history, all time.
 // @Success      200 {object} controllers.TransactionHistory
@@ -54,6 +57,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 			qm.Or2(models.TokenTransferWhere.AddressFrom.EQ(addr.Bytes())),
 		),
 		qm.OrderBy(models.TokenTransferTableColumns.BlockTimestamp + " DESC, " + models.TokenTransferTableColumns.ChainID + " ASC, " + models.TokenTransferTableColumns.LogIndex + " DESC"),
+		qm.Limit(transactionLimit),
 	}
 
 	if typ := c.Query("type"); typ != "" {
