@@ -17,19 +17,24 @@ import (
 
 // Client is a ClickHouse client that interacts with the ClickHouse database.
 type Client struct {
-	conn                clickhouse.Conn
-	ruptelaConnectionID string
+	conn clickhouse.Conn
 }
 
-const (
-	integPrefix          = "dimo/integration/"
-	ruptelaIntegrationID = "2lcaMFuCO0HJIUfdq8o780Kx5n3"
+const integPrefix = "dimo/integration/"
+
+var (
+	dialect = drivers.Dialect{
+		LQ: '`',
+		RQ: '`',
+	}
+	connectionIDToIntegrationID = map[string]string{
+		"0x5a87788D90f0ded17A35E4BDaCb47f1993021630": "2lcaMFuCO0HJIUfdq8o780Kx5n3", // ruptela
+		// "0x762Fd53c4973075a6fC0d17237BC65E183299980": "27qftVRWQYpVDcO5DltO5Ojbjxk", // autopi
+		// "0x354574EC2cC27A29410df751e43723B1bC362Ce4": "26A5Dk3vvvQutjSyF0Jka2DP5lg", // tesla
+		// "0xd3dA3efd882BA2357709328750Cf409A9131b820": "2ULfuC8U9dOqRshZBAi0lMM1Rrx", // macaron
+		// "0x25229D85599603351Ac4f7606DB92Cf85D7F6A1F": "22N2xaPOq2WW2gAHBHd0Ikn4Zob", // smartcar
+	}
 )
-
-var dialect = drivers.Dialect{
-	LQ: '`',
-	RQ: '`',
-}
 
 // NewClient creates a new ClickHouse client.
 func NewClient(settings *config.Settings) (*Client, error) {
@@ -42,15 +47,15 @@ func NewClient(settings *config.Settings) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping clickhouse: %w", err)
 	}
-	return &Client{conn: conn, ruptelaConnectionID: settings.RuptelaConnectionID}, nil
+	return &Client{conn: conn}, nil
 }
 
 // convertSourceToIntegrationID converts a "source" in ClickHouse to an old-style integration id.
 // For AutoPi, Macaron, Smartcar, Tesla this is just stripping off a prefix; but Ruptela
 // in ClickHouse goes by a "connection id", an address.
 func (s *Client) convertSourceToIntegrationID(source string) string {
-	if source == s.ruptelaConnectionID {
-		return ruptelaIntegrationID
+	if integrationID, ok := connectionIDToIntegrationID[source]; ok {
+		return integrationID
 	}
 	return strings.TrimPrefix(source, integPrefix)
 }
