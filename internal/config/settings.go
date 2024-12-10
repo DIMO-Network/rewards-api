@@ -33,5 +33,4 @@ type Settings struct {
 	ContractEventTopic             string          `yaml:"CONTRACT_EVENT_TOPIC"`
 	DeviceDataIndexPrefix          string          `yaml:"DEVICE_DATA_INDEX_PREFIX"`
 	Clickhouse                     config.Settings `yaml:",inline"`
-	RuptelaConnectionID            string          `yaml:"RUPTELA_CONNECTION_ID"`
 }
