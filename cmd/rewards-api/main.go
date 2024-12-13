@@ -176,7 +176,7 @@ func main() {
 		v1 := app.Group("/v1")
 
 		v1.Get("/aftermarket/device/:tokenID", deviceController.GetDevice)
-
+		v1.Get("/rewards/potential", rewardsController.GetPotentialTokens)
 		user := v1.Group("/user", jwtAuth)
 		user.Get("/", rewardsController.GetUserRewards)
 		user.Get("/history", rewardsController.GetUserRewardsHistory)

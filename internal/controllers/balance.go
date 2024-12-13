@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"math/big"
+	"strconv"
 	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -76,4 +78,44 @@ type Balance struct {
 	Time time.Time `json:"time" swaggertype:"string" example:"2023-03-06T09:11:00Z"`
 	// Balance is the total amount of $DIMO held at this time, across all chains.
 	Balance *big.Int `json:"balance" swaggertype:"number" example:"237277217092548851191"`
+}
+
+// GetPotentialTokens godoc
+// @Description Calculate potential DIMO token earnings for a given week and points
+// @Param        date   query    string  true  "Week date (YYYY-MM-DD)"
+// @Param        points query    int     true  "Number of points"
+// @Success      200    {object} PotentialTokensResponse
+// @Router       /rewards/potential [get]
+func (r *RewardsController) GetPotentialTokens(c *fiber.Ctx) error {
+	dateStr := c.Query("date")
+	date := time.Now().Add(-7 * 24 * time.Hour)
+	if dateStr != "" {
+		var err error
+		date, err = time.Parse(time.DateOnly, dateStr)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid date format, use YYYY-MM-DD")
+		}
+	}
+
+	points, err := strconv.Atoi(c.Query("points"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid points value")
+	}
+
+	dbStorage := storage.DBStorage{DBS: r.DB, Logger: r.Logger}
+	potentialTokens, err := dbStorage.CalculateTokensForPoints(c.Context(), points, date)
+	if err != nil {
+	}
+
+	return c.JSON(PotentialTokensResponse{
+		Date:        date,
+		Points:      points,
+		TokenAmount: potentialTokens,
+	})
+}
+
+type PotentialTokensResponse struct {
+	Date        time.Time    `json:"date"`
+	Points      int          `json:"points"`
+	TokenAmount *decimal.Big `json:"tokenAmount"`
 }
