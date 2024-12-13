@@ -105,6 +105,8 @@ func (r *RewardsController) GetPotentialTokens(c *fiber.Ctx) error {
 	dbStorage := storage.DBStorage{DBS: r.DB, Logger: r.Logger}
 	potentialTokens, err := dbStorage.CalculateTokensForPoints(c.Context(), points, date)
 	if err != nil {
+		// do we have error handling for db errors?
+		return err
 	}
 
 	return c.JSON(PotentialTokensResponse{

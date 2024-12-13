@@ -102,7 +102,7 @@ AND r.tokens > 0;
 
 // CalculateTokensForPoints calculates how many tokens a given number of points is worth.
 func (s *DBStorage) CalculateTokensForPoints(ctx context.Context, points int, date time.Time) (*decimal.Big, error) {
-	var tokens types.Decimal
+	var tokens types.NullDecimal
 	err := s.DBS.DBS().Reader.QueryRowContext(ctx, tokensPerWeekQuery, date, points).Scan(&tokens)
 	if err != nil {
 		if err == sql.ErrNoRows {
