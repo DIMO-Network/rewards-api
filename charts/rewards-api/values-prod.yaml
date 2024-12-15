@@ -21,6 +21,7 @@ env:
   DEVICE_DATA_INDEX_PREFIX: device-status-prod-
   DEVICES_API_GRPC_ADDR: devices-api-prod:8086
   USERS_API_GRPC_ADDR: users-api-prod:8086
+  ACCOUNTS_API_GRPC_ADDR: accounts-api-prod:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-prod:8086
   META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
   META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status

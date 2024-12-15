@@ -13,15 +13,17 @@ import (
 	context "context"
 	reflect "reflect"
 
-	grpc "github.com/DIMO-Network/users-api/pkg/grpc"
+	grpc "github.com/DIMO-Network/accounts-api/pkg/grpc"
+	grpc0 "github.com/DIMO-Network/users-api/pkg/grpc"
 	gomock "go.uber.org/mock/gomock"
-	grpc0 "google.golang.org/grpc"
+	grpc1 "google.golang.org/grpc"
 )
 
 // MockUsersClient is a mock of UsersClient interface.
 type MockUsersClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockUsersClientMockRecorder
+	isgomock struct{}
 }
 
 // MockUsersClientMockRecorder is the mock recorder for MockUsersClient.
@@ -42,14 +44,14 @@ func (m *MockUsersClient) EXPECT() *MockUsersClientMockRecorder {
 }
 
 // GetUsersByEthereumAddress mocks base method.
-func (m *MockUsersClient) GetUsersByEthereumAddress(ctx context.Context, in *grpc.GetUsersByEthereumAddressRequest, opts ...grpc0.CallOption) (*grpc.GetUsersByEthereumAddressResponse, error) {
+func (m *MockUsersClient) GetUsersByEthereumAddress(ctx context.Context, in *grpc0.GetUsersByEthereumAddressRequest, opts ...grpc1.CallOption) (*grpc0.GetUsersByEthereumAddressResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetUsersByEthereumAddress", varargs...)
-	ret0, _ := ret[0].(*grpc.GetUsersByEthereumAddressResponse)
+	ret0, _ := ret[0].(*grpc0.GetUsersByEthereumAddressResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -59,4 +61,48 @@ func (mr *MockUsersClientMockRecorder) GetUsersByEthereumAddress(ctx, in any, op
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, in}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUsersByEthereumAddress", reflect.TypeOf((*MockUsersClient)(nil).GetUsersByEthereumAddress), varargs...)
+}
+
+// MockAccountsClient is a mock of AccountsClient interface.
+type MockAccountsClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockAccountsClientMockRecorder
+	isgomock struct{}
+}
+
+// MockAccountsClientMockRecorder is the mock recorder for MockAccountsClient.
+type MockAccountsClientMockRecorder struct {
+	mock *MockAccountsClient
+}
+
+// NewMockAccountsClient creates a new mock instance.
+func NewMockAccountsClient(ctrl *gomock.Controller) *MockAccountsClient {
+	mock := &MockAccountsClient{ctrl: ctrl}
+	mock.recorder = &MockAccountsClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAccountsClient) EXPECT() *MockAccountsClientMockRecorder {
+	return m.recorder
+}
+
+// TempReferral mocks base method.
+func (m *MockAccountsClient) TempReferral(ctx context.Context, req *grpc.TempReferralRequest, opts ...grpc1.CallOption) (*grpc.TempReferralResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "TempReferral", varargs...)
+	ret0, _ := ret[0].(*grpc.TempReferralResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TempReferral indicates an expected call of TempReferral.
+func (mr *MockAccountsClientMockRecorder) TempReferral(ctx, req any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TempReferral", reflect.TypeOf((*MockAccountsClient)(nil).TempReferral), varargs...)
 }

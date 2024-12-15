@@ -17,6 +17,8 @@ import (
 	"github.com/ericlagergren/decimal"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/IBM/sarama/mocks"
 	"github.com/docker/go-connections/nat"
@@ -322,6 +324,11 @@ func TestReferrals(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			usersClient := NewMockUsersClient(ctrl)
+			accountsClient := NewMockAccountsClient(ctrl)
+			accountsClient.EXPECT().TempReferral(gomock.Any(), gomock.Any()).Return(
+				nil, status.Error(codes.NotFound, "Not found xdd"),
+			)
+
 			usersClient.EXPECT().GetUsersByEthereumAddress(gomock.Any(), gomock.Any()).DoAndReturn(
 				func(ctx context.Context, in *pb.GetUsersByEthereumAddressRequest, opts ...grpc.CallOption) (*pb.GetUsersByEthereumAddressResponse, error) {
 					for _, u := range scen.Users {
@@ -351,7 +358,7 @@ func TestReferrals(t *testing.T) {
 					return &pb.GetUsersByEthereumAddressResponse{Users: []*pb.User{}}, nil
 				}).AnyTimes()
 
-			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient)
+			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient, accountsClient)
 			referralBonusService.ContractAddress = refContractAddr
 
 			refs, err := referralBonusService.CollectReferrals(ctx, 8)
@@ -442,8 +449,9 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	usersClient := NewMockUsersClient(ctrl)
+	accountsClient := NewMockAccountsClient(ctrl)
 
-	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient)
+	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient, accountsClient)
 
 	refs := Referrals{
 		Referees:        []common.Address{mkAddr(1)},
