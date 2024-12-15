@@ -2,7 +2,7 @@ replicaCount: 2
 image:
   repository: dimozone/rewards-api
   pullPolicy: IfNotPresent
-  tag: 1.22.4
+  tag: 1.22.6
 cronJob:
   enabled: true
   schedule: 0 5 * * 1
@@ -30,7 +30,6 @@ env:
   ISSUANCE_CONTRACT_ADDRESS: '0x8129f3cD3EBA82136Caf5aB87E2321c958Da5B63'
   TRANSFER_BATCH_SIZE: 100
   REFERRAL_CONTRACT_ADDRESS: '0x3a99A9c4997B710febd7696E73088Fd9e51f49a5'
-  RUPTELA_CONNECTION_ID: '0x3A6603E1065C9b3142403b1b7e349a6Ae936E819'
 ingress:
   enabled: true
   className: nginx

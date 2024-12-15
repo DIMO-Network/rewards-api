@@ -66,7 +66,7 @@ func (c *CHTestSuite) SetupSuite() {
 	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-2 * day), Name: "xdd2", Source: "dimo/integration/" + Integrations.Macaron, ValueNumber: 10.55})
 	mustAppend(&signalRow{TokenID: 5, Timestamp: weekEnd.Add(-3 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
 	mustAppend(&signalRow{TokenID: 7, Timestamp: weekEnd.Add(-10 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
-	mustAppend(&signalRow{TokenID: 11, Timestamp: weekEnd.Add(-4 * day), Name: "xdd", Source: "0x3A6603E1065C9b3142403b1b7e349a6Ae936E819", ValueNumber: 7.5})
+	mustAppend(&signalRow{TokenID: 11, Timestamp: weekEnd.Add(-4 * day), Name: "xdd", Source: "0xF26421509Efe92861a587482100c6d728aBf1CD0", ValueNumber: 7.5})
 
 	c.Require().NoError(err, "Failed to append struct")
 
@@ -77,7 +77,7 @@ func (c *CHTestSuite) SetupSuite() {
 	c.Require().NoError(err, "Failed to send batch")
 
 	c.container = container
-	c.chClient = &Client{conn: conn, ruptelaConnectionID: "0x3A6603E1065C9b3142403b1b7e349a6Ae936E819"}
+	c.chClient = &Client{conn: conn}
 }
 
 func (c *CHTestSuite) TearDownSuite() {
