@@ -159,10 +159,14 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 
 		accResp, err := c.AccountsClient.TempReferral(ctx, &pb_accounts.TempReferralRequest{WalletAddress: user.Bytes()})
 		if err != nil {
-			if s, ok := status.FromError(err); ok && s.Code() != codes.NotFound {
+			if s, ok := status.FromError(err); ok {
+				if s.Code() != codes.NotFound {
+					return refs, err
+				}
+				// Otherwise, the address was simply not found in accounts-api. See if this is an old-style user, in users-api.
+			} else {
 				return refs, err
 			}
-			// Address not found in accounts-api. See if this is an old-style user, in users-api.
 		} else {
 			if accResp.WasReferred {
 				referrerID := "DELETED"
