@@ -169,11 +169,13 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 		aftermarketPoints := rand.Int() % 1000
 		syntheticPoints := rand.Int() % 1000
 
-		// Calculate tokens: points * conversion rate * ether
-		points := streakPoints + aftermarketPoints + syntheticPoints
-		tokensForThis := new(decimal.Big).Mul(decimal.New(int64(points), 0), conversionRate)
-		tokensForThis.Mul(tokensForThis, etherDecimal)
-
+		// Calculate tokens: points * conversion rate * etherx
+		streakTokens := new(decimal.Big).Mul(decimal.New(int64(streakPoints), 0), conversionRate)
+		streakTokens.Mul(streakTokens, etherDecimal)
+		aftermarketTokens := new(decimal.Big).Mul(decimal.New(int64(aftermarketPoints), 0), conversionRate)
+		aftermarketTokens.Mul(aftermarketTokens, etherDecimal)
+		syntheticTokens := new(decimal.Big).Mul(decimal.New(int64(syntheticPoints), 0), conversionRate)
+		syntheticTokens.Mul(syntheticTokens, etherDecimal)
 		reward := models.Reward{
 			IssuanceWeekID:          100,
 			UserDeviceID:            ksuid.New().String(),
@@ -182,9 +184,11 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 			AftermarketDevicePoints: aftermarketPoints,
 			SyntheticDevicePoints:   syntheticPoints,
 
-			CreatedAt: testDate,
-			UpdatedAt: testDate,
-			Tokens:    types.NewNullDecimal(tokensForThis),
+			CreatedAt:               testDate,
+			UpdatedAt:               testDate,
+			StreakTokens:            types.NewNullDecimal(streakTokens),
+			AftermarketDeviceTokens: types.NewNullDecimal(aftermarketTokens),
+			SyntheticDeviceTokens:   types.NewNullDecimal(syntheticTokens),
 		}
 
 		err := reward.Insert(context.TODO(), conn.DBS().Writer, boil.Infer())

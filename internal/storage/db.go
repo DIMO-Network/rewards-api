@@ -85,19 +85,26 @@ func (s *DBStorage) AssignTokens(ctx context.Context, issuanceWeek, firstAutomat
 
 var tokensPerWeekQuery = `
 SELECT 
-	SUM(r.tokens)::numeric / NULLIF(SUM(
+	SUM(
+		r.streak_tokens +
+		r.synthetic_device_tokens +
+		r.aftermarket_device_tokens
+	)::numeric / NULLIF(SUM(
         r.streak_points + 
         r.integration_points + 
         r.aftermarket_device_points + 
         r.synthetic_device_points
     ), 0) * $2 as tokens_for_points
 FROM rewards_api.issuance_weeks w
-JOIN rewards_api.rewards r TABLESAMPLE BERNOULLI(10)
+JOIN rewards_api.rewards r 
     ON r.issuance_week_id = w.id
 WHERE w.starts_at <= $1 
 AND w.ends_at > $1
-AND r.tokens IS NOT NULL
-AND r.tokens > 0;
+AND (r.streak_tokens > 0
+	OR r.synthetic_device_tokens > 0
+	OR r.aftermarket_device_tokens > 0
+)
+LIMIT 10;
 `
 
 // CalculateTokensForPoints calculates how many tokens a given number of points is worth.
