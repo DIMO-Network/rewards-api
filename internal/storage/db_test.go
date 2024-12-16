@@ -203,7 +203,7 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 	db := DBStorage{DBS: conn, Logger: &logger}
 
 	startTime := time.Now()
-	actualTokens, err := db.CalculateTokensForPoints(ctx, 1000, testDate)
+	actualTokens, err := db.CalculateTokensForPoints(ctx, 1000, 100)
 	require.NoError(t, err)
 	duration := time.Since(startTime)
 

@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"fmt"
 	"math/big"
 	"strconv"
 	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/ericlagergren/decimal"
@@ -82,19 +84,21 @@ type Balance struct {
 
 // GetPotentialTokens godoc
 // @Description Calculate potential DIMO token earnings for a given week and points
-// @Param        date   query    string  true  "Week date (YYYY-MM-DD)"
+// @Param        time   query    string  true  "Time in the week to calculate potential tokens for (RFC3339 format 2006-01-02T15:04:05Z07:00)"
 // @Param        points query    int     true  "Number of points"
 // @Success      200    {object} PotentialTokensResponse
 // @Router       /rewards/potential [get]
 func (r *RewardsController) GetPotentialTokens(c *fiber.Ctx) error {
-	dateStr := c.Query("date")
-	date := time.Now().Add(-7 * 24 * time.Hour)
+	dateStr := c.Query("time")
+	var weekID int
 	if dateStr != "" {
-		var err error
-		date, err = time.Parse(time.DateOnly, dateStr)
+		weekTime, err := time.Parse(time.RFC3339, dateStr)
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "invalid date format, use YYYY-MM-DD")
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid time format use %s", time.RFC3339))
 		}
+		weekID = services.GetWeekNumForCron(weekTime)
+	} else {
+		weekID = services.GetWeekNumForCron(time.Now()) - 1
 	}
 
 	points, err := strconv.Atoi(c.Query("points"))
@@ -103,21 +107,21 @@ func (r *RewardsController) GetPotentialTokens(c *fiber.Ctx) error {
 	}
 
 	dbStorage := storage.DBStorage{DBS: r.DB, Logger: r.Logger}
-	potentialTokens, err := dbStorage.CalculateTokensForPoints(c.Context(), points, date)
+	potentialTokens, err := dbStorage.CalculateTokensForPoints(c.Context(), points, weekID)
 	if err != nil {
 		// do we have error handling for db errors?
 		return err
 	}
 
 	return c.JSON(PotentialTokensResponse{
-		Date:        date,
+		WeekID:      weekID,
 		Points:      points,
 		TokenAmount: potentialTokens,
 	})
 }
 
 type PotentialTokensResponse struct {
-	Date        time.Time    `json:"date"`
+	WeekID      int          `json:"weekId"`
 	Points      int          `json:"points"`
 	TokenAmount *decimal.Big `json:"tokenAmount"`
 }

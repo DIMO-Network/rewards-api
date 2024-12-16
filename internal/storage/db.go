@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
@@ -95,12 +94,9 @@ SELECT
         r.aftermarket_device_points + 
         r.synthetic_device_points
     ), 0) * $2 as tokens_for_points
-FROM rewards_api.issuance_weeks w
-JOIN rewards_api.rewards r 
-    ON r.issuance_week_id = w.id
-WHERE w.starts_at <= $1 
-AND w.ends_at > $1
-AND (r.streak_tokens > 0
+FROM rewards_api.rewards r 
+WHERE r.issuance_week_id = $1
+	AND (r.streak_tokens > 0
 	OR r.synthetic_device_tokens > 0
 	OR r.aftermarket_device_tokens > 0
 )
@@ -108,7 +104,7 @@ LIMIT 10;
 `
 
 // CalculateTokensForPoints calculates how many tokens a given number of points is worth.
-func (s *DBStorage) CalculateTokensForPoints(ctx context.Context, points int, date time.Time) (*decimal.Big, error) {
+func (s *DBStorage) CalculateTokensForPoints(ctx context.Context, points int, date int) (*decimal.Big, error) {
 	var tokens types.NullDecimal
 	err := s.DBS.DBS().Reader.QueryRowContext(ctx, tokensPerWeekQuery, date, points).Scan(&tokens)
 	if err != nil {
