@@ -162,7 +162,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			if s, ok := status.FromError(err); ok && s.Code() != codes.NotFound {
 				return refs, err
 			}
-			// See if this is an old-style user, in users-api.
+			// Address not found in accounts-api. See if this is an old-style user, in users-api.
 		} else {
 			if accResp.WasReferred {
 				referrerID := "DELETED"
@@ -171,6 +171,8 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 				if accResp.ReferrerAccountId != "" && len(accResp.ReferrerWalletAddress) == common.AddressLength {
 					referrerID = accResp.ReferrerAccountId
 					referrerAddr = common.BytesToAddress(accResp.ReferrerWalletAddress)
+
+					logger.Info().Str("referringUser", referrerAddr.Hex()).Msg("Referral complete.")
 				}
 
 				refs.RefereeUserIDs = append(refs.RefereeUserIDs, accResp.AccountId)
