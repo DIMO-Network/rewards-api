@@ -373,7 +373,7 @@ func main() {
 		}
 		defer accountsConn.Close()
 
-		accountsClient := pb_accounts.NewAccountsClient(usersConn)
+		accountsClient := pb_accounts.NewAccountsClient(accountsConn)
 
 		referralsClient := services.NewReferralBonusService(&settings, transferService, week, &logger, usersClient, accountsClient)
 		err = referralsClient.ReferralsIssuance(ctx)
