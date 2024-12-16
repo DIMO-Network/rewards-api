@@ -164,7 +164,7 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 	fmt.Printf("Starting to insert test records...\n")
 	insertStart := time.Now()
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1000; i++ {
 		streakPoints := rand.Int() % 1000
 		aftermarketPoints := rand.Int() % 1000
 		syntheticPoints := rand.Int() % 1000
@@ -190,9 +190,6 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 		err := reward.Insert(context.TODO(), conn.DBS().Writer, boil.Infer())
 		require.NoError(t, err)
 
-		// if i > 0 && i%10_000 == 0 {
-		// 	fmt.Printf("Inserted %d records...\n", i)
-		// }
 	}
 
 	insertDuration := time.Since(insertStart)
@@ -220,9 +217,7 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 	require.NotNil(t, actualTokens)
 	assert.InEpsilon(t, expectedFloat, actualFloat, 0.0001, "Token calculation outside acceptable range")
 
-	// fmt.Printf("Query execution time: %v\n", duration)
-	// fmt.Printf("Expected tokens per 1000 points: %v\n", expectedFloat)
-	// fmt.Printf("Actual tokens per 1000 points: %v\n", actualFloat)
+	fmt.Printf("Query execution time: %v\n", duration)
 
 	// Performance threshold check
 	assert.Less(t, duration, 1*time.Second, "Query took longer than 1 second to execute")

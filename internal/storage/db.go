@@ -85,14 +85,14 @@ func (s *DBStorage) AssignTokens(ctx context.Context, issuanceWeek, firstAutomat
 
 var tokensPerWeekQuery = `
 SELECT 
-    (SUM(r.tokens)::numeric / NULLIF(SUM(
+	SUM(r.tokens)::numeric / NULLIF(SUM(
         r.streak_points + 
         r.integration_points + 
         r.aftermarket_device_points + 
         r.synthetic_device_points
-    ), 0)) * $2 as tokens_for_points
+    ), 0) * $2 as tokens_for_points
 FROM rewards_api.issuance_weeks w
-JOIN rewards_api.rewards r TABLESAMPLE SYSTEM(1)
+JOIN rewards_api.rewards r TABLESAMPLE BERNOULLI(10)
     ON r.issuance_week_id = w.id
 WHERE w.starts_at <= $1 
 AND w.ends_at > $1
@@ -109,6 +109,9 @@ func (s *DBStorage) CalculateTokensForPoints(ctx context.Context, points int, da
 			return nil, fmt.Errorf("no conversion rate found for date %v", date)
 		}
 		return nil, fmt.Errorf("error calculating tokens: %w", err)
+	}
+	if tokens.Big == nil {
+		return nil, fmt.Errorf("no conversion rate found for date %v", date)
 	}
 
 	// Divide result by ether
