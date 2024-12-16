@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	pb_accounts "github.com/DIMO-Network/accounts-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -20,11 +21,17 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 //go:generate mockgen -source=./referrals.go -destination=users_client_mock_test.go -package=services
 type UsersClient interface {
 	GetUsersByEthereumAddress(ctx context.Context, in *pb.GetUsersByEthereumAddressRequest, opts ...grpc.CallOption) (*pb.GetUsersByEthereumAddressResponse, error)
+}
+
+type AccountsClient interface {
+	TempReferral(ctx context.Context, req *pb_accounts.TempReferralRequest, opts ...grpc.CallOption) (*pb_accounts.TempReferralResponse, error)
 }
 
 type ReferralsClient struct {
@@ -33,6 +40,7 @@ type ReferralsClient struct {
 	Week            int
 	Logger          *zerolog.Logger
 	UsersClient     UsersClient
+	AccountsClient  AccountsClient
 }
 
 type Referrals struct {
@@ -47,7 +55,9 @@ func NewReferralBonusService(
 	transferService *TransferService,
 	week int,
 	logger *zerolog.Logger,
-	userClient UsersClient) *ReferralsClient {
+	userClient UsersClient,
+	accountsClient AccountsClient,
+) *ReferralsClient {
 
 	return &ReferralsClient{
 		TransferService: transferService,
@@ -55,6 +65,7 @@ func NewReferralBonusService(
 		Week:            week,
 		Logger:          logger,
 		UsersClient:     userClient,
+		AccountsClient:  accountsClient,
 	}
 }
 
@@ -146,12 +157,42 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			continue
 		}
 
+		accResp, err := c.AccountsClient.TempReferral(ctx, &pb_accounts.TempReferralRequest{WalletAddress: user.Bytes()})
+		if err != nil {
+			if s, ok := status.FromError(err); ok {
+				if s.Code() != codes.NotFound {
+					return refs, err
+				}
+				// Otherwise, the address was simply not found in accounts-api. See if this is an old-style user, in users-api.
+			} else {
+				return refs, err
+			}
+		} else {
+			if accResp.WasReferred {
+				referrerID := "DELETED"
+				referrerAddr := c.ContractAddress
+
+				if accResp.ReferrerAccountId != "" && len(accResp.ReferrerWalletAddress) == common.AddressLength {
+					referrerID = accResp.ReferrerAccountId
+					referrerAddr = common.BytesToAddress(accResp.ReferrerWalletAddress)
+
+					logger.Info().Str("referringUser", referrerAddr.Hex()).Msg("Referral complete.")
+				}
+
+				refs.RefereeUserIDs = append(refs.RefereeUserIDs, accResp.AccountId)
+				refs.Referees = append(refs.Referees, user)
+				refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, referrerID)
+				refs.Referrers = append(refs.Referrers, referrerAddr)
+			}
+
+			continue
+		}
+
 		resp, err := c.UsersClient.GetUsersByEthereumAddress(ctx, &pb.GetUsersByEthereumAddressRequest{EthereumAddress: user.Bytes()})
 		if err != nil {
 			return refs, err
 		}
 
-		referred := false
 		for _, potUser := range resp.Users { // These are ordered by creation time, descending.
 			if potUser.ReferredBy == nil {
 				continue
@@ -186,13 +227,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, referrerID)
 			refs.Referrers = append(refs.Referrers, referrerAddr)
 
-			referred = true
-
 			break
-		}
-
-		if !referred {
-			logger.Debug().Msg("User had no referrers.")
 		}
 	}
 

@@ -4,6 +4,7 @@ go 1.23
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
+	github.com/DIMO-Network/accounts-api v0.2.7
 	github.com/DIMO-Network/clickhouse-infra v0.0.3
 	github.com/DIMO-Network/device-definitions-api v1.2.79
 	github.com/DIMO-Network/devices-api v1.32.24
@@ -59,7 +60,7 @@ require (
 	github.com/consensys/gnark-crypto v0.13.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
-	github.com/cpuguy83/dockercfg v0.3.1 // indirect
+	github.com/cpuguy83/dockercfg v0.3.2 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240223125850-b1e8a79f509c // indirect
 	github.com/crate-crypto/go-kzg-4844 v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

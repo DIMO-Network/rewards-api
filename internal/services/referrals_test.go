@@ -17,6 +17,8 @@ import (
 	"github.com/ericlagergren/decimal"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/IBM/sarama/mocks"
 	"github.com/docker/go-connections/nat"
@@ -202,60 +204,6 @@ func TestReferrals(t *testing.T) {
 				{Referee: mkAddr(1), Referrer: refContractAddr},
 			},
 		},
-		// {
-		// 	Name: "New address, new token, old Vin",
-		// 	Devices: []Device{
-		// 		{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 0},
-		// 		{ID: "Dev3", UserID: "User3", TokenID: 3, Vin: "00000000000000001", FirstEarningWeek: 5},
-		// 	},
-		// 	Users: []refUser{
-		// 		{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
-		// 		{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
-		// 		{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: "2"},
-		// 	},
-		// 	Rewards: []Reward{
-		// 		{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
-		// 		{Week: 5, DeviceID: "Dev3", UserID: "User3", Earning: true},
-		// 	},
-		// 	Referrals: []Referral{},
-		// },
-		// {
-		// 	Name: "New Vin and user, same address",
-		// 	Devices: []Device{
-		// 		{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
-		// 		{ID: "Dev2", UserID: "User2", TokenID: 3, Vin: "00000000000000002", FirstEarningWeek: 5},
-		// 	},
-		// 	Users: []refUser{
-		// 		{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
-		// 		{ID: "User2", Address: mkAddr(1), Code: "2", CodeUsed: "3"},
-		// 		{ID: "User3", Address: mkAddr(3), Code: "3", CodeUsed: ""},
-		// 	},
-		// 	Rewards: []Reward{
-		// 		{Week: 3, DeviceID: "Dev1", UserID: "User1", Earning: true},
-		// 		{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
-		// 	},
-		// 	Referrals: []Referral{},
-		// },
-		// {
-		// 	Name: "New user, two vehicles, only one genuinely new",
-		// 	Devices: []Device{
-		// 		{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 3},
-		// 		{ID: "Dev2", UserID: "User2", TokenID: 2, Vin: "00000000000000002", FirstEarningWeek: 3},
-		// 		{ID: "Dev3", UserID: "User2", TokenID: 3, Vin: "00000000000000003", FirstEarningWeek: 5},
-		// 	},
-		// 	Users: []refUser{
-		// 		{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
-		// 		{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: "1"},
-		// 	},
-		// 	Rewards: []Reward{
-		// 		{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true},
-		// 		{Week: 5, DeviceID: "Dev2", UserID: "User2", Earning: true},
-		// 		{Week: 5, DeviceID: "Dev3", UserID: "User2", Earning: true},
-		// 	},
-		// 	Referrals: []Referral{
-		// 		{Referee: mkAddr(2), Referrer: mkAddr(1)},
-		// 	},
-		// },
 	}
 
 	for _, scen := range scens {
@@ -322,6 +270,11 @@ func TestReferrals(t *testing.T) {
 
 			ctrl := gomock.NewController(t)
 			usersClient := NewMockUsersClient(ctrl)
+			accountsClient := NewMockAccountsClient(ctrl)
+			accountsClient.EXPECT().TempReferral(gomock.Any(), gomock.Any()).Return(
+				nil, status.Error(codes.NotFound, "Not found xdd"),
+			)
+
 			usersClient.EXPECT().GetUsersByEthereumAddress(gomock.Any(), gomock.Any()).DoAndReturn(
 				func(ctx context.Context, in *pb.GetUsersByEthereumAddressRequest, opts ...grpc.CallOption) (*pb.GetUsersByEthereumAddressResponse, error) {
 					for _, u := range scen.Users {
@@ -351,7 +304,7 @@ func TestReferrals(t *testing.T) {
 					return &pb.GetUsersByEthereumAddressResponse{Users: []*pb.User{}}, nil
 				}).AnyTimes()
 
-			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient)
+			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient, accountsClient)
 			referralBonusService.ContractAddress = refContractAddr
 
 			refs, err := referralBonusService.CollectReferrals(ctx, 8)
@@ -365,9 +318,7 @@ func TestReferrals(t *testing.T) {
 
 			assert.ElementsMatch(t, scen.Referrals, actual)
 		})
-
 	}
-
 }
 
 func TestReferralsBatchRequest(t *testing.T) {
@@ -442,8 +393,9 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	usersClient := NewMockUsersClient(ctrl)
+	accountsClient := NewMockAccountsClient(ctrl)
 
-	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient)
+	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient, accountsClient)
 
 	refs := Referrals{
 		Referees:        []common.Address{mkAddr(1)},
