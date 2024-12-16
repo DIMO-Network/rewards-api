@@ -2,8 +2,6 @@ module github.com/DIMO-Network/rewards-api
 
 go 1.23
 
-toolchain go1.23.4
-
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
 	github.com/DIMO-Network/accounts-api v0.2.7
