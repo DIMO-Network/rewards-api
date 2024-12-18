@@ -82,13 +82,13 @@ type Balance struct {
 	Balance *big.Int `json:"balance" swaggertype:"number" example:"237277217092548851191"`
 }
 
-// GetPotentialTokens godoc
+// GetHistoricalConversion godoc
 // @Description Calculate potential DIMO token earnings for a given week and points
-// @Param        time   query    string  true  "Time in the week to calculate potential tokens for (RFC3339 format 2006-01-02T15:04:05Z07:00)"
+// @Param        time   query    string  true  "Time in the week to calculate potential tokens earned based on the provided points (RFC3339 format 2006-01-02T15:04:05Z07:00)"
 // @Param        points query    int     true  "Number of points"
-// @Success      200    {object} PotentialTokensResponse
+// @Success      200    {object} HistoricalConversionResponse
 // @Router       /rewards/potential [get]
-func (r *RewardsController) GetPotentialTokens(c *fiber.Ctx) error {
+func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
 	dateStr := c.Query("time")
 	var weekID int
 	if dateStr != "" {
@@ -113,14 +113,14 @@ func (r *RewardsController) GetPotentialTokens(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(PotentialTokensResponse{
+	return c.JSON(HistoricalConversionResponse{
 		WeekID:      weekID,
 		Points:      points,
 		TokenAmount: potentialTokens,
 	})
 }
 
-type PotentialTokensResponse struct {
+type HistoricalConversionResponse struct {
 	WeekID      int          `json:"weekId"`
 	Points      int          `json:"points"`
 	TokenAmount *decimal.Big `json:"tokenAmount"`
