@@ -1,9 +1,13 @@
 package controllers
 
 import (
+	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
+	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -76,4 +80,48 @@ type Balance struct {
 	Time time.Time `json:"time" swaggertype:"string" example:"2023-03-06T09:11:00Z"`
 	// Balance is the total amount of $DIMO held at this time, across all chains.
 	Balance *big.Int `json:"balance" swaggertype:"number" example:"237277217092548851191"`
+}
+
+// GetHistoricalConversion godoc
+// @Description Calculate DIMO token earned fo a given week and popints
+// @Param        points query    int     true  "Number of points"
+// @Param        time   query    string  false  "Time in the week to calculate potential tokens earned based on the provided points (defaults to last week) (format 2006-01-02T15:04:05Z07:00)"
+// @Success      200    {object} HistoricalConversionResponse
+// @Router       /rewards/convert [get]
+func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
+	dateStr := c.Query("time")
+	var weekID int
+	if dateStr != "" {
+		weekTime, err := time.Parse(time.RFC3339, dateStr)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid time format use %s", time.RFC3339))
+		}
+		weekID = services.GetWeekNumForCron(weekTime)
+	} else {
+		weekID = services.GetWeekNumForCron(time.Now()) - 1
+	}
+
+	points, err := strconv.Atoi(c.Query("points"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid points value")
+	}
+
+	dbStorage := storage.DBStorage{DBS: r.DB, Logger: r.Logger}
+	potentialTokens, err := dbStorage.CalculateTokensForPoints(c.Context(), points, weekID)
+	if err != nil {
+		// do we have error handling for db errors?
+		return err
+	}
+
+	return c.JSON(HistoricalConversionResponse{
+		WeekID:      weekID,
+		Points:      points,
+		TokenAmount: potentialTokens,
+	})
+}
+
+type HistoricalConversionResponse struct {
+	WeekID      int          `json:"weekId"`
+	Points      int          `json:"points"`
+	TokenAmount *decimal.Big `json:"tokenAmount"`
 }
