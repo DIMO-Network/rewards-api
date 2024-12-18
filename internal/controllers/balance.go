@@ -83,11 +83,11 @@ type Balance struct {
 }
 
 // GetHistoricalConversion godoc
-// @Description Calculate potential DIMO token earnings for a given week and points
-// @Param        time   query    string  true  "Time in the week to calculate potential tokens earned based on the provided points (RFC3339 format 2006-01-02T15:04:05Z07:00)"
+// @Description Calculate DIMO token earned fo a given week and popints
 // @Param        points query    int     true  "Number of points"
+// @Param        time   query    string  false  "Time in the week to calculate potential tokens earned based on the provided points (defaults to last week) (format 2006-01-02T15:04:05Z07:00)"
 // @Success      200    {object} HistoricalConversionResponse
-// @Router       /rewards/potential [get]
+// @Router       /rewards/convert [get]
 func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
 	dateStr := c.Query("time")
 	var weekID int

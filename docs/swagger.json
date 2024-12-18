@@ -7,30 +7,29 @@
     },
     "basePath": "/v1",
     "paths": {
-        "/rewards/potential": {
+        "/rewards/convert": {
             "get": {
-                "description": "Calculate potential DIMO token earnings for a given week and points",
+                "description": "Calculate DIMO token earned fo a given week and popints",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Time in the week to calculate potential tokens for (RFC3339 format 2006-01-02T15:04:05Z07:00)",
-                        "name": "time",
-                        "in": "query",
-                        "required": true
-                    },
                     {
                         "type": "integer",
                         "description": "Number of points",
                         "name": "points",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Time in the week to calculate potential tokens earned based on the provided points (defaults to last week) (format 2006-01-02T15:04:05Z07:00)",
+                        "name": "time",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_controllers.PotentialTokensResponse"
+                            "$ref": "#/definitions/internal_controllers.HistoricalConversionResponse"
                         }
                     }
                 }
@@ -347,6 +346,20 @@
                 }
             }
         },
+        "internal_controllers.HistoricalConversionResponse": {
+            "type": "object",
+            "properties": {
+                "points": {
+                    "type": "integer"
+                },
+                "tokenAmount": {
+                    "$ref": "#/definitions/decimal.Big"
+                },
+                "weekId": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_controllers.HistoryResponse": {
             "type": "object",
             "properties": {
@@ -380,20 +393,6 @@
                     "description": "Tokens is the number of tokens the user earned this week.",
                     "type": "number",
                     "example": 4000
-                }
-            }
-        },
-        "internal_controllers.PotentialTokensResponse": {
-            "type": "object",
-            "properties": {
-                "points": {
-                    "type": "integer"
-                },
-                "tokenAmount": {
-                    "$ref": "#/definitions/decimal.Big"
-                },
-                "weekId": {
-                    "type": "integer"
                 }
             }
         },

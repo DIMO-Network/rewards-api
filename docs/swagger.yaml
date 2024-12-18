@@ -179,6 +179,15 @@ definitions:
           $ref: '#/definitions/internal_controllers.Balance'
         type: array
     type: object
+  internal_controllers.HistoricalConversionResponse:
+    properties:
+      points:
+        type: integer
+      tokenAmount:
+        $ref: '#/definitions/decimal.Big'
+      weekId:
+        type: integer
+    type: object
   internal_controllers.HistoryResponse:
     properties:
       weeks:
@@ -204,15 +213,6 @@ definitions:
         description: Tokens is the number of tokens the user earned this week.
         example: 4000
         type: number
-    type: object
-  internal_controllers.PotentialTokensResponse:
-    properties:
-      points:
-        type: integer
-      tokenAmount:
-        $ref: '#/definitions/decimal.Big'
-      weekId:
-        type: integer
     type: object
   internal_controllers.TransactionHistory:
     properties:
@@ -378,26 +378,25 @@ info:
   title: DIMO Rewards API
   version: "1.0"
 paths:
-  /rewards/potential:
+  /rewards/convert:
     get:
-      description: Calculate potential DIMO token earnings for a given week and points
+      description: Calculate DIMO token earned fo a given week and popints
       parameters:
-      - description: Time in the week to calculate potential tokens for (RFC3339 format
-          2006-01-02T15:04:05Z07:00)
-        in: query
-        name: time
-        required: true
-        type: string
       - description: Number of points
         in: query
         name: points
         required: true
         type: integer
+      - description: Time in the week to calculate potential tokens earned based on
+          the provided points (defaults to last week) (format 2006-01-02T15:04:05Z07:00)
+        in: query
+        name: time
+        type: string
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_controllers.PotentialTokensResponse'
+            $ref: '#/definitions/internal_controllers.HistoricalConversionResponse'
   /user:
     get:
       description: A summary of the user's rewards.
