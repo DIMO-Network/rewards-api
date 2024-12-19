@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
@@ -25,10 +26,18 @@ const (
 	contractEventType = "zone.dimo.contract.event"
 )
 
-type ContractEventStreamConsumer struct {
+type DIMOTransferListener struct {
 	Db     db.Store
 	log    *zerolog.Logger
 	tokens map[string]string
+
+	// Only one partition for contract events, so no need to share the cache.
+	// But we lock anyway just so it doesn't look weird.
+	userAddrsmap map[common.Address]struct{}
+
+	outsideAddrsmap map[common.Address]struct{}
+
+	mu sync.Mutex
 }
 
 type contractEventData struct {
@@ -55,7 +64,7 @@ type TokenConfig struct {
 	} `yaml:"tokens"`
 }
 
-func NewEventConsumer(db db.Store, logger *zerolog.Logger, tc *TokenConfig) (*ContractEventStreamConsumer, error) {
+func NewEventConsumer(db db.Store, logger *zerolog.Logger, tc *TokenConfig) (*DIMOTransferListener, error) {
 	m := map[string]string{}
 
 	for _, tk := range tc.Tokens {
@@ -63,17 +72,17 @@ func NewEventConsumer(db db.Store, logger *zerolog.Logger, tc *TokenConfig) (*Co
 		m[fmt.Sprintf("chain/%d", tk.ChainID)] = hexutil.Encode(tk.Address.Bytes())
 	}
 
-	return &ContractEventStreamConsumer{Db: db,
+	return &DIMOTransferListener{Db: db,
 		log:    logger,
 		tokens: m,
 	}, nil
 }
 
-func (c *ContractEventStreamConsumer) Setup(sarama.ConsumerGroupSession) error { return nil }
+func (c *DIMOTransferListener) Setup(sarama.ConsumerGroupSession) error { return nil }
 
-func (c *ContractEventStreamConsumer) Cleanup(sarama.ConsumerGroupSession) error { return nil }
+func (c *DIMOTransferListener) Cleanup(sarama.ConsumerGroupSession) error { return nil }
 
-func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (c *DIMOTransferListener) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for {
 		select {
 		case message := <-claim.Messages():
@@ -90,6 +99,7 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 				continue
 			}
 
+			// The source field is, e.g., "chain/137" for Polygon.
 			if addr, ok := c.tokens[event.Source]; !ok || addr != event.Subject || event.Data.EventName != "Transfer" {
 				session.MarkMessage(message, "")
 				continue
@@ -107,7 +117,29 @@ func (c *ContractEventStreamConsumer) ConsumeClaim(session sarama.ConsumerGroupS
 	}
 }
 
-func (c *ContractEventStreamConsumer) processTransferEvent(e *shared.CloudEvent[contractEventData]) error {
+func (c *DIMOTransferListener) areTransferAddrsRelevant(from, to common.Address) (bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.userAddrsmap[from]; ok {
+		return true, nil
+	}
+	if _, ok := c.userAddrsmap[to]; ok {
+		return true, nil
+	}
+
+	// Neither address known to be a user.
+
+	if _, ok := c.outsideAddrsmap[from]; ok {
+		if _, ok := c.outsideAddrsmap[to]; ok {
+			return false, nil
+		}
+
+	}
+
+	// TODO(elffjs): Could try to record who's not a user
+}
+
+func (c *DIMOTransferListener) processTransferEvent(e *shared.CloudEvent[contractEventData]) error {
 	if !strings.HasPrefix(e.Source, "chain/") {
 		return fmt.Errorf("source doesn't have the chain/ prefix: %s", e.Source)
 	}
