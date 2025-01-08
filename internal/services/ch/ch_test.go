@@ -62,6 +62,7 @@ func (c *CHTestSuite) SetupSuite() {
 	}
 
 	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
+	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 65})
 	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
 	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-2 * day), Name: "xdd2", Source: "dimo/integration/" + Integrations.Macaron, ValueNumber: 10.55})
 	mustAppend(&signalRow{TokenID: 5, Timestamp: weekEnd.Add(-3 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
