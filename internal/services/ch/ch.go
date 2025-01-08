@@ -8,6 +8,7 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/DIMO-Network/clickhouse-infra/pkg/connect"
+	"github.com/DIMO-Network/model-garage/pkg/vss"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/volatiletech/sqlboiler/v4/drivers"
 	"github.com/volatiletech/sqlboiler/v4/queries"
@@ -21,6 +22,10 @@ type Client struct {
 }
 
 const integPrefix = "dimo/integration/"
+
+// constantSignals are signals that never change. They tend to come from VIN decoding and should
+// not be taken as signs of an active connection.
+var constantSignals = []any{vss.FieldPowertrainTractionBatteryGrossCapacity}
 
 var (
 	dialect = drivers.Dialect{
@@ -69,6 +74,7 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 		qm.From("signal"),
 		qmhelper.Where("timestamp", qmhelper.GTE, start),
 		qmhelper.Where("timestamp", qmhelper.LT, end),
+		qm.WhereNotIn("name", constantSignals...),
 		qm.GroupBy("token_id"),
 	)
 	query, args := queries.BuildQuery(q)
@@ -121,6 +127,7 @@ func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint
 		qm.From("signal"),
 		qmhelper.Where("timestamp", qmhelper.GTE, start),
 		qmhelper.Where("timestamp", qmhelper.LT, end),
+		qm.WhereNotIn("name", constantSignals...),
 		qm.WhereIn("token_id IN ?", anyIDs...),
 		qm.GroupBy("token_id"),
 	)
