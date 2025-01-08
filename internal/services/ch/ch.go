@@ -74,7 +74,7 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 		qm.From("signal"),
 		qmhelper.Where("timestamp", qmhelper.GTE, start),
 		qmhelper.Where("timestamp", qmhelper.LT, end),
-		qm.WhereNotIn("name", constantSignals...),
+		qm.WhereNotIn("name NOT IN ?", constantSignals...),
 		qm.GroupBy("token_id"),
 	)
 	query, args := queries.BuildQuery(q)
@@ -127,8 +127,8 @@ func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint
 		qm.From("signal"),
 		qmhelper.Where("timestamp", qmhelper.GTE, start),
 		qmhelper.Where("timestamp", qmhelper.LT, end),
-		qm.WhereNotIn("name", constantSignals...),
 		qm.WhereIn("token_id IN ?", anyIDs...),
+		qm.WhereNotIn("name NOT IN ?", constantSignals...),
 		qm.GroupBy("token_id"),
 	)
 	query, args := queries.BuildQuery(q)

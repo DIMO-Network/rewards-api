@@ -67,6 +67,7 @@ func (c *CHTestSuite) SetupSuite() {
 	mustAppend(&signalRow{TokenID: 5, Timestamp: weekEnd.Add(-3 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
 	mustAppend(&signalRow{TokenID: 7, Timestamp: weekEnd.Add(-10 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
 	mustAppend(&signalRow{TokenID: 11, Timestamp: weekEnd.Add(-4 * day), Name: "xdd", Source: "0xF26421509Efe92861a587482100c6d728aBf1CD0", ValueNumber: 7.5})
+	mustAppend(&signalRow{TokenID: 13, Timestamp: weekEnd.Add(-3 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 75.0})
 
 	c.Require().NoError(err, "Failed to append struct")
 
@@ -103,7 +104,7 @@ func (c *CHTestSuite) Test_DescribeActiveDevices() {
 }
 
 func (c *CHTestSuite) Test_GetIntegrations() {
-	resp, err := c.chClient.GetIntegrationsForVehicles(context.TODO(), []uint64{3, 7, 11}, weekEnd.Add(-7*day), weekEnd)
+	resp, err := c.chClient.GetIntegrationsForVehicles(context.TODO(), []uint64{3, 7, 11, 13}, weekEnd.Add(-7*day), weekEnd)
 	c.Require().NoError(err)
 
 	c.Len(resp, 2)
