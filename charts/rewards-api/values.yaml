@@ -56,6 +56,7 @@ env:
   REFERRAL_CONTRACT_ADDRESS: '0x75CBdF0a2619DD4bE9a6C34F6D6F3aC27Fc92529'
   CLICKHOUSE_TCP_PORT: 9440
   CLICKHOUSE_DATABASE: dimo
+  IDENTITY_QUERY_URL: https://identity-api.dev.dimo.zone/query
 config:
   tokens:
     - chainId: 80002
