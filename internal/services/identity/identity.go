@@ -1,5 +1,8 @@
 package identity
 
+// TODO(elffjs): It would be nice to grab even more from Identity: the pairings,
+// for example, could be pulled here.
+
 import (
 	"bytes"
 	"encoding/json"
