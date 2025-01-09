@@ -9,7 +9,6 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/DIMO-Network/clickhouse-infra/pkg/connect"
 	"github.com/DIMO-Network/rewards-api/internal/config"
-	"github.com/DIMO-Network/shared/set"
 	"github.com/volatiletech/sqlboiler/v4/drivers"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -93,7 +92,7 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 
 		vehicles = append(vehicles, &Vehicle{
 			TokenID:      int64(tokenID),
-			Integrations: set.New(integrations...),
+			Integrations: integrations,
 		})
 	}
 
@@ -146,7 +145,7 @@ func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint
 
 		vehicles = append(vehicles, &Vehicle{
 			TokenID:      int64(tokenID),
-			Integrations: set.New(integrations...),
+			Integrations: integrations,
 		})
 	}
 
@@ -159,5 +158,5 @@ func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint
 
 type Vehicle struct {
 	TokenID      int64
-	Integrations set.Set[string]
+	Integrations []string
 }

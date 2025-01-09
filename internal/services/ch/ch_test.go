@@ -8,7 +8,6 @@ import (
 	chconfig "github.com/DIMO-Network/clickhouse-infra/pkg/connect/config"
 	"github.com/DIMO-Network/clickhouse-infra/pkg/container"
 	"github.com/DIMO-Network/model-garage/pkg/migrations"
-	"github.com/DIMO-Network/shared/set"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -93,14 +92,14 @@ func (c *CHTestSuite) Test_DescribeActiveDevices() {
 
 	c.Len(resp, 3)
 
-	vehicleIDToIntegrations := make(map[int64]set.Set[string])
+	vehicleIDToIntegrations := make(map[int64][]string)
 	for _, r := range resp {
 		vehicleIDToIntegrations[r.TokenID] = r.Integrations
 	}
 
-	c.Require().True(vehicleIDToIntegrations[3].Contains(Integrations.Smartcar) && vehicleIDToIntegrations[3].Contains(Integrations.Macaron))
-	c.Require().True(vehicleIDToIntegrations[5].Contains(Integrations.Tesla))
-	c.Require().True(vehicleIDToIntegrations[11].Contains(Integrations.Ruptela))
+	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
+	c.Require().ElementsMatch(vehicleIDToIntegrations[5], []string{Integrations.Tesla})
+	c.Require().ElementsMatch(vehicleIDToIntegrations[11], []string{Integrations.Ruptela})
 }
 
 func (c *CHTestSuite) Test_GetIntegrations() {
@@ -109,13 +108,13 @@ func (c *CHTestSuite) Test_GetIntegrations() {
 
 	c.Len(resp, 2)
 
-	vehicleIDToIntegrations := make(map[int64]set.Set[string])
+	vehicleIDToIntegrations := make(map[int64][]string)
 	for _, r := range resp {
 		vehicleIDToIntegrations[r.TokenID] = r.Integrations
 	}
 
-	c.Require().True(vehicleIDToIntegrations[3].Contains(Integrations.Smartcar) && vehicleIDToIntegrations[3].Contains(Integrations.Macaron))
-	c.Require().True(vehicleIDToIntegrations[11].Contains(Integrations.Ruptela))
+	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
+	c.Require().ElementsMatch(vehicleIDToIntegrations[11], []string{Integrations.Ruptela})
 }
 
 type signalRow struct {

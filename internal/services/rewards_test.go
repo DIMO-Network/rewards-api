@@ -16,7 +16,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	"github.com/DIMO-Network/shared/set"
 	"github.com/IBM/sarama/mocks"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -975,7 +974,7 @@ func (v Views) DescribeActiveDevices(ctx context.Context, _, _ time.Time) ([]*ch
 			continue
 		}
 		out = append(out, &ch.Vehicle{
-			TokenID: int64(d.TokenID), Integrations: set.New(d.IntsWithData...),
+			TokenID: int64(d.TokenID), Integrations: d.IntsWithData,
 		})
 	}
 	return out, nil

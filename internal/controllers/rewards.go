@@ -139,7 +139,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	integrationsByTokenID := make(map[uint64]set.Set[string])
+	integrationsByTokenID := make(map[uint64][]string)
 
 	vehicles, err := r.ChClient.GetIntegrationsForVehicles(c.Context(), vehicleIDs, weekStart, now)
 	if err != nil {
@@ -174,10 +174,12 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		vehicleMinted := device.TokenId != nil
 
-		integSignalsThisWeek := set.New[string]()
+		var vehicleIntegsWithSignals []string
 		if device.TokenId != nil {
-			integSignalsThisWeek = integrationsByTokenID[*device.TokenId]
+			vehicleIntegsWithSignals = integrationsByTokenID[*device.TokenId]
 		}
+
+		integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
 
 		if ad := device.AftermarketDevice; ad != nil {
 			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
