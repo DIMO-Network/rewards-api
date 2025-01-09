@@ -9,14 +9,17 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/ericlagergren/decimal"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
-var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
-var etherDecimal = new(decimal.Big).SetBigMantScale(ether, 0)
-var initialWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
+var (
+	ether               = big.NewInt(params.Ether)
+	etherDecimal        = new(decimal.Big).SetBigMantScale(ether, 0)
+	initialWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
+)
 
 type DBStorage struct {
 	DBS    db.Store
@@ -90,7 +93,6 @@ SELECT
 		r.aftermarket_device_tokens
 	)::numeric / NULLIF(SUM(
         r.streak_points + 
-        r.integration_points + 
         r.aftermarket_device_points + 
         r.synthetic_device_points
     ), 0) * $2 as tokens_for_points
@@ -104,9 +106,9 @@ LIMIT 10;
 `
 
 // CalculateTokensForPoints calculates how many tokens a given number of points is worth.
-func (s *DBStorage) CalculateTokensForPoints(ctx context.Context, points int, date int) (*decimal.Big, error) {
+func CalculateTokensForPoints(ctx context.Context, dbStore db.Store, points int, date int) (*decimal.Big, error) {
 	var tokens types.NullDecimal
-	err := s.DBS.DBS().Reader.QueryRowContext(ctx, tokensPerWeekQuery, date, points).Scan(&tokens)
+	err := dbStore.DBS().Reader.QueryRowContext(ctx, tokensPerWeekQuery, date, points).Scan(&tokens)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("no conversion rate found for date %v", date)

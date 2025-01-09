@@ -85,7 +85,7 @@ type Balance struct {
 // GetHistoricalConversion godoc
 // @Description Calculate DIMO token earned fo a given week and popints
 // @Param        points query    int     true  "Number of points"
-// @Param        time   query    string  false  "Time in the week to calculate potential tokens earned based on the provided points (defaults to last week) (format 2006-01-02T15:04:05Z07:00)"
+// @Param        time   query    string  false  "Time in the week to calculate potential tokens earned based on the provided points (defaults to last week) (format RFC-3339 e.x. 2024-12-23T12:41:42Z)"
 // @Success      200    {object} HistoricalConversionResponse
 // @Router       /rewards/convert [get]
 func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
@@ -94,7 +94,7 @@ func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
 	if dateStr != "" {
 		weekTime, err := time.Parse(time.RFC3339, dateStr)
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid time format use %s", time.RFC3339))
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid time format use RFC-3339 e.g. (2024-12-23T12:41:42Z)"))
 		}
 		weekID = services.GetWeekNumForCron(weekTime)
 	} else {
@@ -103,25 +103,26 @@ func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
 
 	points, err := strconv.Atoi(c.Query("points"))
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid points value")
+		return fiber.NewError(fiber.StatusBadRequest, "couldn't parse points value as a number")
+	}
+	if points < 0 {
+		return fiber.NewError(fiber.StatusBadRequest, "points must be positive")
 	}
 
-	dbStorage := storage.DBStorage{DBS: r.DB, Logger: r.Logger}
-	potentialTokens, err := dbStorage.CalculateTokensForPoints(c.Context(), points, weekID)
+	potentialTokens, err := storage.CalculateTokensForPoints(c.Context(), r.DB, points, weekID)
 	if err != nil {
-		// do we have error handling for db errors?
 		return err
 	}
 
 	return c.JSON(HistoricalConversionResponse{
-		WeekID:      weekID,
-		Points:      points,
-		TokenAmount: potentialTokens,
+		Points: points,
+		Tokens: potentialTokens,
 	})
 }
 
 type HistoricalConversionResponse struct {
-	WeekID      int          `json:"weekId"`
-	Points      int          `json:"points"`
-	TokenAmount *decimal.Big `json:"tokenAmount"`
+	// Points is the number of points used to calculate the potential tokens.
+	Points int `json:"points"`
+	// Tokens is the number of tokens ($DIMO/eth not wei) that would be earned for the given number of points.
+	Tokens *decimal.Big `json:"tokens"`
 }

@@ -200,10 +200,9 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 	fmt.Printf("Finished inserting records in %v\n", insertDuration)
 
 	// Run the performance test
-	db := DBStorage{DBS: conn, Logger: &logger}
 
 	startTime := time.Now()
-	actualTokens, err := db.CalculateTokensForPoints(ctx, 1000, 100)
+	actualTokens, err := CalculateTokensForPoints(ctx, conn, 1000, 100)
 	require.NoError(t, err)
 	duration := time.Since(startTime)
 
