@@ -4,16 +4,20 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
+	"github.com/ericlagergren/decimal"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 func TestTokenAssignmentNoDecrease(t *testing.T) {
@@ -130,4 +134,94 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 
 	assert.Equal(t, expect1, reward1.AftermarketDeviceTokens.Int(nil))
 	assert.Equal(t, expect2, reward2.AftermarketDeviceTokens.Int(nil))
+}
+
+func TestCalculateTokensForPointsPerformance(t *testing.T) {
+	ctx := context.Background()
+	logger := zerolog.Nop()
+
+	cont, conn := utils.GetDbConnection(ctx, t, logger)
+	defer func() {
+		_ = cont.Terminate(ctx)
+	}()
+
+	// Set a fixed conversion rate (tokens per point)
+	conversionRate := decimal.New(5, 0) // 5 tokens per point
+
+	// Create a test week
+	testDate := time.Now()
+	wk := models.IssuanceWeek{
+		ID:        100,
+		StartsAt:  testDate,
+		EndsAt:    testDate.Add(7 * 24 * time.Hour),
+		JobStatus: models.IssuanceWeeksJobStatusFinished,
+	}
+
+	err := wk.Insert(context.TODO(), conn.DBS().Writer, boil.Infer())
+	require.NoError(t, err)
+
+	// Insert test records
+	fmt.Printf("Starting to insert test records...\n")
+	insertStart := time.Now()
+
+	for i := 0; i < 1000; i++ {
+		streakPoints := rand.Int() % 1000
+		aftermarketPoints := rand.Int() % 1000
+		syntheticPoints := rand.Int() % 1000
+
+		// Calculate tokens: points * conversion rate * etherx
+		streakTokens := new(decimal.Big).Mul(decimal.New(int64(streakPoints), 0), conversionRate)
+		streakTokens.Mul(streakTokens, etherDecimal)
+		aftermarketTokens := new(decimal.Big).Mul(decimal.New(int64(aftermarketPoints), 0), conversionRate)
+		aftermarketTokens.Mul(aftermarketTokens, etherDecimal)
+		syntheticTokens := new(decimal.Big).Mul(decimal.New(int64(syntheticPoints), 0), conversionRate)
+		syntheticTokens.Mul(syntheticTokens, etherDecimal)
+		reward := models.Reward{
+			IssuanceWeekID:          100,
+			UserDeviceID:            ksuid.New().String(),
+			UserID:                  ksuid.New().String(),
+			StreakPoints:            streakPoints,
+			AftermarketDevicePoints: aftermarketPoints,
+			SyntheticDevicePoints:   syntheticPoints,
+
+			CreatedAt:               testDate,
+			UpdatedAt:               testDate,
+			StreakTokens:            types.NewNullDecimal(streakTokens),
+			AftermarketDeviceTokens: types.NewNullDecimal(aftermarketTokens),
+			SyntheticDeviceTokens:   types.NewNullDecimal(syntheticTokens),
+		}
+
+		err := reward.Insert(context.TODO(), conn.DBS().Writer, boil.Infer())
+		require.NoError(t, err)
+
+	}
+
+	insertDuration := time.Since(insertStart)
+	fmt.Printf("Finished inserting records in %v\n", insertDuration)
+
+	// Run the performance test
+
+	startTime := time.Now()
+	actualTokens, err := CalculateTokensForPoints(ctx, conn, 1000, 100)
+	require.NoError(t, err)
+	duration := time.Since(startTime)
+
+	// Calculate expected result: 1000 * conversion rate
+	expectedTokens := new(decimal.Big).Mul(decimal.New(1000, 0), conversionRate)
+
+	// Convert to float64 for comparison
+	expectedFloat, ok := expectedTokens.Float64()
+	require.True(t, ok, "Failed to convert expected tokens to float64")
+	actualFloat, ok := actualTokens.Float64()
+	require.True(t, ok, "Failed to convert actual tokens to float64")
+
+	// Assertions
+	require.NoError(t, err)
+	require.NotNil(t, actualTokens)
+	assert.InEpsilon(t, expectedFloat, actualFloat, 0.0001, "Token calculation outside acceptable range")
+
+	fmt.Printf("Query execution time: %v\n", duration)
+
+	// Performance threshold check
+	assert.Less(t, duration, 1*time.Second, "Query took longer than 1 second to execute")
 }

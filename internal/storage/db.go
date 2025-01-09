@@ -2,16 +2,24 @@ package storage
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"math/big"
 
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/ericlagergren/decimal"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
-var ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
-var initialWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
+var (
+	ether               = big.NewInt(params.Ether)
+	etherDecimal        = new(decimal.Big).SetBigMantScale(ether, 0)
+	initialWeeklyTokens = new(big.Int).Mul(big.NewInt(1_105_000), ether)
+)
 
 type DBStorage struct {
 	DBS    db.Store
@@ -75,4 +83,43 @@ func (s *DBStorage) AssignTokens(ctx context.Context, issuanceWeek, firstAutomat
 
 	_, err = s.DBS.DBS().Writer.ExecContext(ctx, assignTokensQuery, issuanceWeek, weekLimit.String())
 	return err
+}
+
+var tokensPerWeekQuery = `
+SELECT 
+	SUM(
+		r.streak_tokens +
+		r.synthetic_device_tokens +
+		r.aftermarket_device_tokens
+	)::numeric / NULLIF(SUM(
+        r.streak_points + 
+        r.aftermarket_device_points + 
+        r.synthetic_device_points
+    ), 0) * $2 as tokens_for_points
+FROM rewards_api.rewards r 
+WHERE r.issuance_week_id = $1
+	AND (r.streak_tokens > 0
+	OR r.synthetic_device_tokens > 0
+	OR r.aftermarket_device_tokens > 0
+)
+LIMIT 10;
+`
+
+// CalculateTokensForPoints calculates how many tokens a given number of points is worth.
+func CalculateTokensForPoints(ctx context.Context, dbStore db.Store, points int, date int) (*decimal.Big, error) {
+	var tokens types.NullDecimal
+	err := dbStore.DBS().Reader.QueryRowContext(ctx, tokensPerWeekQuery, date, points).Scan(&tokens)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("no conversion rate found for date %v", date)
+		}
+		return nil, fmt.Errorf("error calculating tokens: %w", err)
+	}
+	if tokens.Big == nil {
+		return nil, fmt.Errorf("no conversion rate found for date %v", date)
+	}
+
+	// Divide result by ether
+	result := new(decimal.Big).Quo(tokens.Big, etherDecimal)
+	return result, nil
 }
