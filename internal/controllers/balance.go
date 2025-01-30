@@ -96,9 +96,9 @@ func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
 		if err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid time format use RFC-3339 e.g. (2024-12-23T12:41:42Z)"))
 		}
-		weekID = services.GetWeekNumForCron(weekTime)
+		weekID = services.GetWeekNum(weekTime)
 	} else {
-		weekID = services.GetWeekNumForCron(time.Now()) - 1
+		weekID = services.GetWeekNum(time.Now()) - 1
 	}
 
 	points, err := strconv.Atoi(c.Query("points"))

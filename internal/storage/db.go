@@ -106,17 +106,17 @@ LIMIT 10;
 `
 
 // CalculateTokensForPoints calculates how many tokens a given number of points is worth.
-func CalculateTokensForPoints(ctx context.Context, dbStore db.Store, points int, date int) (*decimal.Big, error) {
+func CalculateTokensForPoints(ctx context.Context, dbStore db.Store, points int, weekID int) (*decimal.Big, error) {
 	var tokens types.NullDecimal
-	err := dbStore.DBS().Reader.QueryRowContext(ctx, tokensPerWeekQuery, date, points).Scan(&tokens)
+	err := dbStore.DBS().Reader.QueryRowContext(ctx, tokensPerWeekQuery, weekID, points).Scan(&tokens)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("no conversion rate found for date %v", date)
+			return nil, fmt.Errorf("no conversion rate found for weekId %v", weekID)
 		}
 		return nil, fmt.Errorf("error calculating tokens: %w", err)
 	}
 	if tokens.Big == nil {
-		return nil, fmt.Errorf("no conversion rate found for date %v", date)
+		return nil, fmt.Errorf("null conversion rate found for weekId %v", weekID)
 	}
 
 	// Divide result by ether
