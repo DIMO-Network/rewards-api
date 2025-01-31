@@ -8,6 +8,7 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/DIMO-Network/clickhouse-infra/pkg/connect"
+	"github.com/DIMO-Network/model-garage/pkg/vss"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/volatiletech/sqlboiler/v4/drivers"
 	"github.com/volatiletech/sqlboiler/v4/queries"
@@ -22,6 +23,10 @@ type Client struct {
 
 const integPrefix = "dimo/integration/"
 
+// constantSignals are signals that never change. They tend to come from VIN decoding and should
+// not be taken as signs of an active connection.
+var constantSignals = []any{vss.FieldPowertrainTractionBatteryGrossCapacity}
+
 var (
 	dialect = drivers.Dialect{
 		LQ: '`',
@@ -29,10 +34,10 @@ var (
 	}
 	connectionIDToIntegrationID = map[string]string{
 		"0xF26421509Efe92861a587482100c6d728aBf1CD0": "2lcaMFuCO0HJIUfdq8o780Kx5n3", // ruptela
-		// "0x5e31bBc786D7bEd95216383787deA1ab0f1c1897": "27qftVRWQYpVDcO5DltO5Ojbjxk", // autopi
-		// "0xc4035Fecb1cc906130423EF05f9C20977F643722": "26A5Dk3vvvQutjSyF0Jka2DP5lg", // tesla
-		// "0x4c674ddE8189aEF6e3b58F5a36d7438b2b1f6Bc2": "2ULfuC8U9dOqRshZBAi0lMM1Rrx", // macaron
-		// "0xcd445F4c6bDAD32b68a2939b912150Fe3C88803E": "22N2xaPOq2WW2gAHBHd0Ikn4Zob", // smartcar
+		"0x5e31bBc786D7bEd95216383787deA1ab0f1c1897": "27qftVRWQYpVDcO5DltO5Ojbjxk", // autopi
+		"0xc4035Fecb1cc906130423EF05f9C20977F643722": "26A5Dk3vvvQutjSyF0Jka2DP5lg", // tesla
+		"0x4c674ddE8189aEF6e3b58F5a36d7438b2b1f6Bc2": "2ULfuC8U9dOqRshZBAi0lMM1Rrx", // macaron
+		"0xcd445F4c6bDAD32b68a2939b912150Fe3C88803E": "22N2xaPOq2WW2gAHBHd0Ikn4Zob", // smartcar
 	}
 )
 
@@ -69,6 +74,7 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 		qm.From("signal"),
 		qmhelper.Where("timestamp", qmhelper.GTE, start),
 		qmhelper.Where("timestamp", qmhelper.LT, end),
+		qm.WhereNotIn("name NOT IN ?", constantSignals...),
 		qm.GroupBy("token_id"),
 	)
 	query, args := queries.BuildQuery(q)
@@ -122,6 +128,7 @@ func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint
 		qmhelper.Where("timestamp", qmhelper.GTE, start),
 		qmhelper.Where("timestamp", qmhelper.LT, end),
 		qm.WhereIn("token_id IN ?", anyIDs...),
+		qm.WhereNotIn("name NOT IN ?", constantSignals...),
 		qm.GroupBy("token_id"),
 	)
 	query, args := queries.BuildQuery(q)
