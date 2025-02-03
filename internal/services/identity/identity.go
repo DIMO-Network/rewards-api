@@ -84,7 +84,7 @@ func (c *Client) GetVehicleStakePoints(vehicleID uint64) (int, error) {
 
 	// TODO(elffjs): The error handling here is too loose: if this failed because of, e.g., a
 	// database issue then we want to bail.
-	if resBody.Vehicle == nil || resBody.Vehicle.Stake == nil {
+	if resBody.Vehicle == nil || resBody.Vehicle.Stake == nil || resBody.Vehicle.Stake.EndsAt.Before(time.Now()) {
 		return 0, nil
 	}
 
