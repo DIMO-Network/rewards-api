@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/rewards-api
   pullPolicy: IfNotPresent
-  tag: dd1f41c
+  tag: 90418ed
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
@@ -32,6 +32,7 @@ env:
   LOG_LEVEL: info
   DB_PORT: '5432'
   DB_NAME: rewards_api
+  DB_SSL_MODE: require
   DB_MAX_OPEN_CONNECTIONS: '10'
   DB_MAX_IDLE_CONNECTIONS: '3'
   SERVICE_NAME: rewards-api
