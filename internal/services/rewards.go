@@ -39,6 +39,7 @@ type BaselineClient struct {
 	Logger             *zerolog.Logger
 	FirstAutomatedWeek int
 	StakeChecker       StakeChecker
+	StakingEnabled     bool
 }
 
 //go:generate mockgen -source=./rewards.go -destination=stake_checker_mock_test.go -package=services
@@ -78,6 +79,7 @@ func NewBaselineRewardService(
 		Logger:             logger,
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
 		StakeChecker:       stakeChecker,
+		StakingEnabled:     settings.EnableStaking,
 	}
 }
 
@@ -275,9 +277,14 @@ func (t *BaselineClient) assignPoints() error {
 
 		streak := ComputeStreak(streakInput)
 
-		stakePoints, err := t.StakeChecker.GetVehicleStakePoints(*ud.TokenId)
-		if err != nil {
-			return err
+		stakePoints := 0
+
+		if t.StakingEnabled {
+			var err error
+			stakePoints, err = t.StakeChecker.GetVehicleStakePoints(*ud.TokenId)
+			if err != nil {
+				return fmt.Errorf("failed to check staking for vehicle %d: %w", device.TokenID, err)
+			}
 		}
 
 		setStreakFields(thisWeek, streak, stakePoints)

@@ -57,6 +57,7 @@ env:
   CLICKHOUSE_TCP_PORT: 9440
   CLICKHOUSE_DATABASE: dimo
   IDENTITY_QUERY_URL: https://identity-api.dev.dimo.zone/query
+  ENABLE_STAKING: true
 config:
   tokens:
     - chainId: 80002

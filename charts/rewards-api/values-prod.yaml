@@ -31,6 +31,7 @@ env:
   TRANSFER_BATCH_SIZE: 100
   REFERRAL_CONTRACT_ADDRESS: '0x3a99A9c4997B710febd7696E73088Fd9e51f49a5'
   IDENTITY_QUERY_URL: https://identity-api.dimo.zone/query
+  ENABLE_STAKING: false
 ingress:
   enabled: true
   className: nginx
