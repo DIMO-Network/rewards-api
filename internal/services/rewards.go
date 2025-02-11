@@ -3,14 +3,12 @@ package services
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
-	"github.com/DIMO-Network/rewards-api/internal/services/identity"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/set"
@@ -43,6 +41,7 @@ type BaselineClient struct {
 	StakeChecker       StakeChecker
 }
 
+//go:generate mockgen -source=./rewards.go -destination=stake_checker_mock_test.go -package=services
 type StakeChecker interface {
 	GetVehicleStakePoints(vehicleID uint64) (int, error)
 }
@@ -67,6 +66,7 @@ func NewBaselineRewardService(
 	defsClient IntegrationsGetter,
 	week int,
 	logger *zerolog.Logger,
+	stakeChecker StakeChecker,
 ) *BaselineClient {
 	return &BaselineClient{
 		TransferService:    transferService,
@@ -77,10 +77,7 @@ func NewBaselineRewardService(
 		Week:               week,
 		Logger:             logger,
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
-		StakeChecker: &identity.Client{
-			QueryURL: settings.IdentityQueryURL,
-			Client:   &http.Client{},
-		},
+		StakeChecker:       stakeChecker,
 	}
 }
 

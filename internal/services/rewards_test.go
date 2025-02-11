@@ -26,6 +26,7 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -410,7 +411,11 @@ func TestStreak(t *testing.T) {
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
+			ctrl := gomock.NewController(t)
+			msc := NewMockStakeChecker(ctrl)
+			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
+
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger, msc)
 
 			err = rwBonusService.assignPoints()
 			if err != nil {
@@ -600,7 +605,11 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 
 			transferService := NewTokenTransferService(&settings, nil, conn)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
+			ctrl := gomock.NewController(t)
+			msc := NewMockStakeChecker(ctrl)
+			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).Return(0, nil).AnyTimes()
+
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger, msc)
 
 			err = rwBonusService.assignPoints()
 			assert.NoError(t, err)
@@ -859,7 +868,11 @@ func TestBaselineIssuance(t *testing.T) {
 
 			transferService := NewTokenTransferService(&settings, producer, conn)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger)
+			ctrl := gomock.NewController(t)
+			msc := NewMockStakeChecker(ctrl)
+			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
+
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger, msc)
 
 			err = rwBonusService.BaselineIssuance()
 			assert.NoError(t, err)
