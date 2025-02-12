@@ -34,4 +34,6 @@ type Settings struct {
 	ContractEventTopic             string          `yaml:"CONTRACT_EVENT_TOPIC"`
 	DeviceDataIndexPrefix          string          `yaml:"DEVICE_DATA_INDEX_PREFIX"`
 	Clickhouse                     config.Settings `yaml:",inline"`
+	IdentityQueryURL               string          `yaml:"IDENTITY_QUERY_URL"`
+	EnableStaking                  bool            `yaml:"ENABLE_STAKING"`
 }

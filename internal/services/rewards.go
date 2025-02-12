@@ -38,6 +38,13 @@ type BaselineClient struct {
 	Week               int
 	Logger             *zerolog.Logger
 	FirstAutomatedWeek int
+	StakeChecker       StakeChecker
+	StakingEnabled     bool
+}
+
+//go:generate mockgen -source=./rewards.go -destination=stake_checker_mock_test.go -package=services
+type StakeChecker interface {
+	GetVehicleStakePoints(vehicleID uint64) (int, error)
 }
 
 type DeviceActivityClient interface {
@@ -60,6 +67,7 @@ func NewBaselineRewardService(
 	defsClient IntegrationsGetter,
 	week int,
 	logger *zerolog.Logger,
+	stakeChecker StakeChecker,
 ) *BaselineClient {
 	return &BaselineClient{
 		TransferService:    transferService,
@@ -70,6 +78,8 @@ func NewBaselineRewardService(
 		Week:               week,
 		Logger:             logger,
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
+		StakeChecker:       stakeChecker,
+		StakingEnabled:     settings.EnableStaking,
 	}
 }
 
@@ -267,7 +277,17 @@ func (t *BaselineClient) assignPoints() error {
 
 		streak := ComputeStreak(streakInput)
 
-		setStreakFields(thisWeek, streak)
+		stakePoints := 0
+
+		if t.StakingEnabled {
+			var err error
+			stakePoints, err = t.StakeChecker.GetVehicleStakePoints(*ud.TokenId)
+			if err != nil {
+				return fmt.Errorf("failed to check staking for vehicle %d: %w", device.TokenID, err)
+			}
+		}
+
+		setStreakFields(thisWeek, streak, stakePoints)
 
 		// Anything left in this map is considered disconnected.
 		// This is a no-op if the device doesn't have a record from last week.
@@ -305,7 +325,7 @@ func (t *BaselineClient) assignPoints() error {
 			ExistingDisconnectionStreak: lastWeek.DisconnectionStreak,
 		}
 		streak := ComputeStreak(streakInput)
-		setStreakFields(thisWeek, streak)
+		setStreakFields(thisWeek, streak, 0)
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
@@ -351,8 +371,8 @@ func (t *BaselineClient) BaselineIssuance() error {
 	return nil
 }
 
-func setStreakFields(reward *models.Reward, streakOutput StreakOutput) {
+func setStreakFields(reward *models.Reward, streakOutput StreakOutput, stakePoints int) {
 	reward.ConnectionStreak = streakOutput.ConnectionStreak
 	reward.DisconnectionStreak = streakOutput.DisconnectionStreak
-	reward.StreakPoints = streakOutput.Points
+	reward.StreakPoints = streakOutput.Points + stakePoints
 }
