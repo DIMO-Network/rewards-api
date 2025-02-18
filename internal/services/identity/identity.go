@@ -59,7 +59,7 @@ func (c *Client) GetVehicleStakePoints(vehicleID uint64) (int, error) {
 	p := payload{
 		Query: query,
 		Variables: map[string]any{
-			"tokenId": vehicleID,
+			"vehicleId": vehicleID,
 		},
 	}
 
