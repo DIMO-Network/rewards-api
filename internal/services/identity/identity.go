@@ -15,16 +15,15 @@ import (
 
 const jsonContentType = "application/json"
 
-const query = `{
+const query = `
 	query GetStake($vehicleId: Int!) {
-		vehicle(by: {tokenId: $vehicleId}) {
+		vehicle(tokenId: $vehicleId) {
 			stake {
 				points
 				endsAt
 			}
 		}
-	}
-}`
+	}`
 
 type Client struct {
 	QueryURL string
