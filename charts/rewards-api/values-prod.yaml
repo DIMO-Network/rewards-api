@@ -31,7 +31,7 @@ env:
   TRANSFER_BATCH_SIZE: 100
   REFERRAL_CONTRACT_ADDRESS: '0x3a99A9c4997B710febd7696E73088Fd9e51f49a5'
   IDENTITY_QUERY_URL: http://identity-api-prod:8080/query
-  ENABLE_STAKING: false
+  ENABLE_STAKING: true
 ingress:
   enabled: true
   className: nginx
