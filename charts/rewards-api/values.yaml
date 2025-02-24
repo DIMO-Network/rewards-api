@@ -25,7 +25,7 @@ rewardsCronJob:
   schedule: 0 5 * * 1
 referralsCronJob:
   enabled: true
-  schedule: 0 6 * * 1
+  schedule: 0 7 * * 1
 env:
   ENVIRONMENT: dev
   PORT: '8080'
