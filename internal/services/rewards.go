@@ -285,6 +285,9 @@ func (t *BaselineClient) assignPoints() error {
 			if err != nil {
 				return fmt.Errorf("failed to check staking for vehicle %d: %w", device.TokenID, err)
 			}
+			if stakePoints != 0 {
+				logger.Info().Uint64("vehicleId", *ud.TokenId).Msgf("Adding %d points from staking.", stakePoints)
+			}
 		}
 
 		setStreakFields(thisWeek, streak, stakePoints)
