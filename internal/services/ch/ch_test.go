@@ -8,6 +8,7 @@ import (
 	chconfig "github.com/DIMO-Network/clickhouse-infra/pkg/connect/config"
 	"github.com/DIMO-Network/clickhouse-infra/pkg/container"
 	"github.com/DIMO-Network/model-garage/pkg/migrations"
+	"github.com/DIMO-Network/model-garage/pkg/vss"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -61,14 +62,14 @@ func (c *CHTestSuite) SetupSuite() {
 		c.Require().NoError(err)
 	}
 
-	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
-	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 65})
-	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
-	mustAppend(&signalRow{TokenID: 3, Timestamp: weekEnd.Add(-2 * day), Name: "xdd2", Source: "dimo/integration/" + Integrations.Macaron, ValueNumber: 10.55})
-	mustAppend(&signalRow{TokenID: 5, Timestamp: weekEnd.Add(-3 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
-	mustAppend(&signalRow{TokenID: 7, Timestamp: weekEnd.Add(-10 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
-	mustAppend(&signalRow{TokenID: 11, Timestamp: weekEnd.Add(-4 * day), Name: "xdd", Source: "0xF26421509Efe92861a587482100c6d728aBf1CD0", ValueNumber: 7.5})
-	mustAppend(&signalRow{TokenID: 13, Timestamp: weekEnd.Add(-3 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 75.0})
+	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
+	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 65})
+	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
+	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-2 * day), Name: "xdd2", Source: "dimo/integration/" + Integrations.Macaron, ValueNumber: 10.55})
+	mustAppend(&vss.Signal{TokenID: 5, Timestamp: weekEnd.Add(-3 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
+	mustAppend(&vss.Signal{TokenID: 7, Timestamp: weekEnd.Add(-10 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
+	mustAppend(&vss.Signal{TokenID: 11, Timestamp: weekEnd.Add(-4 * day), Name: "xdd", Source: "0xF26421509Efe92861a587482100c6d728aBf1CD0", ValueNumber: 7.5})
+	mustAppend(&vss.Signal{TokenID: 13, Timestamp: weekEnd.Add(-3 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 75.0})
 
 	c.Require().NoError(err, "Failed to append struct")
 
@@ -117,13 +118,4 @@ func (c *CHTestSuite) Test_GetIntegrations() {
 
 	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
 	c.Require().ElementsMatch(vehicleIDToIntegrations[11], []string{Integrations.Ruptela})
-}
-
-type signalRow struct {
-	TokenID     int64     `ch:"token_id"`
-	Timestamp   time.Time `ch:"timestamp"`
-	Name        string    `ch:"name"`
-	Source      string    `ch:"source"`
-	ValueNumber float64   `ch:"value_number"`
-	ValueString string    `ch:"value_string"`
 }
