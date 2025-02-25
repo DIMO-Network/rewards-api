@@ -412,7 +412,7 @@ func TestStreak(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
-			vinVCSrv := NewMockVINVCClient(ctrl)
+			vinVCSrv := NewMockVINVCService(ctrl)
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
 
@@ -604,7 +604,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).Return(0, nil).AnyTimes()
-			vinVCSrv := NewMockVINVCClient(ctrl)
+			vinVCSrv := NewMockVINVCService(ctrl)
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
 
@@ -865,7 +865,7 @@ func TestBaselineIssuance(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
-			vinVCSrv := NewMockVINVCClient(ctrl)
+			vinVCSrv := NewMockVINVCService(ctrl)
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
 

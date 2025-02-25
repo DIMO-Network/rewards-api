@@ -3,7 +3,7 @@ package vinvc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"slices"
 	"time"
 
 	"github.com/DIMO-Network/attestation-api/pkg/verifiable"
@@ -11,32 +11,41 @@ import (
 	"github.com/DIMO-Network/model-garage/pkg/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
-	"github.com/DIMO-Network/rewards-api/internal/services/fetchapi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-const dincConnectionAddr = "0x1234567890abcdef1234567890abcdef12345678"
+var dincSource = common.HexToAddress("0x4F098Ea7cAd393365b4d251Dd109e791e6190239")
+
+// FetchAPIService defines the interface Fetch API.
+type FetchAPIService interface {
+	// GetLatestCloudEvent retrieves the most recent cloud event matching the provided search criteria
+	GetLatestCloudEvent(ctx context.Context, filter *pb.SearchOptions) (cloudevent.CloudEvent[json.RawMessage], error)
+}
 
 // VINVCService is a client for interacting with the VINVC service.
 type VINVCService struct {
-	fetchService     *fetchapi.FetchAPIService
+	fetchService     FetchAPIService
 	logger           zerolog.Logger
 	vinVCDataVersion string
+	vehicleAddr      common.Address
+	chainID          uint64
 	trustedRecorders []string
 }
 
 // New creates a new instance of VINVCClient.
-func New(fetchService *fetchapi.FetchAPIService, settings *config.Settings, logger *zerolog.Logger) *VINVCService {
+func New(fetchService FetchAPIService, settings *config.Settings, logger *zerolog.Logger) *VINVCService {
 	return &VINVCService{
 		fetchService:     fetchService,
 		logger:           logger.With().Str("component", "vinvc_service").Logger(),
 		vinVCDataVersion: settings.VINVCDataVersion,
+		vehicleAddr:      settings.VehicleNFTAddress,
+		chainID:          uint64(settings.DIMORegistryChainID),
 		trustedRecorders: []string{
 			cloudevent.EthrDID{
 				ChainID:         uint64(settings.DIMORegistryChainID),
-				ContractAddress: common.HexToAddress(dincConnectionAddr),
+				ContractAddress: dincSource,
 			}.String(),
 		},
 	}
@@ -58,8 +67,8 @@ func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 		// Set search options
 		opts := &pb.SearchOptions{
 			DataVersion: &wrapperspb.StringValue{Value: v.vinVCDataVersion},
-			Type:        &wrapperspb.StringValue{Value: "io.dimo.verifiable.credential"},
-			Subject:     &wrapperspb.StringValue{Value: fmt.Sprintf("did:dimo:vehicle:%d", vehicle.TokenID)},
+			Type:        &wrapperspb.StringValue{Value: cloudevent.TypeVerifableCredential},
+			Subject:     &wrapperspb.StringValue{Value: cloudevent.NFTDID{ChainID: v.chainID, TokenID: uint32(vehicle.TokenID)}.String()},
 		}
 
 		// Get latest cloud event
@@ -137,13 +146,7 @@ func (v *VINVCService) isValidVC(cred *verifiable.Credential, subject *verifiabl
 	oneWeekAgo := endOfWeek.AddDate(0, 0, -7)
 
 	// Check if recorder is trusted
-	isTrustedRecorder := false
-	for _, trusted := range v.trustedRecorders {
-		if subject.RecordedBy == trusted {
-			isTrustedRecorder = true
-			break
-		}
-	}
+	isTrustedRecorder := slices.Contains(v.trustedRecorders, subject.RecordedBy)
 
 	// Credential is valid if it was recorded in the past week OR by a trusted recorder
 	isRecentlyRecorded := false

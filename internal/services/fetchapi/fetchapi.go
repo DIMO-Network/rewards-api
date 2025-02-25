@@ -9,7 +9,6 @@ import (
 	pb "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	"github.com/DIMO-Network/model-garage/pkg/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -18,8 +17,6 @@ import (
 // FetchAPIService is a service for interacting with the Fetch API.
 type FetchAPIService struct {
 	fetchGRPCAddr string
-	vehicleAddr   common.Address
-	chainID       uint64
 	client        pb.FetchServiceClient
 	once          sync.Once
 	logger        zerolog.Logger
@@ -29,8 +26,6 @@ type FetchAPIService struct {
 func New(settings *config.Settings, logger *zerolog.Logger) *FetchAPIService {
 	return &FetchAPIService{
 		fetchGRPCAddr: settings.FetchAPIGRPCEndpoint,
-		vehicleAddr:   settings.VehicleNFTAddress,
-		chainID:       uint64(settings.DIMORegistryChainID),
 		logger:        logger.With().Str("component", "fetch_api_service").Logger(),
 	}
 }
@@ -68,13 +63,4 @@ func (f *FetchAPIService) getClient() (pb.FetchServiceClient, error) {
 		f.client = pb.NewFetchServiceClient(conn)
 	})
 	return f.client, err
-}
-
-// CreateVehicleDID creates a DID for a vehicle.
-func (f *FetchAPIService) CreateVehicleDID(tokenID uint32) string {
-	return cloudevent.NFTDID{
-		ChainID:         f.chainID,
-		ContractAddress: f.vehicleAddr,
-		TokenID:         tokenID,
-	}.String()
 }
