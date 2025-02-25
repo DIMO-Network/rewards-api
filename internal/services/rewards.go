@@ -70,7 +70,7 @@ func NewBaselineRewardService(
 	devicesClient DevicesClient,
 	defsClient IntegrationsGetter,
 	stakeChecker StakeChecker,
-	vinVCClient VINVCService,
+	vinVCSrv VINVCService,
 	week int,
 	logger *zerolog.Logger,
 ) *BaselineClient {
@@ -83,7 +83,7 @@ func NewBaselineRewardService(
 		Week:               week,
 		Logger:             logger,
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
-		vinVCClient:        vinVCClient,
+		vinVCSrv:           vinVCSrv,
 		StakeChecker:       stakeChecker,
 		StakingEnabled:     settings.EnableStaking,
 	}
@@ -150,7 +150,7 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	vinVCConfirmed, err := t.vinVCClient.GetConfirmedVINVCs(ctx, activeDevices)
+	vinVCConfirmed, err := t.vinVCSrv.GetConfirmedVINVCs(ctx, activeDevices)
 	if err != nil {
 		// this is a non-fatal error, we can continue without this data
 		t.Logger.Warn().Err(err).Msg("Failed to get confirmed VIN VC VINs. continuing execution.")

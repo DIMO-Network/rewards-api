@@ -30,7 +30,7 @@ func New(settings *config.Settings, logger *zerolog.Logger) *FetchAPIService {
 	return &FetchAPIService{
 		fetchGRPCAddr: settings.FetchAPIGRPCEndpoint,
 		vehicleAddr:   settings.VehicleNFTAddress,
-		chainID:       uint64(settings.ChainID),
+		chainID:       uint64(settings.DIMORegistryChainID),
 		logger:        logger.With().Str("component", "fetch_api_service").Logger(),
 	}
 }
