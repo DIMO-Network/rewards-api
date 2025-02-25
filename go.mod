@@ -5,46 +5,46 @@ go 1.24
 replace github.com/ericlagergren/decimal => github.com/ericlagergren/decimal v0.0.0-20181231230500-73749d4874d5
 
 require (
-	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
-	github.com/DIMO-Network/accounts-api v0.2.7
+	github.com/ClickHouse/clickhouse-go/v2 v2.32.2
+	github.com/DIMO-Network/accounts-api v0.2.9
 	github.com/DIMO-Network/clickhouse-infra v0.0.3
-	github.com/DIMO-Network/device-definitions-api v1.2.79
-	github.com/DIMO-Network/devices-api v1.32.24
-	github.com/DIMO-Network/model-garage v0.4.5
+	github.com/DIMO-Network/device-definitions-api v1.2.89
+	github.com/DIMO-Network/devices-api v1.32.53
+	github.com/DIMO-Network/model-garage v0.4.11
 	github.com/DIMO-Network/shared v0.12.9
-	github.com/DIMO-Network/users-api v0.9.3
+	github.com/DIMO-Network/users-api v0.9.4
 	github.com/IBM/sarama v1.45.0
 	github.com/burdiyan/kafkautil v0.0.0-20240215092415-7e6d3d0fc870
 	github.com/docker/go-connections v0.5.0
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
-	github.com/ethereum/go-ethereum v1.15.0
+	github.com/ethereum/go-ethereum v1.15.3
 	github.com/friendsofgo/errors v0.9.2
-	github.com/gofiber/fiber/v2 v2.52.5
+	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/gofiber/jwt/v3 v3.3.10
-	github.com/gofiber/swagger v1.1.0
+	github.com/gofiber/swagger v1.1.1
 	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/lib/pq v1.10.9
 	github.com/pkg/errors v0.9.1
-	github.com/pressly/goose/v3 v3.23.1
+	github.com/pressly/goose/v3 v3.24.1
 	github.com/rs/zerolog v1.33.0
 	github.com/segmentio/ksuid v1.0.4
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.4
-	github.com/testcontainers/testcontainers-go v0.33.0
+	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.18.0
 	github.com/volatiletech/strmangle v0.0.8
 	go.uber.org/mock v0.5.0
 	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e
-	google.golang.org/grpc v1.69.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/grpc v1.69.4
+	google.golang.org/protobuf v1.36.4
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
-	github.com/ClickHouse/ch-go v0.61.5 // indirect
+	github.com/ClickHouse/ch-go v0.65.1 // indirect
 	github.com/DIMO-Network/yaml v0.1.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -66,14 +66,14 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240724233137-53bbb0ceb27a // indirect
 	github.com/crate-crypto/go-kzg-4844 v1.1.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v27.3.0+incompatible // indirect
+	github.com/docker/docker v27.5.1+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
@@ -157,33 +157,34 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.12.0 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
-	github.com/supranational/blst v0.3.13 // indirect
-	github.com/swaggo/files/v2 v2.0.1 // indirect
+	github.com/supranational/blst v0.3.14 // indirect
+	github.com/swaggo/files/v2 v2.0.2 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.33.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
-	github.com/urfave/cli/v2 v2.25.7 // indirect
+	github.com/urfave/cli/v2 v2.27.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.55.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/volatiletech/inflect v0.0.1 // indirect
 	github.com/volatiletech/randomize v0.0.1 // indirect
-	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
-	go.opentelemetry.io/otel v1.31.0 // indirect
-	go.opentelemetry.io/otel/metric v1.31.0 // indirect
-	go.opentelemetry.io/otel/trace v1.31.0 // indirect
+	go.opentelemetry.io/otel v1.34.0 // indirect
+	go.opentelemetry.io/otel/metric v1.34.0 // indirect
+	go.opentelemetry.io/otel/trace v1.34.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
-	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.29.0 // indirect
+	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/mod v0.23.0 // indirect
+	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/time v0.9.0 // indirect
+	golang.org/x/tools v0.30.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241015192408-796eee8c2d53 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241021214115-324edc3d5d38 // indirect

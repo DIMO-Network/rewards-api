@@ -77,7 +77,7 @@ func TestReferrals(t *testing.T) {
 		t.Fatalf("failed to start geneic container: %v", err)
 	}
 
-	defer cont.Terminate(ctx) //nolint
+	defer testcontainers.CleanupContainer(t, cont)
 
 	logger := zerolog.New(os.Stdout)
 
@@ -353,7 +353,7 @@ func TestReferralsBatchRequest(t *testing.T) {
 		t.Fatalf("failed to start geneic container: %v", err)
 	}
 
-	defer cont.Terminate(ctx) //nolint
+	defer testcontainers.CleanupContainer(t, cont)
 
 	logger := zerolog.New(os.Stdout)
 
