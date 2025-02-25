@@ -23,6 +23,7 @@ import (
 	"github.com/segmentio/ksuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types"
@@ -121,10 +122,7 @@ func TestStreak(t *testing.T) {
 	logger := zerolog.Nop()
 
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
-	defer func() {
-		err := cont.Terminate(ctx)
-		assert.NoError(t, err)
-	}()
+	defer testcontainers.CleanupContainer(t, cont)
 
 	scens := []Scenario{
 		{
@@ -480,10 +478,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 	logger := zerolog.Nop()
 
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
-	defer func() {
-		err := cont.Terminate(ctx)
-		assert.NoError(t, err)
-	}()
+	defer testcontainers.CleanupContainer(t, cont)
 
 	scens := []Scenario{
 		{
@@ -675,10 +670,7 @@ func TestBaselineIssuance(t *testing.T) {
 	logger := zerolog.Nop()
 
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
-	defer func() {
-		err := cont.Terminate(ctx)
-		assert.NoError(t, err)
-	}()
+	defer testcontainers.CleanupContainer(t, cont)
 
 	scens := []Scenario{
 		{
