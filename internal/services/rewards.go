@@ -1,3 +1,4 @@
+//go:generate mockgen -source=./rewards.go -destination=rewards_mock_test.go -package=services
 package services
 
 import (
@@ -34,6 +35,7 @@ type BaselineClient struct {
 	DataService        DeviceActivityClient
 	DevicesClient      DevicesClient
 	DefsClient         IntegrationsGetter
+	vinVCSrv           VINVCService
 	ContractAddress    common.Address
 	Week               int
 	Logger             *zerolog.Logger
@@ -42,11 +44,13 @@ type BaselineClient struct {
 	StakingEnabled     bool
 }
 
-//go:generate mockgen -source=./rewards.go -destination=stake_checker_mock_test.go -package=services
 type StakeChecker interface {
 	GetVehicleStakePoints(vehicleID uint64) (int, error)
 }
 
+type VINVCService interface {
+	GetConfirmedVINVCs(ctx context.Context, activeTokenIds []*ch.Vehicle) (map[int64]struct{}, error)
+}
 type DeviceActivityClient interface {
 	DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*ch.Vehicle, error)
 }
@@ -65,9 +69,10 @@ func NewBaselineRewardService(
 	dataService DeviceActivityClient,
 	devicesClient DevicesClient,
 	defsClient IntegrationsGetter,
+	stakeChecker StakeChecker,
+	vinVCClient VINVCService,
 	week int,
 	logger *zerolog.Logger,
-	stakeChecker StakeChecker,
 ) *BaselineClient {
 	return &BaselineClient{
 		TransferService:    transferService,
@@ -78,6 +83,7 @@ func NewBaselineRewardService(
 		Week:               week,
 		Logger:             logger,
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
+		vinVCClient:        vinVCClient,
 		StakeChecker:       stakeChecker,
 		StakingEnabled:     settings.EnableStaking,
 	}
@@ -144,6 +150,13 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
+	vinVCConfirmed, err := t.vinVCClient.GetConfirmedVINVCs(ctx, activeDevices)
+	if err != nil {
+		// this is a non-fatal error, we can continue without this data
+		t.Logger.Warn().Err(err).Msg("Failed to get confirmed VIN VC VINs. continuing execution.")
+		vinVCConfirmed = map[int64]struct{}{}
+	}
+
 	allIntegrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
@@ -187,6 +200,11 @@ func (t *BaselineClient) assignPoints() error {
 		integsSignalsThisWeek := set.New(device.Integrations...)
 
 		logger = logger.With().Str("userId", ud.UserId).Logger()
+
+		if _, ok := vinVCConfirmed[device.TokenID]; !ok && len(vinVCConfirmed) > 0 {
+			// TODO: Update this to a continue after we have a better idea of how many vehicles are missing VIN VC.
+			logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle does not have a confirmed VIN VC VIN.")
+		}
 
 		if !ud.VinConfirmed {
 			logger.Info().Msg("Device does not have confirmed VIN.")
