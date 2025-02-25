@@ -415,6 +415,7 @@ func TestStreak(t *testing.T) {
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
 			vinVCSrv := NewMockVINVCService(ctrl)
+			vinVCSrv.EXPECT().GetConfirmedVINVCs(gomock.Any(), gomock.Any()).AnyTimes().Return(map[int64]struct{}{}, nil)
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
 
@@ -610,6 +611,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).Return(0, nil).AnyTimes()
 			vinVCSrv := NewMockVINVCService(ctrl)
+			vinVCSrv.EXPECT().GetConfirmedVINVCs(gomock.Any(), gomock.Any()).AnyTimes().Return(map[int64]struct{}{}, nil)
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
 
@@ -874,6 +876,7 @@ func TestBaselineIssuance(t *testing.T) {
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
 			vinVCSrv := NewMockVINVCService(ctrl)
+			vinVCSrv.EXPECT().GetConfirmedVINVCs(gomock.Any(), gomock.Any()).AnyTimes().Return(map[int64]struct{}{}, nil)
 
 			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
 
@@ -1084,10 +1087,4 @@ func (d *FakeDevClient) GetUserDeviceByTokenId(_ context.Context, in *pb_devices
 	}
 
 	return nil, status.Error(codes.NotFound, "No user with that ID found.")
-}
-
-type FakeVINVinClient struct{}
-
-func (f *FakeVINVinClient) GetConfirmedVINVCs(ctx context.Context, activeTokenIds []*ch.Vehicle) (map[int64]struct{}, error) {
-	return map[int64]struct{}{}, nil
 }
