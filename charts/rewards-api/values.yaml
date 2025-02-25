@@ -35,12 +35,9 @@ env:
   DB_SSL_MODE: require
   DB_MAX_OPEN_CONNECTIONS: '10'
   DB_MAX_IDLE_CONNECTIONS: '3'
-  SERVICE_NAME: rewards-api
   GRPC_PORT: '8086'
   JWT_KEY_SET_URL: https://auth.dev.dimo.zone/keys
   DEPLOYMENT_BASE_URL: https://rewards-api.dev.dimo.zone
-  DEVICE_DATA_INDEX_NAME: device-status-dev*
-  DEVICE_DATA_INDEX_PREFIX: device-status-dev-
   AWS_REGION: us-east-2
   DEVICES_API_GRPC_ADDR: devices-api-dev:8086
   USERS_API_GRPC_ADDR: users-api-dev:8086

@@ -11,21 +11,21 @@ The formulas are available on the [docs site](https://docs.dimo.zone/dimo-overvi
 **Integration.** Better integrations earn more points, as shown in the table below. The only valid combination of two of these is Smartcar and AutoPi together, which earns the sim 7000.
 
 | Integration | Points |
-|-|-|
-| Smartcar | 1000 |
-| Tesla | 4000 |
-| AutoPi | 6000 |
+| ----------- | ------ |
+| Smartcar    | 1000   |
+| Tesla       | 4000   |
+| AutoPi      | 6000   |
 
 **Streak.** The program maintains a "weeks connected" counter for each vehicle. Ideally, this starts at 0 and simply increments by 1 every week, with the vehicle staying continuously connected. Being disconnected for one or two weeks in a row merely pauses this counter.
 
 **Level.** The connection streak at the end of a week determines a level for the vehicle. An active vehicle then earns points based on the level:
 
 | Level | Min streak | Points |
-|-|-|-|
-| 1 | 0 | 0 |
-| 2 | 4 | 1000 |
-| 3 | 20 | 2000 |
-| 4 | 36 | 3000 |
+| ----- | ---------- | ------ |
+| 1     | 0          | 0      |
+| 2     | 4          | 1000   |
+| 3     | 20         | 2000   |
+| 4     | 36         | 3000   |
 
 Being inactive for three weeks straight drops your connection streak to the minimum one for the previous level.
 
@@ -34,14 +34,19 @@ Being inactive for three weeks straight drops your connection streak to the mini
 ### Database modifications
 
 Create a new Goose migration file:
+
 ```
 goose -dir migrations create MIGRATION_TITLE sql
 ```
+
 This will create a file in the `migrations` folder named something like `$TIMESTAMP_MIGRATION_TITLE.sql`. Edit this with your new innovations. To run the migrations:
+
 ```
 go run ./cmd/rewards-api migrate
 ```
+
 And then to generate the models:
+
 ```
 sqlboiler psql --no-tests --wipe
 ```
@@ -54,7 +59,7 @@ swag init -g cmd/rewards-api/main.go --parseDependency --parseInternal --generat
 
 ### Simulating a production run
 
-1. Get production values for the Elastic instance to place in `ELASTIC_SEARCH_ANALYTICS_HOST`, `ELASTIC_SEARCH_ANALYTICS_USERNAME`, and `ELASTIC_SEARCH_ANALYTICS_PASSWORD` in `settings.yaml`. You will need to be on VPN for this to work.
+1. Get production values for the Clickohouse instance to place in `settings.yaml`. You will need to be on VPN for this to work.
 2. Make sure `DEVICE_DATA_INDEX_NAME` is appropriately set to, e.g., `device-status-prod-*`.
 3. Set `DEFINITIONS_API_GRPC_ADDR` and `DEVICES_API_GRPC_ADDR` to local ports. For the sake of an example, let's say these are `localhost:8086` and `localhost:8087`, respectively.
 4. Port-forward these two services through. In our example:
