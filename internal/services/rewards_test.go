@@ -412,8 +412,9 @@ func TestStreak(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
+			vinVCSrv := NewMockVINVCClient(ctrl)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger, msc)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
 
 			err = rwBonusService.assignPoints()
 			if err != nil {
@@ -603,8 +604,9 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).Return(0, nil).AnyTimes()
+			vinVCSrv := NewMockVINVCClient(ctrl)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger, msc)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
 
 			err = rwBonusService.assignPoints()
 			assert.NoError(t, err)
@@ -863,8 +865,9 @@ func TestBaselineIssuance(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
+			vinVCSrv := NewMockVINVCClient(ctrl)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, 5, &logger, msc)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
 
 			err = rwBonusService.BaselineIssuance()
 			assert.NoError(t, err)
@@ -1073,4 +1076,10 @@ func (d *FakeDevClient) GetUserDeviceByTokenId(_ context.Context, in *pb_devices
 	}
 
 	return nil, status.Error(codes.NotFound, "No user with that ID found.")
+}
+
+type FakeVINVinClient struct{}
+
+func (f *FakeVINVinClient) GetConfirmedVINVCs(ctx context.Context, activeTokenIds []*ch.Vehicle) (map[int64]struct{}, error) {
+	return map[int64]struct{}{}, nil
 }

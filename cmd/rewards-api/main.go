@@ -26,7 +26,9 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
+	"github.com/DIMO-Network/rewards-api/internal/services/fetchapi"
 	"github.com/DIMO-Network/rewards-api/internal/services/identity"
+	"github.com/DIMO-Network/rewards-api/internal/services/vinvc"
 	"github.com/DIMO-Network/shared"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
@@ -328,8 +330,10 @@ func main() {
 			QueryURL: settings.IdentityQueryURL,
 			Client:   &http.Client{},
 		}
+		fetchapiSrv := fetchapi.New(&settings, &logger)
+		vinvcSrv := vinvc.New(fetchapiSrv, &settings, &logger)
 
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, week, &logger, identClient)
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, identClient, vinvcSrv, week, &logger)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")

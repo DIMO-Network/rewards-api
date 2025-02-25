@@ -7,9 +7,11 @@ replace github.com/ericlagergren/decimal => github.com/ericlagergren/decimal v0.
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.32.2
 	github.com/DIMO-Network/accounts-api v0.2.9
+	github.com/DIMO-Network/attestation-api v0.0.18
 	github.com/DIMO-Network/clickhouse-infra v0.0.3
 	github.com/DIMO-Network/device-definitions-api v1.2.89
 	github.com/DIMO-Network/devices-api v1.32.53
+	github.com/DIMO-Network/fetch-api v0.0.7
 	github.com/DIMO-Network/model-garage v0.4.11
 	github.com/DIMO-Network/shared v0.12.9
 	github.com/DIMO-Network/users-api v0.9.4
@@ -37,7 +39,7 @@ require (
 	github.com/volatiletech/strmangle v0.0.8
 	go.uber.org/mock v0.5.0
 	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e
-	google.golang.org/grpc v1.69.4
+	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.4
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -55,12 +57,14 @@ require (
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/avast/retry-go/v4 v4.6.0 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.30.4 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.16 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.16 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.36.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.31 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.31 // indirect
 	github.com/aws/aws-sdk-go-v2/service/kms v1.35.5 // indirect
-	github.com/aws/smithy-go v1.20.4 // indirect
+	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/bits-and-blooms/bitset v1.17.0 // indirect
+	github.com/btcsuite/btcd/btcutil v1.1.6 // indirect
+	github.com/btcsuite/btcutil v1.0.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/consensys/bavard v0.1.22 // indirect
 	github.com/consensys/gnark-crypto v0.14.0 // indirect
@@ -117,7 +121,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20240819163618-b1d8f4d146e7 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mdelapenya/tlscert v0.1.0 // indirect
@@ -139,8 +143,10 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
+	github.com/piprate/json-gold v0.5.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
+	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
@@ -162,6 +168,10 @@ require (
 	github.com/swaggo/files/v2 v2.0.2 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.33.0 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/urfave/cli/v2 v2.27.5 // indirect
@@ -187,8 +197,8 @@ require (
 	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.30.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241015192408-796eee8c2d53 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241021214115-324edc3d5d38 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241202173237-19429a94021a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
