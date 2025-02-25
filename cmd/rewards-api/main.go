@@ -70,6 +70,13 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to load settings.")
 	}
+	if settings.LogLevel != "" {
+		lvl, err := zerolog.ParseLevel(settings.LogLevel)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to parse log level.")
+		}
+		zerolog.SetGlobalLevel(lvl)
+	}
 
 	if len(os.Args) == 1 {
 		pdb := db.NewDbConnectionFromSettings(ctx, &settings.DB, true)

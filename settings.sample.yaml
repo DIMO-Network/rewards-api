@@ -9,10 +9,7 @@ DB:
   NAME: rewards_api
   MAX_OPEN_CONNECTIONS: 5
   MAX_IDLE_CONNECTIONS: 5
-SERVICE_NAME: rewards-api
 JWT_KEY_SET_URL: http://127.0.0.1:5556/dex/keys
-ELASTIC_SEARCH_ANALYTICS_HOST: http://localhost:9200
-DEVICE_DATA_INDEX_NAME: device-status
 META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
 META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
 KAFKA_BROKERS: localhost:9092

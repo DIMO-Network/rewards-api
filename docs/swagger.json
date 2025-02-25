@@ -20,7 +20,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "Time in the week to calculate potential tokens earned based on the provided points (defaults to last week) (format 2006-01-02T15:04:05Z07:00)",
+                        "description": "Time in the week to calculate potential tokens earned based on the provided points (defaults to last week) (format RFC-3339 e.x. 2024-12-23T12:41:42Z)",
                         "name": "time",
                         "in": "query"
                     }
@@ -350,13 +350,16 @@
             "type": "object",
             "properties": {
                 "points": {
+                    "description": "Points is the number of points used to calculate the potential tokens.",
                     "type": "integer"
                 },
-                "tokenAmount": {
-                    "$ref": "#/definitions/decimal.Big"
-                },
-                "weekId": {
-                    "type": "integer"
+                "tokens": {
+                    "description": "Tokens is the number of tokens ($DIMO/eth not wei) that would be earned for the given number of points.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/decimal.Big"
+                        }
+                    ]
                 }
             }
         },
