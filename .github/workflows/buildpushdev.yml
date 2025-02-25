@@ -30,7 +30,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./resources/docker/Dockerfile
+          file: ./docker/dockerfile
           push: true
           platforms: linux/amd64
           tags: dimozone/rewards-api:${{ steps.slug.outputs.sha7 }}, dimozone/rewards-api:latest
