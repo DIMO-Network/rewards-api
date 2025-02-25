@@ -23,19 +23,19 @@ const dincConnectionAddr = "0x1234567890abcdef1234567890abcdef12345678"
 type VINVCService struct {
 	fetchService     *fetchapi.FetchAPIService
 	logger           zerolog.Logger
-	vinVCDataType    string
+	vinVCDataVersion string
 	trustedRecorders []string
 }
 
 // New creates a new instance of VINVCClient.
 func New(fetchService *fetchapi.FetchAPIService, settings *config.Settings, logger *zerolog.Logger) *VINVCService {
 	return &VINVCService{
-		fetchService:  fetchService,
-		logger:        logger.With().Str("component", "fetch_vinvc_client").Logger(),
-		vinVCDataType: "TODO",
+		fetchService:     fetchService,
+		logger:           logger.With().Str("component", "vinvc_service").Logger(),
+		vinVCDataVersion: settings.VINVCDataVersion,
 		trustedRecorders: []string{
 			cloudevent.EthrDID{
-				ChainID:         uint64(settings.ChainID),
+				ChainID:         uint64(settings.DIMORegistryChainID),
 				ContractAddress: common.HexToAddress(dincConnectionAddr),
 			}.String(),
 		},
@@ -47,23 +47,23 @@ func New(fetchService *fetchapi.FetchAPIService, settings *config.Settings, logg
 // 1. It is not expired.
 // 2. It was either recorded in the past week OR recorded by a trusted source.
 // 3. The TokenID is the only one associated with that VIN.
-func (c *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle) (map[int64]struct{}, error) {
+func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle) (map[int64]struct{}, error) {
 	confirmedVINs := make(map[int64]struct{})
 	// Map to track VINs and their associated tokenIDs (only for valid VCs)
 	validVinToTokenIDs := make(map[string][]int64)
 
 	// First pass: collect all valid VINVCs and their associated VINs
 	for _, vehicle := range activeVehicles {
-		logger := c.logger.With().Int64("vehicleTokenId", vehicle.TokenID).Logger()
+		logger := v.logger.With().Int64("vehicleTokenId", vehicle.TokenID).Logger()
 		// Set search options
 		opts := &pb.SearchOptions{
-			DataVersion: &wrapperspb.StringValue{Value: c.vinVCDataType},
+			DataVersion: &wrapperspb.StringValue{Value: v.vinVCDataVersion},
 			Type:        &wrapperspb.StringValue{Value: "io.dimo.verifiable.credential"},
 			Subject:     &wrapperspb.StringValue{Value: fmt.Sprintf("did:dimo:vehicle:%d", vehicle.TokenID)},
 		}
 
 		// Get latest cloud event
-		cloudEvent, err := c.fetchService.GetLatestCloudEvent(ctx, opts)
+		cloudEvent, err := v.fetchService.GetLatestCloudEvent(ctx, opts)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to get latest VIN VC")
 			continue
@@ -90,13 +90,13 @@ func (c *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 		}
 
 		// Check if this is a valid VC
-		if isValidVC(cred, credSubject, c.trustedRecorders, c.logger) {
+		if v.isValidVC(&cred, &credSubject) {
 			// Only track VINs from valid VCs
 			vin := credSubject.VehicleIdentificationNumber
 			validVinToTokenIDs[vin] = append(validVinToTokenIDs[vin], vehicle.TokenID)
 			confirmedVINs[vehicle.TokenID] = struct{}{}
 		} else {
-			c.logger.Info().Any("credentialSubject", credSubject).Msg("VINVC did not meet validation criteria")
+			v.logger.Info().Any("credentialSubject", credSubject).Msg("VINVC did not meet validation criteria")
 		}
 	}
 
@@ -104,7 +104,7 @@ func (c *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 	for vin, tokenIDs := range validVinToTokenIDs {
 		if len(tokenIDs) > 1 {
 			// This VIN has multiple associated tokenIDs, so none are confirmed
-			c.logger.Warn().Str("vin", vin).Any("vehicleTokenIds", tokenIDs).Msg("VIN has multiple associated tokenIDs")
+			v.logger.Warn().Str("vin", vin).Any("vehicleTokenIds", tokenIDs).Msg("VIN has multiple associated tokenIDs")
 			for _, tokenID := range tokenIDs {
 				delete(confirmedVINs, tokenID)
 			}
@@ -118,19 +118,19 @@ func (c *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 // A credential is valid if:
 // 1. It is not expired.
 // 2. It was either recorded in the past week OR recorded by a trusted source.
-func isValidVC(cred verifiable.Credential, subject verifiable.VINSubject, trustedRecorders []string, logger zerolog.Logger) bool {
+func (v *VINVCService) isValidVC(cred *verifiable.Credential, subject *verifiable.VINSubject) bool {
 	// Check expiration - credential should not be expired
 	// previous Monday
 	endOfWeek := time.Now().AddDate(0, 0, -int(time.Now().Weekday()))
 	expiresAt, err := time.Parse(time.RFC3339, cred.ValidTo)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to parse ValidTo date")
+		v.logger.Error().Err(err).Msg("failed to parse ValidTo date")
 		return false
 	}
 
 	if endOfWeek.After(expiresAt) {
 		// Credential is expired
-		logger.Info().Str("validTo", cred.ValidTo).Msg("VINVC is expired")
+		v.logger.Info().Str("validTo", cred.ValidTo).Msg("VINVC is expired")
 		return false
 	}
 
@@ -138,7 +138,7 @@ func isValidVC(cred verifiable.Credential, subject verifiable.VINSubject, truste
 
 	// Check if recorder is trusted
 	isTrustedRecorder := false
-	for _, trusted := range trustedRecorders {
+	for _, trusted := range v.trustedRecorders {
 		if subject.RecordedBy == trusted {
 			isTrustedRecorder = true
 			break

@@ -31,6 +31,7 @@ type Settings struct {
 	Clickhouse                 config.Settings `yaml:",inline"`
 	IdentityQueryURL           string          `yaml:"IDENTITY_QUERY_URL"`
 	EnableStaking              bool            `yaml:"ENABLE_STAKING"`
-	ChainID                    int             `yaml:"CHAIN_ID"`
+	DIMORegistryChainID        int             `yaml:"DIMO_REGISTRY_CHAIN_ID"`
 	VehicleNFTAddress          common.Address  `yaml:"VEHICLE_NFT_ADDRESS"`
+	VINVCDataVersion           string          `yaml:"VINVC_DATA_VERSION"`
 }
