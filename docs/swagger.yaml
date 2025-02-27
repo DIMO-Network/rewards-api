@@ -306,6 +306,10 @@ definitions:
           across all weeks.
         example: 5000
         type: integer
+      tokenId:
+        description: TokenID is the NFT token id for minted vehicles.
+        example: 37
+        type: integer
       tokens:
         description: Tokens is the total number of tokens that the device has earned
           across all weeks.

@@ -274,6 +274,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		outLi[i] = &UserResponseDevice{
 			ID:                   device.Id,
+			TokenID:              device.TokenId,
 			Points:               pts,
 			Tokens:               tkns,
 			ConnectedThisWeek:    slices.ContainsFunc(outInts, func(uri UserResponseIntegration) bool { return uri.Points > 0 }),
@@ -336,6 +337,8 @@ type UserResponse struct {
 type UserResponseDevice struct {
 	// ID is the user device ID used across all services.
 	ID string `json:"id" example:"27cv7gVTh9h4RJuTsmJHpBcr4I9"`
+	// TokenID is the NFT token id for minted vehicles.
+	TokenID *uint64 `json:"tokenId,omitempty" example:"37"`
 	// Points is the total number of points that the device has earned across all weeks.
 	Points int `json:"points" example:"5000"`
 	// Tokens is the total number of tokens that the device has earned across all weeks.
