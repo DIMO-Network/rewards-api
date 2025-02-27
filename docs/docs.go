@@ -509,6 +509,11 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 5000
                 },
+                "tokenId": {
+                    "description": "TokenID is the NFT token id for minted vehicles.",
+                    "type": "integer",
+                    "example": 37
+                },
                 "tokens": {
                     "description": "Tokens is the total number of tokens that the device has earned across all weeks.",
                     "type": "number",
