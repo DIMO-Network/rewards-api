@@ -80,6 +80,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				}
 				subject := verifiable.VINSubject{
 					VehicleIdentificationNumber: "1HGCM82633A123456",
+					VehicleTokenID:              1,
 					RecordedAt:                  yesterday,
 					RecordedBy:                  "SOME_RECORDER",
 				}
@@ -105,6 +106,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				}
 				subject1 := verifiable.VINSubject{
 					VehicleIdentificationNumber: "1HGCM82633A123456",
+					VehicleTokenID:              1,
 					RecordedAt:                  yesterday,
 					RecordedBy:                  "SOME_RECORDER",
 				}
@@ -119,6 +121,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				}
 				subject2 := verifiable.VINSubject{
 					VehicleIdentificationNumber: "JH4DA9470MS012345",
+					VehicleTokenID:              2,
 					RecordedAt:                  twoWeeksAgo,
 					RecordedBy:                  "SOME_RECORDER",
 				}
@@ -149,17 +152,58 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				}
 				subject := verifiable.VINSubject{
 					VehicleIdentificationNumber: "1HGCM82633A123456", // Same VIN
+					VehicleTokenID:              1,
+					RecordedAt:                  yesterday.Add(time.Hour),
+					RecordedBy:                  "SOME_RECORDER",
+				}
+				cloudEvent := createTestCloudEvent(t, cred, subject)
+				subject2 := verifiable.VINSubject{
+					VehicleIdentificationNumber: "1HGCM82633A123456", // Same VIN
+					VehicleTokenID:              2,
+					RecordedAt:                  yesterday,
+					RecordedBy:                  "SOME_RECORDER",
+				}
+				cloudEvent2 := createTestCloudEvent(t, cred, subject2)
+
+				m.EXPECT().
+					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
+					Return(cloudEvent, nil)
+				m.EXPECT().
+					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
+					Return(cloudEvent2, nil)
+			},
+			expectedResult: map[int64]struct{}{1: {}},
+		},
+		{
+			name: "Duplicate VINs Same RecordedAt",
+			vehicles: []*ch.Vehicle{
+				{TokenID: 1, Integrations: []string{"integration1"}},
+				{TokenID: 2, Integrations: []string{"integration2"}},
+			},
+			setupMock: func(m *MockFetchAPIService) {
+				// Both vehicles point to same VIN
+				cred := verifiable.Credential{
+					ValidFrom: yesterday.Format(time.RFC3339),
+					ValidTo:   nextWeek.Format(time.RFC3339),
+				}
+				subject := verifiable.VINSubject{
+					VehicleIdentificationNumber: "1HGCM82633A123456", // Same VIN
+					VehicleTokenID:              1,
 					RecordedAt:                  yesterday,
 					RecordedBy:                  "SOME_RECORDER",
 				}
 				cloudEvent := createTestCloudEvent(t, cred, subject)
-
+				subject2 := subject
+				subject2.VehicleTokenID = 2
+				cloudEvent2 := createTestCloudEvent(t, cred, subject2)
 				m.EXPECT().
 					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
-					Return(cloudEvent, nil).
-					Times(2)
+					Return(cloudEvent, nil)
+				m.EXPECT().
+					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
+					Return(cloudEvent2, nil)
 			},
-			expectedResult: map[int64]struct{}{}, // Neither should be confirmed due to duplicate VIN
+			expectedResult: map[int64]struct{}{2: {}},
 		},
 		{
 			name: "Fetch API error",
@@ -207,6 +251,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				}
 				subject := verifiable.VINSubject{
 					VehicleIdentificationNumber: "", // Empty VIN
+					VehicleTokenID:              1,
 					RecordedAt:                  yesterday,
 					RecordedBy:                  "SOME_RECORDER",
 				}
