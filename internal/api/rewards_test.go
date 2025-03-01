@@ -2,74 +2,22 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/DIMO-Network/rewards-api/internal/database"
+	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/shared/api/rewards"
-	"github.com/DIMO-Network/shared/db"
-	"github.com/docker/go-connections/nat"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestGetBlacklist(t *testing.T) {
 	ctx := context.TODO()
-	port := 5432
-	nport := fmt.Sprintf("%d/tcp", port)
-
-	req := testcontainers.ContainerRequest{
-		Image:        "postgres:16.6-alpine",
-		ExposedPorts: []string{nport},
-		AutoRemove:   true,
-		Env: map[string]string{
-			"POSTGRES_DB":       "rewards_api",
-			"POSTGRES_PASSWORD": "postgres",
-		},
-		WaitingFor: wait.ForListeningPort(nat.Port(nport)),
-	}
-	cont, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		t.Fatalf("failed to start geneic container: %v", err)
-	}
-
-	defer testcontainers.CleanupContainer(t, cont)
-
 	logger := zerolog.New(os.Stdout)
-
-	host, err := cont.Host(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	mport, err := cont.MappedPort(ctx, nat.Port(nport))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dbset := db.Settings{
-		User:               "postgres",
-		Password:           "postgres",
-		Port:               mport.Port(),
-		Host:               host,
-		Name:               "rewards_api",
-		MaxOpenConnections: 10,
-		MaxIdleConnections: 10,
-	}
-
-	if err := database.MigrateDatabase(logger, &dbset, "", "../../migrations"); err != nil {
-		t.Fatal(err)
-	}
-
-	dbs := db.NewDbConnectionForTest(ctx, &dbset, true)
-	dbs.WaitForDB(logger)
+	cont, dbs := utils.GetDbConnection(ctx, t, logger)
+	defer testcontainers.CleanupContainer(t, cont)
 
 	addr1 := common.HexToAddress("0x1")
 	addr2 := common.HexToAddress("0x2")
@@ -82,7 +30,7 @@ func TestGetBlacklist(t *testing.T) {
 		return creatTime
 	}
 
-	_, err = serv.SetBlacklistStatus(ctx, &rewards.SetBlacklistStatusRequest{
+	_, err := serv.SetBlacklistStatus(ctx, &rewards.SetBlacklistStatusRequest{
 		EthereumAddress: addr1.Bytes(),
 		IsBlacklisted:   true,
 		Note:            "xdd",
