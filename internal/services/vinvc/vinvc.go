@@ -1,6 +1,7 @@
 package vinvc
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"slices"
@@ -59,7 +60,7 @@ func New(fetchService FetchAPIService, settings *config.Settings, logger *zerolo
 func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle) (map[int64]struct{}, error) {
 	confirmedVINs := make(map[int64]struct{})
 	// Map to track VINs and their associated tokenIDs (only for valid VCs)
-	validVinToTokenIDs := make(map[string][]int64)
+	validVinToTokenIDs := make(map[string][]verifiable.VINSubject)
 
 	// First pass: collect all valid VINVCs and their associated VINs
 	for _, vehicle := range activeVehicles {
@@ -99,10 +100,10 @@ func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 		}
 
 		// Check if this is a valid VC
-		if v.isValidVC(&cred, &credSubject) {
+		if v.isValidVC(uint32(vehicle.TokenID), &cred, &credSubject) {
 			// Only track VINs from valid VCs
 			vin := credSubject.VehicleIdentificationNumber
-			validVinToTokenIDs[vin] = append(validVinToTokenIDs[vin], vehicle.TokenID)
+			validVinToTokenIDs[vin] = append(validVinToTokenIDs[vin], credSubject)
 			confirmedVINs[vehicle.TokenID] = struct{}{}
 		} else {
 			v.logger.Info().Any("credentialSubject", credSubject).Msg("VINVC did not meet validation criteria")
@@ -110,12 +111,27 @@ func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 	}
 
 	// Second pass: check for VIN uniqueness and add to confirmed list
-	for vin, tokenIDs := range validVinToTokenIDs {
-		if len(tokenIDs) > 1 {
-			// This VIN has multiple associated tokenIDs, so none are confirmed
-			v.logger.Warn().Str("vin", vin).Any("vehicleTokenIds", tokenIDs).Msg("VIN has multiple associated tokenIDs")
-			for _, tokenID := range tokenIDs {
-				delete(confirmedVINs, tokenID)
+	for vin, subjects := range validVinToTokenIDs {
+		if len(subjects) > 1 {
+			// This VIN has multiple associated tokenIDs, so only keep the one with the latest recordedAt
+			v.logger.Warn().Str("vin", vin).Any("vehicleTokenIdCount", len(subjects)).Msg("VIN has multiple associated tokenIDs")
+			// delete all tokenIDs associated with this VIN accepts for  the one with the latest recordedAt
+			slices.SortFunc(subjects, func(a, b verifiable.VINSubject) int {
+				if a.RecordedAt.Before(b.RecordedAt) {
+					return -1
+				}
+				if a.RecordedAt.After(b.RecordedAt) {
+					return 1
+				}
+				// If recordedAt is the same, sort by tokenId
+				return cmp.Compare(a.VehicleTokenID, b.VehicleTokenID)
+			})
+			badSubjects := subjects[:len(subjects)-1]
+			for _, badSubject := range badSubjects {
+				v.logger.Debug().Uint32("vehicleTokenId", badSubject.VehicleTokenID).
+					Time("recordedAt", badSubject.RecordedAt).Str("vin", badSubject.VehicleIdentificationNumber).
+					Msg("removing non latest tokenId associated with VIN")
+				delete(confirmedVINs, int64(badSubject.VehicleTokenID))
 			}
 		}
 	}
@@ -127,7 +143,11 @@ func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 // A credential is valid if:
 // 1. It is not expired.
 // 2. It was either recorded in the past week OR recorded by a trusted source.
-func (v *VINVCService) isValidVC(cred *verifiable.Credential, subject *verifiable.VINSubject) bool {
+func (v *VINVCService) isValidVC(vehicleTokenID uint32, cred *verifiable.Credential, subject *verifiable.VINSubject) bool {
+	if vehicleTokenID != subject.VehicleTokenID {
+		v.logger.Warn().Uint32("vehicleTokenId", vehicleTokenID).Uint32("vcVehicleTokenId", subject.VehicleTokenID).Msg("tokenId mismatch")
+		return false
+	}
 	// Check expiration - credential should not be expired
 	// previous Monday
 	endOfWeek := time.Now().AddDate(0, 0, -int(time.Now().Weekday()))
