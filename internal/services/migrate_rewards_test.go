@@ -9,6 +9,7 @@ import (
 	"github.com/ericlagergren/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"github.com/testcontainers/testcontainers-go"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
@@ -52,10 +53,7 @@ func TestRewardsMigrationTestSuite(t *testing.T) {
 
 func (o *RewardsMigrationTestSuite) TestMigrateOldRewards() {
 	cont, conn := utils.GetDbConnection(o.ctx, o.T(), o.logger)
-	defer func() {
-		err := cont.Terminate(o.ctx)
-		assert.NoError(o.T(), err)
-	}()
+	defer testcontainers.CleanupContainer(o.T(), cont)
 
 	issuanceWeeks := []models.IssuanceWeek{
 		{ID: 1, JobStatus: models.IssuanceWeeksJobStatusFinished},
@@ -120,10 +118,7 @@ func (o *RewardsMigrationTestSuite) TestMigrateOldRewards() {
 
 func (o *RewardsMigrationTestSuite) Test_MultipleWeeks_MigrateOldRewards() {
 	cont, conn := utils.GetDbConnection(o.ctx, o.T(), o.logger)
-	defer func() {
-		err := cont.Terminate(o.ctx)
-		assert.NoError(o.T(), err)
-	}()
+	defer testcontainers.CleanupContainer(o.T(), cont)
 
 	issuanceWeeks := []models.IssuanceWeek{
 		{ID: 1, JobStatus: models.IssuanceWeeksJobStatusFinished},
@@ -220,10 +215,7 @@ func (o *RewardsMigrationTestSuite) Test_MultipleWeeks_MigrateOldRewards() {
 
 func (o *RewardsMigrationTestSuite) Test_NoStreakPoints() {
 	cont, conn := utils.GetDbConnection(o.ctx, o.T(), o.logger)
-	defer func() {
-		err := cont.Terminate(o.ctx)
-		assert.NoError(o.T(), err)
-	}()
+	defer testcontainers.CleanupContainer(o.T(), cont)
 
 	issuanceWeeks := []models.IssuanceWeek{
 		{ID: 1, JobStatus: models.IssuanceWeeksJobStatusFinished},
