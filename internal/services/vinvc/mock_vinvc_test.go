@@ -23,6 +23,7 @@ import (
 type MockFetchAPIService struct {
 	ctrl     *gomock.Controller
 	recorder *MockFetchAPIServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockFetchAPIServiceMockRecorder is the mock recorder for MockFetchAPIService.

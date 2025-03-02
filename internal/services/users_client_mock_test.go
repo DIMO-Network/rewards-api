@@ -23,6 +23,7 @@ import (
 type MockUsersClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockUsersClientMockRecorder
+	isgomock struct{}
 }
 
 // MockUsersClientMockRecorder is the mock recorder for MockUsersClient.
@@ -66,6 +67,7 @@ func (mr *MockUsersClientMockRecorder) GetUsersByEthereumAddress(ctx, in any, op
 type MockAccountsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockAccountsClientMockRecorder
+	isgomock struct{}
 }
 
 // MockAccountsClientMockRecorder is the mock recorder for MockAccountsClient.

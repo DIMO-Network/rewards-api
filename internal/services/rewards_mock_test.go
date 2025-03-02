@@ -26,6 +26,7 @@ import (
 type MockStakeChecker struct {
 	ctrl     *gomock.Controller
 	recorder *MockStakeCheckerMockRecorder
+	isgomock struct{}
 }
 
 // MockStakeCheckerMockRecorder is the mock recorder for MockStakeChecker.
@@ -64,6 +65,7 @@ func (mr *MockStakeCheckerMockRecorder) GetVehicleStakePoints(vehicleID any) *go
 type MockVINVCService struct {
 	ctrl     *gomock.Controller
 	recorder *MockVINVCServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockVINVCServiceMockRecorder is the mock recorder for MockVINVCService.
@@ -102,6 +104,7 @@ func (mr *MockVINVCServiceMockRecorder) GetConfirmedVINVCs(ctx, activeTokenIds, 
 type MockDeviceActivityClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDeviceActivityClientMockRecorder
+	isgomock struct{}
 }
 
 // MockDeviceActivityClientMockRecorder is the mock recorder for MockDeviceActivityClient.
@@ -140,6 +143,7 @@ func (mr *MockDeviceActivityClientMockRecorder) DescribeActiveDevices(ctx, start
 type MockIntegrationsGetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockIntegrationsGetterMockRecorder
+	isgomock struct{}
 }
 
 // MockIntegrationsGetterMockRecorder is the mock recorder for MockIntegrationsGetter.
@@ -183,6 +187,7 @@ func (mr *MockIntegrationsGetterMockRecorder) GetIntegrations(ctx, in any, opts 
 type MockDevicesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDevicesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockDevicesClientMockRecorder is the mock recorder for MockDevicesClient.
