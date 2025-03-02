@@ -46,7 +46,7 @@ type StakeChecker interface {
 }
 
 type VINVCService interface {
-	GetConfirmedVINVCs(ctx context.Context, activeTokenIds []*ch.Vehicle) (map[int64]struct{}, error)
+	GetConfirmedVINVCs(ctx context.Context, activeTokenIds []*ch.Vehicle, weekNum int) (map[int64]struct{}, error)
 }
 type DeviceActivityClient interface {
 	DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*ch.Vehicle, error)
@@ -122,7 +122,7 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	vinVCConfirmed, err := t.vinVCSrv.GetConfirmedVINVCs(ctx, activeDevices)
+	vinVCConfirmed, err := t.vinVCSrv.GetConfirmedVINVCs(ctx, activeDevices, issuanceWeek)
 	if err != nil {
 		// this is a non-fatal error, we can continue without this data
 		t.Logger.Warn().Err(err).Msg("Failed to get confirmed VIN VC VINs. continuing execution.")

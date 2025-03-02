@@ -84,18 +84,18 @@ func (m *MockVINVCService) EXPECT() *MockVINVCServiceMockRecorder {
 }
 
 // GetConfirmedVINVCs mocks base method.
-func (m *MockVINVCService) GetConfirmedVINVCs(ctx context.Context, activeTokenIds []*ch.Vehicle) (map[int64]struct{}, error) {
+func (m *MockVINVCService) GetConfirmedVINVCs(ctx context.Context, activeTokenIds []*ch.Vehicle, weekNum int) (map[int64]struct{}, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConfirmedVINVCs", ctx, activeTokenIds)
+	ret := m.ctrl.Call(m, "GetConfirmedVINVCs", ctx, activeTokenIds, weekNum)
 	ret0, _ := ret[0].(map[int64]struct{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetConfirmedVINVCs indicates an expected call of GetConfirmedVINVCs.
-func (mr *MockVINVCServiceMockRecorder) GetConfirmedVINVCs(ctx, activeTokenIds any) *gomock.Call {
+func (mr *MockVINVCServiceMockRecorder) GetConfirmedVINVCs(ctx, activeTokenIds, weekNum any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfirmedVINVCs", reflect.TypeOf((*MockVINVCService)(nil).GetConfirmedVINVCs), ctx, activeTokenIds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfirmedVINVCs", reflect.TypeOf((*MockVINVCService)(nil).GetConfirmedVINVCs), ctx, activeTokenIds, weekNum)
 }
 
 // MockDeviceActivityClient is a mock of DeviceActivityClient interface.

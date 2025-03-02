@@ -35,6 +35,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+const issuanceWeek = 5
+
 type User struct {
 	ID       string
 	Address  common.Address
@@ -414,16 +416,16 @@ func TestStreak(t *testing.T) {
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
 			vinVCSrv := NewMockVINVCService(ctrl)
-			vinVCSrv.EXPECT().GetConfirmedVINVCs(gomock.Any(), gomock.Any()).AnyTimes().Return(map[int64]struct{}{}, nil)
+			vinVCSrv.EXPECT().GetConfirmedVINVCs(gomock.Any(), gomock.Any(), issuanceWeek).AnyTimes().Return(map[int64]struct{}{}, nil)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, issuanceWeek, &logger)
 
 			err = rwBonusService.assignPoints()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -455,7 +457,7 @@ func TestStreak(t *testing.T) {
 
 			assert.ElementsMatch(t, scen.New, actual)
 
-			vs, err := models.Vins(models.VinWhere.FirstEarningWeek.EQ(5)).All(ctx, conn.DBS().Reader.DB)
+			vs, err := models.Vins(models.VinWhere.FirstEarningWeek.EQ(issuanceWeek)).All(ctx, conn.DBS().Reader.DB)
 			require.NoError(t, err)
 
 			actualv := []VIN{}
@@ -607,14 +609,14 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).Return(0, nil).AnyTimes()
 			vinVCSrv := NewMockVINVCService(ctrl)
-			vinVCSrv.EXPECT().GetConfirmedVINVCs(gomock.Any(), gomock.Any()).AnyTimes().Return(map[int64]struct{}{}, nil)
+			vinVCSrv.EXPECT().GetConfirmedVINVCs(gomock.Any(), gomock.Any(), issuanceWeek).AnyTimes().Return(map[int64]struct{}{}, nil)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, issuanceWeek, &logger)
 
 			err = rwBonusService.assignPoints()
 			assert.NoError(t, err)
 
-			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -648,7 +650,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			}
 			assert.ElementsMatch(t, scen.New, actual, scen.Description)
 
-			vs, err := models.Vins(models.VinWhere.FirstEarningWeek.EQ(5)).All(ctx, conn.DBS().Reader.DB)
+			vs, err := models.Vins(models.VinWhere.FirstEarningWeek.EQ(issuanceWeek)).All(ctx, conn.DBS().Reader.DB)
 			require.NoError(t, err)
 
 			actualv := []VIN{}
@@ -869,14 +871,14 @@ func TestBaselineIssuance(t *testing.T) {
 			msc := NewMockStakeChecker(ctrl)
 			msc.EXPECT().GetVehicleStakePoints(gomock.Any()).AnyTimes().Return(0, nil)
 			vinVCSrv := NewMockVINVCService(ctrl)
-			vinVCSrv.EXPECT().GetConfirmedVINVCs(gomock.Any(), gomock.Any()).AnyTimes().Return(map[int64]struct{}{}, nil)
+			vinVCSrv.EXPECT().GetConfirmedVINVCs(gomock.Any(), gomock.Any(), issuanceWeek).AnyTimes().Return(map[int64]struct{}{}, nil)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, 5, &logger)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, Views{devices: scen.Devices}, &FakeDevClient{devices: scen.Devices, users: scen.Users}, &FakeDefClient{}, msc, vinVCSrv, issuanceWeek, &logger)
 
 			err = rwBonusService.BaselineIssuance()
 			assert.NoError(t, err)
 
-			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(5), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
 				t.Fatal(err)
 			}

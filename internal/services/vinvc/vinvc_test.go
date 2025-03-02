@@ -2,7 +2,6 @@
 package vinvc_test
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	pb "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	"github.com/DIMO-Network/model-garage/pkg/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/date"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/services/vinvc"
 	"github.com/ethereum/go-ethereum/common"
@@ -279,7 +279,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 			service := vinvc.New(mockFetchAPI, settings, loggerPtr)
 
 			// Call the method
-			result, err := service.GetConfirmedVINVCs(context.Background(), tc.vehicles)
+			result, err := service.GetConfirmedVINVCs(t.Context(), tc.vehicles, date.GetWeekNum(time.Now()))
 
 			// Verify
 			require.NoError(t, err)
