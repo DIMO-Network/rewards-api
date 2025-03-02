@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/rewards-api/internal/date"
 	"github.com/DIMO-Network/rewards-api/models"
 	pb "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
@@ -115,7 +115,7 @@ func (s *rewardsService) GetDeviceRewards(ctx context.Context, req *pb.GetDevice
 		resp.Tokens += tokEth
 
 		row := pb.DeviceRewardsWeek{
-			EndDate:             services.NumToWeekEnd(r.IssuanceWeekID).UTC().Format("2006-01-02"),
+			EndDate:             date.NumToWeekEnd(r.IssuanceWeekID).UTC().Format("2006-01-02"),
 			Tokens:              tokEth,
 			ConnectionStreak:    int32(r.ConnectionStreak),
 			DisconnectionStreak: int32(r.DisconnectionStreak),

@@ -24,6 +24,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
+	"github.com/DIMO-Network/rewards-api/internal/date"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/services/fetchapi"
@@ -276,7 +277,7 @@ func main() {
 		var week int
 		if len(os.Args) == 2 {
 			// We have to subtract 1 because we're getting the number of the newly beginning week.
-			week = services.GetWeekNumForCron(time.Now()) - 1
+			week = date.GetWeekNumForCron(time.Now()) - 1
 		} else {
 			var err error
 			week, err = strconv.Atoi(os.Args[2])
@@ -342,7 +343,7 @@ func main() {
 		var week int
 		if len(os.Args) == 2 {
 			// We have to subtract 1 because we're getting the number of the newly beginning week.
-			week = services.GetWeekNumForCron(time.Now()) - 1
+			week = date.GetWeekNumForCron(time.Now()) - 1
 		} else {
 			var err error
 			week, err = strconv.Atoi(os.Args[2])

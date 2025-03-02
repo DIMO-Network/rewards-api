@@ -12,6 +12,7 @@ import (
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
+	"github.com/DIMO-Network/rewards-api/internal/date"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -101,12 +102,12 @@ var mkVIN = func(i int) string {
 
 func TestGetWeekNumForCron(t *testing.T) {
 	ti, _ := time.Parse(time.RFC3339, "2022-02-07T05:00:02Z")
-	if GetWeekNumForCron(ti) != 1 {
+	if date.GetWeekNumForCron(ti) != 1 {
 		t.Errorf("Failed")
 	}
 
 	ti, _ = time.Parse(time.RFC3339, "2022-02-07T04:58:44Z")
-	if GetWeekNumForCron(ti) != 1 {
+	if date.GetWeekNumForCron(ti) != 1 {
 		t.Errorf("Failed")
 	}
 }

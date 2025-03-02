@@ -9,6 +9,7 @@ import (
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/date"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -25,10 +26,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
-
-var weekDuration = 7 * 24 * time.Hour
 
 type BaselineClient struct {
 	TransferService    *TransferService
@@ -89,37 +86,12 @@ func NewBaselineRewardService(
 	}
 }
 
-// GetWeekNum calculates the number of the week in which the given time lies for DIMO point
-// issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
-// zero-based.
-func GetWeekNum(t time.Time) int {
-	sinceStart := t.Sub(startTime)
-	weekNum := int(sinceStart.Truncate(weekDuration) / weekDuration)
-	return weekNum
-}
-
-// GetWeekNumForCron calculates the week number for the current run of the cron job. We expect
-// the job to run every Monday at 05:00 UTC, but due to skew we just round the time.
-func GetWeekNumForCron(t time.Time) int {
-	sinceStart := t.Sub(startTime)
-	weekNum := int(sinceStart.Round(weekDuration) / weekDuration)
-	return weekNum
-}
-
-func NumToWeekStart(n int) time.Time {
-	return startTime.Add(time.Duration(n) * weekDuration)
-}
-
-func NumToWeekEnd(n int) time.Time {
-	return startTime.Add(time.Duration(n+1) * weekDuration)
-}
-
 func (t *BaselineClient) assignPoints() error {
 	issuanceWeek := t.Week
 	ctx := context.Background()
 
-	weekStart := NumToWeekStart(issuanceWeek)
-	weekEnd := NumToWeekEnd(issuanceWeek)
+	weekStart := date.NumToWeekStart(issuanceWeek)
+	weekEnd := date.NumToWeekEnd(issuanceWeek)
 
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/rewards-api/internal/date"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/ericlagergren/decimal"
@@ -96,9 +96,9 @@ func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
 		if err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid time format use RFC-3339 e.g. (2024-12-23T12:41:42Z)"))
 		}
-		weekID = services.GetWeekNum(weekTime)
+		weekID = date.GetWeekNum(weekTime)
 	} else {
-		weekID = services.GetWeekNum(time.Now()) - 1
+		weekID = date.GetWeekNum(time.Now()) - 1
 	}
 
 	points, err := strconv.Atoi(c.Query("points"))
