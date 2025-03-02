@@ -34,13 +34,3 @@ func NumToWeekStart(n int) time.Time {
 func NumToWeekEnd(n int) time.Time {
 	return startTime.Add(time.Duration(n+1) * weekDuration)
 }
-
-// CurrentWeekStart returns the start time of the current week.
-func CurrentWeekStart() time.Time {
-	return NumToWeekStart(GetWeekNum(time.Now()))
-}
-
-// CurrentWeekEnd returns the end time of the current week.
-func CurrentWeekEnd() time.Time {
-	return NumToWeekEnd(GetWeekNum(time.Now()))
-}
