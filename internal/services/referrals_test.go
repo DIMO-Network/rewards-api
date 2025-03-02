@@ -3,16 +3,14 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"testing"
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
-	"github.com/DIMO-Network/rewards-api/internal/database"
+	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	"github.com/DIMO-Network/shared/db"
 	pb "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ericlagergren/decimal"
 	"go.uber.org/mock/gomock"
@@ -21,13 +19,11 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/IBM/sarama/mocks"
-	"github.com/docker/go-connections/nat"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
@@ -55,58 +51,9 @@ func TestReferrals(t *testing.T) {
 	}
 
 	refContractAddr := common.HexToAddress("0xfF358a3dB687d9E80435a642bB3Ba8E64D4359A6")
-
-	port := 5432
-	nport := fmt.Sprintf("%d/tcp", port)
-
-	req := testcontainers.ContainerRequest{
-		Image:        "postgres:16.6-alpine",
-		ExposedPorts: []string{nport},
-		AutoRemove:   true,
-		Env: map[string]string{
-			"POSTGRES_DB":       "rewards_api",
-			"POSTGRES_PASSWORD": "postgres",
-		},
-		WaitingFor: wait.ForListeningPort(nat.Port(nport)),
-	}
-	cont, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		t.Fatalf("failed to start geneic container: %v", err)
-	}
-
-	defer cont.Terminate(ctx) //nolint
-
 	logger := zerolog.New(os.Stdout)
-
-	host, err := cont.Host(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	mport, err := cont.MappedPort(ctx, nat.Port(nport))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dbset := db.Settings{
-		User:               "postgres",
-		Password:           "postgres",
-		Port:               mport.Port(),
-		Host:               host,
-		Name:               "rewards_api",
-		MaxOpenConnections: 10,
-		MaxIdleConnections: 10,
-	}
-
-	if err := database.MigrateDatabase(logger, &dbset, "", "../../migrations"); err != nil {
-		t.Fatal(err)
-	}
-
-	conn := db.NewDbConnectionForTest(ctx, &dbset, true)
-	conn.WaitForDB(logger)
+	cont, conn := utils.GetDbConnection(ctx, t, logger)
+	defer testcontainers.CleanupContainer(t, cont)
 
 	type Device struct {
 		ID               string
@@ -332,57 +279,9 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	settings.TransferBatchSize = 1
 
-	port := 5432
-	nport := fmt.Sprintf("%d/tcp", port)
-
-	req := testcontainers.ContainerRequest{
-		Image:        "postgres:16.6-alpine",
-		ExposedPorts: []string{nport},
-		AutoRemove:   true,
-		Env: map[string]string{
-			"POSTGRES_DB":       "rewards_api",
-			"POSTGRES_PASSWORD": "postgres",
-		},
-		WaitingFor: wait.ForListeningPort(nat.Port(nport)),
-	}
-	cont, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		t.Fatalf("failed to start geneic container: %v", err)
-	}
-
-	defer cont.Terminate(ctx) //nolint
-
 	logger := zerolog.New(os.Stdout)
-
-	host, err := cont.Host(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	mport, err := cont.MappedPort(ctx, nat.Port(nport))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dbset := db.Settings{
-		User:               "postgres",
-		Password:           "postgres",
-		Port:               mport.Port(),
-		Host:               host,
-		Name:               "rewards_api",
-		MaxOpenConnections: 10,
-		MaxIdleConnections: 10,
-	}
-
-	if err := database.MigrateDatabase(logger, &dbset, "", "../../migrations"); err != nil {
-		t.Fatal(err)
-	}
-
-	conn := db.NewDbConnectionForTest(ctx, &dbset, true)
-	conn.WaitForDB(logger)
+	cont, conn := utils.GetDbConnection(ctx, t, logger)
+	defer testcontainers.CleanupContainer(t, cont)
 
 	config := mocks.NewTestConfig()
 	config.Producer.Return.Successes = true

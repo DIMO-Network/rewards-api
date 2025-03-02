@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/testcontainers/testcontainers-go"
 
 	"github.com/stretchr/testify/require"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -26,9 +27,7 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 	logger := zerolog.Nop()
 
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
-	defer func() {
-		_ = cont.Terminate(ctx)
-	}()
+	defer testcontainers.CleanupContainer(t, cont)
 
 	userDeviceID1 := ksuid.New().String()
 	userDeviceID2 := ksuid.New().String()
@@ -86,9 +85,7 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 	logger := zerolog.Nop()
 
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
-	defer func() {
-		_ = cont.Terminate(ctx)
-	}()
+	defer testcontainers.CleanupContainer(t, cont)
 
 	userDeviceID1 := ksuid.New().String()
 	userDeviceID2 := ksuid.New().String()
@@ -141,9 +138,7 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 	logger := zerolog.Nop()
 
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
-	defer func() {
-		_ = cont.Terminate(ctx)
-	}()
+	defer testcontainers.CleanupContainer(t, cont)
 
 	// Set a fixed conversion rate (tokens per point)
 	conversionRate := decimal.New(5, 0) // 5 tokens per point
