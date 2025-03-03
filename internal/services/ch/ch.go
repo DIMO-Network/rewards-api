@@ -51,14 +51,15 @@ func NewClient(settings *config.Settings) (*Client, error) {
 
 	err = conn.Ping(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("failed to ping clickhouse: %w", err)
+		return nil, fmt.Errorf("failed to ping ClickHouse: %w", err)
 	}
 	return &Client{conn: conn}, nil
 }
 
-// convertSourceToIntegrationID converts a "source" in ClickHouse to an old-style integration id.
-// For AutoPi, Macaron, Smartcar, Tesla this is just stripping off a prefix; but Ruptela
-// in ClickHouse goes by a "connection id", an address.
+// convertSourceToIntegrationID converts a "source" in ClickHouse to an old-style integration KSUID.
+// "Modern" connections will always use the the connection's Ethereum address, but older records and
+// some legacy connections like Smartcar will have sources that are a "dimo/integration/" prefix in
+// front of the KSUID.
 func (s *Client) convertSourceToIntegrationID(source string) string {
 	if integrationID, ok := connectionIDToIntegrationID[source]; ok {
 		return integrationID
@@ -66,7 +67,8 @@ func (s *Client) convertSourceToIntegrationID(source string) string {
 	return strings.TrimPrefix(source, integPrefix)
 }
 
-// DescribeActiveDevices returns list of vehicles and associated vehicle integrations that have signals in Clickhouse during specified time period
+// DescribeActiveDevices returns a list of vehicles and associated integrations KSUIDs that have signals
+// in ClickHouse during specified time period.
 func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*Vehicle, error) {
 	q := &queries.Query{}
 	queries.SetDialect(q, &dialect)
@@ -110,6 +112,8 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 	return vehicles, nil
 }
 
+// GetIntegrationsForVehicles is like DescribeActiveDevices, restricted to a given list of vehicle
+// token ids.
 func (s *Client) GetIntegrationsForVehicles(ctx context.Context, tokenIDs []uint64, start, end time.Time) ([]*Vehicle, error) {
 	if len(tokenIDs) == 0 {
 		return nil, nil
