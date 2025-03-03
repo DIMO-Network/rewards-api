@@ -59,7 +59,7 @@ func New(fetchService FetchAPIService, settings *config.Settings, logger *zerolo
 // A VINVC is confirmed if:
 // 1. It is not expired.
 // 2. It was either recorded in the past week OR recorded by a trusted source.
-// 3. The TokenID holds the latest recordedAt for the VIN.
+// 3. The TokenId holds the latest recordedAt for the VIN.
 func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle, weekNum int) (map[int64]struct{}, error) {
 	// map to track VINs and their associated tokenIDs (only for valid VCs)
 	validVinToTokenIDs := make(map[string][]*verifiable.VINSubject)
@@ -67,7 +67,6 @@ func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 	// collect all valid VINVCs and their associated VINs
 	for _, vehicle := range activeVehicles {
 		logger := v.logger.With().Int64("vehicleTokenId", vehicle.TokenID).Logger()
-		// Set search options
 		credSubject, err := v.GetLatestVINVC(ctx, vehicle.TokenID, weekNum)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to get latest VINVC")
@@ -91,7 +90,7 @@ func (v *VINVCService) GetLatestVINVC(ctx context.Context, tokenId int64, weekNu
 	opts := &pb.SearchOptions{
 		DataVersion: &wrapperspb.StringValue{Value: v.vinVCDataVersion},
 		Type:        &wrapperspb.StringValue{Value: cloudevent.TypeVerifableCredential},
-		Subject:     &wrapperspb.StringValue{Value: cloudevent.NFTDID{ChainID: v.chainID, TokenID: uint32(tokenId)}.String()},
+		Subject:     &wrapperspb.StringValue{Value: cloudevent.NFTDID{ChainID: v.chainID, ContractAddress: v.vehicleAddr, TokenID: uint32(tokenId)}.String()},
 		Before:      timestamppb.New(before.Add(time.Second)), // add a second to ensure inclusion of the end of the week
 	}
 	logger := v.logger.With().Int64("vehicleTokenId", tokenId).Logger()
@@ -104,29 +103,30 @@ func (v *VINVCService) GetLatestVINVC(ctx context.Context, tokenId int64, weekNu
 			return nil, errors.New("no VINVC found")
 		}
 		cloudEvent := cloudEvents[0]
-		before = cloudEvent.Time // update before to the time for the next iteration if we need to fetch more events
+		before = cloudEvent.Time // update before time for the next iteration if needed
 		eventLogger := logger.With().Str("cloudEventId", cloudEvent.ID).Str("cloudEventSource", cloudEvent.Source).Logger()
 
-		// Parse and validate the credential
+		// parse and validate the credential
 		cred := verifiable.Credential{}
 		if err := json.Unmarshal(cloudEvent.Data, &cred); err != nil {
 			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential skipping...")
 			continue
 		}
 
-		// Parse the credential subject
+		// parse the credential subject
 		credSubject := verifiable.VINSubject{}
 		if err := json.Unmarshal(cred.CredentialSubject, &credSubject); err != nil {
 			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential subject skipping...")
 			continue
 		}
 
-		// Skip if VIN is empty
+		// skip if VIN is empty
 		if credSubject.VehicleIdentificationNumber == "" {
 			eventLogger.Error().Msg("VINVC has empty VIN skipping...")
 			continue
 		}
-		// Check if this is a valid VC
+
+		// check if this is a valid VC for baseline issuance
 		if !v.isValidVC(uint32(tokenId), &cred, &credSubject, weekNum) {
 			eventLogger.Error().Any("credentialSubject", credSubject).Msg("VINVC did not meet validation criteria")
 			continue
@@ -152,7 +152,7 @@ func (v *VINVCService) resolveVINConflicts(vinToTokenIDs map[string][]*verifiabl
 			continue
 		}
 
-		// This VIN has multiple associated tokenIDs, so only keep the one with the latest recordedAt
+		// this VIN has multiple associated tokenIDs, so only keep the one with the latest recordedAt
 		v.logger.Debug().Str("vin", vin).Any("vehicleTokenIdCount", len(subjects)).Msg("VIN has multiple associated tokenIDs")
 		lastTokenID := getLatestTokenID(subjects)
 		confirmedVINs[lastTokenID] = struct{}{}
@@ -210,10 +210,10 @@ func (v *VINVCService) isValidVC(vehicleTokenID uint32, cred *verifiable.Credent
 		return false
 	}
 
-	// Check if recorder is trusted
+	// check if recorder is trusted
 	isTrustedRecorder := slices.Contains(v.trustedRecorders, subject.RecordedBy)
 
-	// Credential is valid if it was recorded in the past week OR by a trusted recorder
+	// credential is valid if it was recorded in the past week OR by a trusted recorder
 	recordedThisWeek := false
 	if !subject.RecordedAt.IsZero() {
 		recordedThisWeek = subject.RecordedAt.After(startOfWeek) && subject.RecordedAt.Before(endOfWeek)
