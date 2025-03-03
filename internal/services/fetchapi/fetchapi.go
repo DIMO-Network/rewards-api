@@ -22,7 +22,7 @@ type FetchAPIService struct {
 	logger        zerolog.Logger
 }
 
-// New creates a new instance of FetchAPIService
+// New creates a new instance of FetchAPIService.
 func New(settings *config.Settings, logger *zerolog.Logger) *FetchAPIService {
 	return &FetchAPIService{
 		fetchGRPCAddr: settings.FetchAPIGRPCEndpoint,
@@ -30,7 +30,7 @@ func New(settings *config.Settings, logger *zerolog.Logger) *FetchAPIService {
 	}
 }
 
-// GetLatestCloudEvent retrieves the most recent cloud event matching the provided search criteria
+// ListCloudEvents retrieves the most recent cloud event matching the provided search criteria.
 func (f *FetchAPIService) ListCloudEvents(ctx context.Context, filter *pb.SearchOptions, limit int32) ([]cloudevent.CloudEvent[json.RawMessage], error) {
 	client, err := f.getClient()
 	if err != nil {

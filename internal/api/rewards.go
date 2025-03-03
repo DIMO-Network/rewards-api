@@ -7,8 +7,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/DIMO-Network/rewards-api/internal/date"
 	"github.com/DIMO-Network/rewards-api/models"
+	"github.com/DIMO-Network/rewards-api/pkg/date"
 	pb "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/ethereum/go-ethereum/common"
