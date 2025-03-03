@@ -21,28 +21,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-// Helper function to create a cloud event with credential
-func createTestCloudEvent(t *testing.T, cred verifiable.Credential, subject verifiable.VINSubject) cloudevent.CloudEvent[json.RawMessage] {
-	// Marshal the subject to JSON
-	subjectBytes, err := json.Marshal(subject)
-	require.NoError(t, err)
-
-	// Set the credential subject
-	cred.CredentialSubject = subjectBytes
-
-	// Marshal the credential to JSON
-	credBytes, err := json.Marshal(cred)
-	require.NoError(t, err)
-
-	// Create and return the cloud event
-	return cloudevent.CloudEvent[json.RawMessage]{
-		CloudEventHeader: cloudevent.CloudEventHeader{
-			Type:   cloudevent.TypeVerifableCredential,
-			Source: "test",
-		},
-		Data: credBytes,
-	}
-}
+var vehicleAddr = common.HexToAddress("0x4F098Ea7cAd393365b4d251Dd109e791e6190239")
 
 func TestGetConfirmedVINVCs(t *testing.T) {
 	// Setup test logger
@@ -53,10 +32,11 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 	settings := &config.Settings{
 		VINVCDataVersion:    "VINVCDataVersion",
 		DIMORegistryChainID: 137,
+		VehicleNFTAddress:   vehicleAddr,
 	}
 
 	// Setup test times
-	now := time.Now()
+	now := date.NumToWeekStart(date.GetWeekNum(time.Now())).AddDate(0, 0, 3)
 	nextWeek := now.AddDate(0, 0, 7)
 	yesterday := now.AddDate(0, 0, -1)
 
@@ -279,12 +259,35 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 			service := vinvc.New(mockFetchAPI, settings, loggerPtr)
 
 			// Call the method
-			result, err := service.GetConfirmedVINVCs(t.Context(), tc.vehicles, date.GetWeekNum(time.Now()))
+			result, err := service.GetConfirmedVINVCs(t.Context(), tc.vehicles, date.GetWeekNum(now))
 
 			// Verify
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedResult, result)
 		})
+	}
+}
+
+// Helper function to create a cloud event with credential
+func createTestCloudEvent(t *testing.T, cred verifiable.Credential, subject verifiable.VINSubject) cloudevent.CloudEvent[json.RawMessage] {
+	// Marshal the subject to JSON
+	subjectBytes, err := json.Marshal(subject)
+	require.NoError(t, err)
+
+	// Set the credential subject
+	cred.CredentialSubject = subjectBytes
+
+	// Marshal the credential to JSON
+	credBytes, err := json.Marshal(cred)
+	require.NoError(t, err)
+
+	// Create and return the cloud event
+	return cloudevent.CloudEvent[json.RawMessage]{
+		CloudEventHeader: cloudevent.CloudEventHeader{
+			Type:   cloudevent.TypeVerifableCredential,
+			Source: "test",
+		},
+		Data: credBytes,
 	}
 }
 
@@ -300,7 +303,7 @@ func (m vehicleIDMatcher) Matches(x interface{}) bool {
 	}
 	return filter.GetSubject().GetValue() == cloudevent.NFTDID{
 		ChainID:         137,
-		ContractAddress: common.HexToAddress("0x"),
+		ContractAddress: vehicleAddr,
 		TokenID:         uint32(m.tokenID),
 	}.String()
 }
