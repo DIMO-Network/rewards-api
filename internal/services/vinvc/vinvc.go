@@ -3,6 +3,8 @@ package vinvc
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"slices"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -21,8 +24,8 @@ var dincSource = common.HexToAddress("0x4F098Ea7cAd393365b4d251Dd109e791e6190239
 
 // FetchAPIService defines the interface Fetch API.
 type FetchAPIService interface {
-	// GetLatestCloudEvent retrieves the most recent cloud event matching the provided search criteria
-	GetLatestCloudEvent(ctx context.Context, filter *pb.SearchOptions) (cloudevent.CloudEvent[json.RawMessage], error)
+	// ListCloudEvents retrieves the most recent cloud events matching the provided search criteria.
+	ListCloudEvents(ctx context.Context, filter *pb.SearchOptions, limit int32) ([]cloudevent.CloudEvent[json.RawMessage], error)
 }
 
 // VINVCService is a client for interacting with the VINVC service.
@@ -56,56 +59,23 @@ func New(fetchService FetchAPIService, settings *config.Settings, logger *zerolo
 // A VINVC is confirmed if:
 // 1. It is not expired.
 // 2. It was either recorded in the past week OR recorded by a trusted source.
-// 3. The TokenID is the only one associated with that VIN.
+// 3. The TokenID holds the latest recordedAt for the VIN.
 func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle, weekNum int) (map[int64]struct{}, error) {
-	// Map to track VINs and their associated tokenIDs (only for valid VCs)
-	validVinToTokenIDs := make(map[string][]verifiable.VINSubject)
+	// map to track VINs and their associated tokenIDs (only for valid VCs)
+	validVinToTokenIDs := make(map[string][]*verifiable.VINSubject)
 
-	// First pass: collect all valid VINVCs and their associated VINs
+	// collect all valid VINVCs and their associated VINs
 	for _, vehicle := range activeVehicles {
 		logger := v.logger.With().Int64("vehicleTokenId", vehicle.TokenID).Logger()
 		// Set search options
-		opts := &pb.SearchOptions{
-			DataVersion: &wrapperspb.StringValue{Value: v.vinVCDataVersion},
-			Type:        &wrapperspb.StringValue{Value: cloudevent.TypeVerifableCredential},
-			Subject:     &wrapperspb.StringValue{Value: cloudevent.NFTDID{ChainID: v.chainID, TokenID: uint32(vehicle.TokenID)}.String()},
-		}
-
-		// Get latest cloud event
-		cloudEvent, err := v.fetchService.GetLatestCloudEvent(ctx, opts)
+		credSubject, err := v.GetLatestVINVC(ctx, vehicle.TokenID, weekNum)
 		if err != nil {
-			logger.Error().Err(err).Msg("failed to get latest VIN VC")
+			logger.Error().Err(err).Msg("failed to get latest VINVC")
 			continue
 		}
 
-		// Parse and validate the credential
-		cred := verifiable.Credential{}
-		if err := json.Unmarshal(cloudEvent.Data, &cred); err != nil {
-			logger.Error().Err(err).Msg("failed to unmarshal VIN credential")
-			continue
-		}
-
-		// Parse the credential subject
-		credSubject := verifiable.VINSubject{}
-		if err := json.Unmarshal(cred.CredentialSubject, &credSubject); err != nil {
-			logger.Error().Err(err).Msg("failed to unmarshal VIN credential subject")
-			continue
-		}
-
-		// Skip if VIN is empty
-		if credSubject.VehicleIdentificationNumber == "" {
-			logger.Warn().Msg("VINVC has empty VIN")
-			continue
-		}
-
-		// Check if this is a valid VC
-		if v.isValidVC(uint32(vehicle.TokenID), &cred, &credSubject, weekNum) {
-			// Only track VINs from valid VCs
-			vin := credSubject.VehicleIdentificationNumber
-			validVinToTokenIDs[vin] = append(validVinToTokenIDs[vin], credSubject)
-		} else {
-			v.logger.Info().Any("credentialSubject", credSubject).Msg("VINVC did not meet validation criteria")
-		}
+		vin := credSubject.VehicleIdentificationNumber
+		validVinToTokenIDs[vin] = append(validVinToTokenIDs[vin], credSubject)
 	}
 
 	confirmedVINs := v.resolveVINConflicts(validVinToTokenIDs)
@@ -113,8 +83,62 @@ func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 	return confirmedVINs, nil
 }
 
+// GetLatestVINVC retrieves the latest VINVC for the provided vehicle tokenId in the given week.
+// if a VINVC fails to decode, it is skipped and the next one is fetched.
+func (v *VINVCService) GetLatestVINVC(ctx context.Context, tokenId int64, weekNum int) (*verifiable.VINSubject, error) {
+	before := date.NumToWeekEnd(weekNum)
+	startOfWeek := date.NumToWeekStart(weekNum)
+	opts := &pb.SearchOptions{
+		DataVersion: &wrapperspb.StringValue{Value: v.vinVCDataVersion},
+		Type:        &wrapperspb.StringValue{Value: cloudevent.TypeVerifableCredential},
+		Subject:     &wrapperspb.StringValue{Value: cloudevent.NFTDID{ChainID: v.chainID, TokenID: uint32(tokenId)}.String()},
+		Before:      timestamppb.New(before.Add(time.Second)), // add a second to ensure inclusion of the end of the week
+	}
+	logger := v.logger.With().Int64("vehicleTokenId", tokenId).Logger()
+	for startOfWeek.Before(before) {
+		cloudEvents, err := v.fetchService.ListCloudEvents(ctx, opts, 1)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get fetch latest VINVC: %w", err)
+		}
+		if len(cloudEvents) == 0 {
+			return nil, errors.New("no VINVC found")
+		}
+		cloudEvent := cloudEvents[0]
+		before = cloudEvent.Time // update before to the time for the next iteration if we need to fetch more events
+		eventLogger := logger.With().Str("cloudEventId", cloudEvent.ID).Str("cloudEventSource", cloudEvent.Source).Logger()
+
+		// Parse and validate the credential
+		cred := verifiable.Credential{}
+		if err := json.Unmarshal(cloudEvent.Data, &cred); err != nil {
+			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential skipping...")
+			continue
+		}
+
+		// Parse the credential subject
+		credSubject := verifiable.VINSubject{}
+		if err := json.Unmarshal(cred.CredentialSubject, &credSubject); err != nil {
+			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential subject skipping...")
+			continue
+		}
+
+		// Skip if VIN is empty
+		if credSubject.VehicleIdentificationNumber == "" {
+			eventLogger.Error().Msg("VINVC has empty VIN skipping...")
+			continue
+		}
+		// Check if this is a valid VC
+		if !v.isValidVC(uint32(tokenId), &cred, &credSubject, weekNum) {
+			eventLogger.Error().Any("credentialSubject", credSubject).Msg("VINVC did not meet validation criteria")
+			continue
+		}
+
+		return &credSubject, nil
+	}
+	return nil, errors.New("no valid VINVC found")
+}
+
 // resolveVINConflicts resolves conflicts between VINs and their associated with multiple tokenIDs.
-func (v *VINVCService) resolveVINConflicts(vinToTokenIDs map[string][]verifiable.VINSubject) map[int64]struct{} {
+func (v *VINVCService) resolveVINConflicts(vinToTokenIDs map[string][]*verifiable.VINSubject) map[int64]struct{} {
 	confirmedVINs := make(map[int64]struct{})
 	for vin, subjects := range vinToTokenIDs {
 		if len(subjects) == 0 {
@@ -150,7 +174,7 @@ func (v *VINVCService) resolveVINConflicts(vinToTokenIDs map[string][]verifiable
 }
 
 // getLatestTokenID returns the latest vehicleTokenId based on the recordedAt and vehicleTokenId.
-func getLatestTokenID(subs []verifiable.VINSubject) int64 {
+func getLatestTokenID(subs []*verifiable.VINSubject) int64 {
 	maxSub := subs[0]
 	for _, sub := range subs {
 		if maxSub.RecordedAt.Before(sub.RecordedAt) {

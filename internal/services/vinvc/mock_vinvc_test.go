@@ -43,17 +43,17 @@ func (m *MockFetchAPIService) EXPECT() *MockFetchAPIServiceMockRecorder {
 	return m.recorder
 }
 
-// GetLatestCloudEvent mocks base method.
-func (m *MockFetchAPIService) GetLatestCloudEvent(ctx context.Context, filter *grpc.SearchOptions) (cloudevent.CloudEvent[json.RawMessage], error) {
+// ListCloudEvents mocks base method.
+func (m *MockFetchAPIService) ListCloudEvents(ctx context.Context, filter *grpc.SearchOptions, limit int32) ([]cloudevent.CloudEvent[json.RawMessage], error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestCloudEvent", ctx, filter)
-	ret0, _ := ret[0].(cloudevent.CloudEvent[json.RawMessage])
+	ret := m.ctrl.Call(m, "ListCloudEvents", ctx, filter, limit)
+	ret0, _ := ret[0].([]cloudevent.CloudEvent[json.RawMessage])
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetLatestCloudEvent indicates an expected call of GetLatestCloudEvent.
-func (mr *MockFetchAPIServiceMockRecorder) GetLatestCloudEvent(ctx, filter any) *gomock.Call {
+// ListCloudEvents indicates an expected call of ListCloudEvents.
+func (mr *MockFetchAPIServiceMockRecorder) ListCloudEvents(ctx, filter, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestCloudEvent", reflect.TypeOf((*MockFetchAPIService)(nil).GetLatestCloudEvent), ctx, filter)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCloudEvents", reflect.TypeOf((*MockFetchAPIService)(nil).ListCloudEvents), ctx, filter, limit)
 }

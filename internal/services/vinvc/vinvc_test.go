@@ -87,8 +87,8 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				cloudEvent := createTestCloudEvent(t, cred, subject)
 
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
-					Return(cloudEvent, nil)
+					ListCloudEvents(gomock.Any(), gomock.Any(), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{cloudEvent}, nil)
 			},
 			expectedResult: map[int64]struct{}{1: {}},
 		},
@@ -129,12 +129,12 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 
 				// Setup expectations based on the filter
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), matchesVehicle(1)).
-					Return(cloudEvent1, nil)
+					ListCloudEvents(gomock.Any(), matchesVehicle(1), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{cloudEvent1}, nil)
 
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), matchesVehicle(2)).
-					Return(cloudEvent2, nil)
+					ListCloudEvents(gomock.Any(), matchesVehicle(2), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{cloudEvent2}, nil)
 			},
 			expectedResult: map[int64]struct{}{1: {}},
 		},
@@ -166,11 +166,11 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				cloudEvent2 := createTestCloudEvent(t, cred, subject2)
 
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
-					Return(cloudEvent, nil)
+					ListCloudEvents(gomock.Any(), gomock.Any(), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{cloudEvent}, nil)
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
-					Return(cloudEvent2, nil)
+					ListCloudEvents(gomock.Any(), gomock.Any(), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{cloudEvent2}, nil)
 			},
 			expectedResult: map[int64]struct{}{1: {}},
 		},
@@ -197,11 +197,11 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				subject2.VehicleTokenID = 2
 				cloudEvent2 := createTestCloudEvent(t, cred, subject2)
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
-					Return(cloudEvent, nil)
+					ListCloudEvents(gomock.Any(), gomock.Any(), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{cloudEvent}, nil)
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
-					Return(cloudEvent2, nil)
+					ListCloudEvents(gomock.Any(), gomock.Any(), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{cloudEvent2}, nil)
 			},
 			expectedResult: map[int64]struct{}{2: {}},
 		},
@@ -212,8 +212,8 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
-					Return(cloudevent.CloudEvent[json.RawMessage]{}, errors.New("fetch api error"))
+					ListCloudEvents(gomock.Any(), gomock.Any(), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{}, errors.New("fetch api error"))
 			},
 			expectedResult: map[int64]struct{}{},
 		},
@@ -233,8 +233,8 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				}
 
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
-					Return(invalidEvent, nil)
+					ListCloudEvents(gomock.Any(), gomock.Any(), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{invalidEvent}, nil)
 			},
 			expectedResult: map[int64]struct{}{},
 		},
@@ -258,8 +258,8 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				cloudEvent := createTestCloudEvent(t, cred, subject)
 
 				m.EXPECT().
-					GetLatestCloudEvent(gomock.Any(), gomock.Any()).
-					Return(cloudEvent, nil)
+					ListCloudEvents(gomock.Any(), gomock.Any(), int32(1)).
+					Return([]cloudevent.CloudEvent[json.RawMessage]{cloudEvent}, nil)
 			},
 			expectedResult: map[int64]struct{}{},
 		},

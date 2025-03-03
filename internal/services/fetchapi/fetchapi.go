@@ -31,20 +31,25 @@ func New(settings *config.Settings, logger *zerolog.Logger) *FetchAPIService {
 }
 
 // GetLatestCloudEvent retrieves the most recent cloud event matching the provided search criteria
-func (f *FetchAPIService) GetLatestCloudEvent(ctx context.Context, filter *pb.SearchOptions) (cloudevent.CloudEvent[json.RawMessage], error) {
+func (f *FetchAPIService) ListCloudEvents(ctx context.Context, filter *pb.SearchOptions, limit int32) ([]cloudevent.CloudEvent[json.RawMessage], error) {
 	client, err := f.getClient()
 	if err != nil {
-		return cloudevent.CloudEvent[json.RawMessage]{}, fmt.Errorf("failed to initialize gRPC client: %w", err)
+		return nil, fmt.Errorf("failed to initialize gRPC client: %w", err)
 	}
 
-	resp, err := client.GetLatestCloudEvent(ctx, &pb.GetLatestCloudEventRequest{
+	resp, err := client.ListCloudEvents(ctx, &pb.ListCloudEventsRequest{
 		Options: filter,
+		Limit:   limit,
 	})
 	if err != nil {
-		return cloudevent.CloudEvent[json.RawMessage]{}, fmt.Errorf("failed to get latest cloud event: %w", err)
+		return nil, fmt.Errorf("failed to get latest cloud event: %w", err)
+	}
+	events := make([]cloudevent.CloudEvent[json.RawMessage], len(resp.GetCloudEvents()))
+	for i, ce := range resp.GetCloudEvents() {
+		events[i] = ce.AsCloudEvent()
 	}
 
-	return resp.GetCloudEvent().AsCloudEvent(), nil
+	return events, nil
 }
 
 // getClient initializes the gRPC client if not already initialized.
