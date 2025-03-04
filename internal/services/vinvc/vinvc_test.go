@@ -3,7 +3,6 @@ package vinvc_test
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -19,6 +18,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var vehicleAddr = common.HexToAddress("0x4F098Ea7cAd393365b4d251Dd109e791e6190239")
@@ -186,14 +187,14 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 			expectedResult: map[int64]struct{}{2: {}},
 		},
 		{
-			name: "Fetch API error",
+			name: "Fetch API not found error",
 			vehicles: []*ch.Vehicle{
 				{TokenID: 1, Integrations: []string{"integration1"}},
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				m.EXPECT().
 					ListCloudEvents(gomock.Any(), gomock.Any(), int32(1)).
-					Return([]cloudevent.CloudEvent[json.RawMessage]{}, errors.New("fetch api error"))
+					Return([]cloudevent.CloudEvent[json.RawMessage]{}, status.New(codes.NotFound, "not found").Err())
 			},
 			expectedResult: map[int64]struct{}{},
 		},

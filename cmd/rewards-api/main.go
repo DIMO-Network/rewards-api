@@ -331,7 +331,10 @@ func main() {
 			QueryURL: settings.IdentityQueryURL,
 			Client:   &http.Client{},
 		}
-		fetchapiSrv := fetchapi.New(&settings, &logger)
+		fetchapiSrv, err := fetchapi.New(&settings, &logger)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Fetch API service.")
+		}
 		vinvcSrv := vinvc.New(fetchapiSrv, &settings, &logger)
 
 		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, identClient, vinvcSrv, week, &logger)

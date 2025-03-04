@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sync"
 
 	pb "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	"github.com/DIMO-Network/model-garage/pkg/cloudevent"
@@ -16,29 +15,27 @@ import (
 
 // FetchAPIService is a service for interacting with the Fetch API.
 type FetchAPIService struct {
-	fetchGRPCAddr string
-	client        pb.FetchServiceClient
-	once          sync.Once
-	logger        zerolog.Logger
+	client pb.FetchServiceClient
+	logger zerolog.Logger
 }
 
 // New creates a new instance of FetchAPIService.
-func New(settings *config.Settings, logger *zerolog.Logger) *FetchAPIService {
-	return &FetchAPIService{
-		fetchGRPCAddr: settings.FetchAPIGRPCEndpoint,
-		logger:        logger.With().Str("component", "fetch_api_service").Logger(),
+func New(settings *config.Settings, logger *zerolog.Logger) (*FetchAPIService, error) {
+	conn, err := grpc.NewClient(settings.FetchAPIGRPCEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create to Fetch API gRPC client: %w", err)
 	}
+
+	return &FetchAPIService{
+		client: pb.NewFetchServiceClient(conn),
+		logger: logger.With().Str("component", "fetch_api_service").Logger(),
+	}, nil
 }
 
-// ListCloudEvents retrieves the most recent cloud event matching the provided search criteria.
-func (f *FetchAPIService) ListCloudEvents(ctx context.Context, filter *pb.SearchOptions, limit int32) ([]cloudevent.CloudEvent[json.RawMessage], error) {
-	client, err := f.getClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize gRPC client: %w", err)
-	}
-
-	resp, err := client.ListCloudEvents(ctx, &pb.ListCloudEventsRequest{
-		Options: filter,
+// ListCloudEvents retrieves cloud events matching the provided search criteria.
+func (f *FetchAPIService) ListCloudEvents(ctx context.Context, searchOpts *pb.SearchOptions, limit int32) ([]cloudevent.CloudEvent[json.RawMessage], error) {
+	resp, err := f.client.ListCloudEvents(ctx, &pb.ListCloudEventsRequest{
+		Options: searchOpts,
 		Limit:   limit,
 	})
 	if err != nil {
@@ -50,22 +47,4 @@ func (f *FetchAPIService) ListCloudEvents(ctx context.Context, filter *pb.Search
 	}
 
 	return events, nil
-}
-
-// getClient initializes the gRPC client if not already initialized.
-func (f *FetchAPIService) getClient() (pb.FetchServiceClient, error) {
-	if f.client != nil {
-		return f.client, nil
-	}
-	var err error
-	f.once.Do(func() {
-		var conn *grpc.ClientConn
-		conn, err = grpc.NewClient(f.fetchGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			err = fmt.Errorf("failed to connect to Fetch API gRPC server: %w", err)
-			return
-		}
-		f.client = pb.NewFetchServiceClient(conn)
-	})
-	return f.client, err
 }
