@@ -26,7 +26,10 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
+	"github.com/DIMO-Network/rewards-api/internal/services/fetchapi"
 	"github.com/DIMO-Network/rewards-api/internal/services/identity"
+	"github.com/DIMO-Network/rewards-api/internal/services/vinvc"
+	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
@@ -274,7 +277,7 @@ func main() {
 		var week int
 		if len(os.Args) == 2 {
 			// We have to subtract 1 because we're getting the number of the newly beginning week.
-			week = services.GetWeekNumForCron(time.Now()) - 1
+			week = date.GetWeekNumForCron(time.Now()) - 1
 		} else {
 			var err error
 			week, err = strconv.Atoi(os.Args[2])
@@ -328,8 +331,13 @@ func main() {
 			QueryURL: settings.IdentityQueryURL,
 			Client:   &http.Client{},
 		}
+		fetchapiSrv, err := fetchapi.New(&settings, &logger)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Fetch API service.")
+		}
+		vinvcSrv := vinvc.New(fetchapiSrv, &settings, &logger)
 
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, week, &logger, identClient)
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, identClient, vinvcSrv, week, &logger)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
@@ -338,7 +346,7 @@ func main() {
 		var week int
 		if len(os.Args) == 2 {
 			// We have to subtract 1 because we're getting the number of the newly beginning week.
-			week = services.GetWeekNumForCron(time.Now()) - 1
+			week = date.GetWeekNumForCron(time.Now()) - 1
 		} else {
 			var err error
 			week, err = strconv.Atoi(os.Args[2])

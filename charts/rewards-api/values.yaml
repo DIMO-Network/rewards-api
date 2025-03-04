@@ -42,6 +42,7 @@ env:
   USERS_API_GRPC_ADDR: users-api-dev:8086
   ACCOUNTS_API_GRPC_ADDR: accounts-api-dev:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-dev:8086
+  FETCH_API_GRPC_ENDPOINT: fetch-api-dev:8086
   META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
   META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
   KAFKA_BROKERS: kafka-dev-dimo-kafka-kafka-brokers:9092
@@ -55,6 +56,9 @@ env:
   CLICKHOUSE_DATABASE: dimo
   IDENTITY_QUERY_URL: http://identity-api-dev:8080/query
   ENABLE_STAKING: true
+  DIMO_REGISTRY_CHAIN_ID: '80002'
+  VEHICLE_NFT_CONTRACT_ADDRESS: '0x45fbCD3ef7361d156e8b16F5538AE36DEdf61Da8'
+  VINVC_DATA_VERSION: VINVCv1.0
 config:
   tokens:
     - chainId: 80002

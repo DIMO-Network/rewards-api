@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/DIMO-Network/clickhouse-infra/pkg/connect/config"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Settings contains the application config
@@ -17,6 +18,7 @@ type Settings struct {
 	DefinitionsAPIGRPCAddr     string          `yaml:"DEFINITIONS_API_GRPC_ADDR"`
 	UsersAPIGRPCAddr           string          `yaml:"USERS_API_GRPC_ADDR"`
 	AccountsAPIGRPCAddr        string          `yaml:"ACCOUNTS_API_GRPC_ADDR"`
+	FetchAPIGRPCEndpoint       string          `yaml:"FETCH_API_GRPC_ENDPOINT"`
 	KafkaBrokers               string          `yaml:"KAFKA_BROKERS"`
 	MetaTransactionSendTopic   string          `yaml:"META_TRANSACTION_SEND_TOPIC"`
 	MetaTransactionStatusTopic string          `yaml:"META_TRANSACTION_STATUS_TOPIC"`
@@ -29,4 +31,7 @@ type Settings struct {
 	Clickhouse                 config.Settings `yaml:",inline"`
 	IdentityQueryURL           string          `yaml:"IDENTITY_QUERY_URL"`
 	EnableStaking              bool            `yaml:"ENABLE_STAKING"`
+	DIMORegistryChainID        int             `yaml:"DIMO_REGISTRY_CHAIN_ID"`
+	VehicleNFTAddress          common.Address  `yaml:"VEHICLE_NFT_ADDRESS"`
+	VINVCDataVersion           string          `yaml:"VINVC_DATA_VERSION"`
 }

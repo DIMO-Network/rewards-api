@@ -1,3 +1,4 @@
+//go:generate mockgen -source=./rewards.go -destination=rewards_mock_test.go -package=services
 package services
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
+	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/set"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,15 +27,12 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var startTime = time.Date(2022, time.January, 31, 5, 0, 0, 0, time.UTC)
-
-var weekDuration = 7 * 24 * time.Hour
-
 type BaselineClient struct {
 	TransferService    *TransferService
 	DataService        DeviceActivityClient
 	DevicesClient      DevicesClient
 	DefsClient         IntegrationsGetter
+	vinVCSrv           VINVCService
 	ContractAddress    common.Address
 	Week               int
 	Logger             *zerolog.Logger
@@ -42,11 +41,13 @@ type BaselineClient struct {
 	StakingEnabled     bool
 }
 
-//go:generate mockgen -source=./rewards.go -destination=stake_checker_mock_test.go -package=services
 type StakeChecker interface {
 	GetVehicleStakePoints(vehicleID uint64) (int, error)
 }
 
+type VINVCService interface {
+	GetConfirmedVINVCs(ctx context.Context, activeTokenIds []*ch.Vehicle, weekNum int) (map[int64]struct{}, error)
+}
 type DeviceActivityClient interface {
 	DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*ch.Vehicle, error)
 }
@@ -65,9 +66,10 @@ func NewBaselineRewardService(
 	dataService DeviceActivityClient,
 	devicesClient DevicesClient,
 	defsClient IntegrationsGetter,
+	stakeChecker StakeChecker,
+	vinVCSrv VINVCService,
 	week int,
 	logger *zerolog.Logger,
-	stakeChecker StakeChecker,
 ) *BaselineClient {
 	return &BaselineClient{
 		TransferService:    transferService,
@@ -78,42 +80,18 @@ func NewBaselineRewardService(
 		Week:               week,
 		Logger:             logger,
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
+		vinVCSrv:           vinVCSrv,
 		StakeChecker:       stakeChecker,
 		StakingEnabled:     settings.EnableStaking,
 	}
-}
-
-// GetWeekNum calculates the number of the week in which the given time lies for DIMO point
-// issuance, which at the time of writing starts at 2022-01-31 05:00 UTC. Indexing is
-// zero-based.
-func GetWeekNum(t time.Time) int {
-	sinceStart := t.Sub(startTime)
-	weekNum := int(sinceStart.Truncate(weekDuration) / weekDuration)
-	return weekNum
-}
-
-// GetWeekNumForCron calculates the week number for the current run of the cron job. We expect
-// the job to run every Monday at 05:00 UTC, but due to skew we just round the time.
-func GetWeekNumForCron(t time.Time) int {
-	sinceStart := t.Sub(startTime)
-	weekNum := int(sinceStart.Round(weekDuration) / weekDuration)
-	return weekNum
-}
-
-func NumToWeekStart(n int) time.Time {
-	return startTime.Add(time.Duration(n) * weekDuration)
-}
-
-func NumToWeekEnd(n int) time.Time {
-	return startTime.Add(time.Duration(n+1) * weekDuration)
 }
 
 func (t *BaselineClient) assignPoints() error {
 	issuanceWeek := t.Week
 	ctx := context.Background()
 
-	weekStart := NumToWeekStart(issuanceWeek)
-	weekEnd := NumToWeekEnd(issuanceWeek)
+	weekStart := date.NumToWeekStart(issuanceWeek)
+	weekEnd := date.NumToWeekEnd(issuanceWeek)
 
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
@@ -142,6 +120,13 @@ func (t *BaselineClient) assignPoints() error {
 	activeDevices, err := t.DataService.DescribeActiveDevices(ctx, weekStart, weekEnd)
 	if err != nil {
 		return err
+	}
+
+	vinVCConfirmed, err := t.vinVCSrv.GetConfirmedVINVCs(ctx, activeDevices, issuanceWeek)
+	if err != nil {
+		// this is a non-fatal error, we can continue without this data
+		t.Logger.Warn().Err(err).Msg("Failed to get confirmed VIN VC VINs. continuing execution.")
+		vinVCConfirmed = map[int64]struct{}{}
 	}
 
 	allIntegrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
@@ -187,6 +172,11 @@ func (t *BaselineClient) assignPoints() error {
 		integsSignalsThisWeek := set.New(device.Integrations...)
 
 		logger = logger.With().Str("userId", ud.UserId).Logger()
+
+		if _, ok := vinVCConfirmed[device.TokenID]; !ok && len(vinVCConfirmed) > 0 {
+			// TODO: Update this to a continue after we have a better idea of how many vehicles are missing VIN VC.
+			logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle does not have a confirmed VIN VC VIN.")
+		}
 
 		if !ud.VinConfirmed {
 			logger.Info().Msg("Device does not have confirmed VIN.")

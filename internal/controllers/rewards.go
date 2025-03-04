@@ -17,6 +17,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/models"
+	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/DIMO-Network/shared/set"
 	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
@@ -91,8 +92,8 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	logger := r.Logger.With().Str("userId", userID).Logger()
 
 	now := time.Now()
-	weekNum := services.GetWeekNum(now)
-	weekStart := services.NumToWeekStart(weekNum)
+	weekNum := date.GetWeekNum(now)
+	weekStart := date.NumToWeekStart(weekNum)
 
 	maybeAddr, err := r.getCallerEthAddress(c)
 	if err != nil {
@@ -295,7 +296,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		WalletBalance: addrBalance,
 		ThisWeek: UserResponseThisWeek{
 			Start: weekStart,
-			End:   services.NumToWeekEnd(weekNum),
+			End:   date.NumToWeekEnd(weekNum),
 		},
 		Devices: outLi,
 	}
@@ -448,8 +449,8 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	weeks := make([]HistoryResponseWeek, maxWeek-minWeek+1)
 	for i := range weeks {
 		weekNum := maxWeek - i
-		weeks[i].Start = services.NumToWeekStart(weekNum)
-		weeks[i].End = services.NumToWeekEnd(weekNum)
+		weeks[i].Start = date.NumToWeekStart(weekNum)
+		weeks[i].End = date.NumToWeekEnd(weekNum)
 		weeks[i].Tokens = big.NewInt(0)
 	}
 
