@@ -19,7 +19,7 @@ env:
   USERS_API_GRPC_ADDR: users-api-prod:8086
   ACCOUNTS_API_GRPC_ADDR: accounts-api-prod:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-prod:8086
-  FETCH_API_GRPC_ENDPOINT: fetch-api-prod:8086
+  FETCH_API_GRPC_ADDR: fetch-api-prod:8086
   ATTESTATION_API_GRPC_ADDR: attestation-api-prod:8086
   META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
   META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status

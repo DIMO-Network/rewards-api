@@ -31,7 +31,7 @@ type Service struct {
 // NewService initializes a new attestation Service with all required dependencies.
 func NewService(settings *config.Settings, logger *zerolog.Logger, chClient *ch.Client, vinvcSrv *vinvc.VINVCService) (*Service, error) {
 	// Set up connection to server
-	conn, err := grpc.NewClient(settings.AttestationAPIGRPCEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(settings.AttestationAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Attestation API gRPC server: %w", err)
 	}

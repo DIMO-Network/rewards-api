@@ -21,7 +21,7 @@ type FetchAPIService struct {
 
 // New creates a new instance of FetchAPIService.
 func New(settings *config.Settings, logger *zerolog.Logger) (*FetchAPIService, error) {
-	conn, err := grpc.NewClient(settings.FetchAPIGRPCEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(settings.FetchAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create to Fetch API gRPC client: %w", err)
 	}
