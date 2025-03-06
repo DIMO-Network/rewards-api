@@ -455,7 +455,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Could not parse week number.")
 		}
 
-		logger = logger.With().Int("week", week).Str("subCommand", "ensure-attestations").Logger()
+		logger = logger.With().Int("week", week).Str("subCommand", subCommand).Logger()
 
 		chClient, err := ch.NewClient(&settings)
 		if err != nil {
