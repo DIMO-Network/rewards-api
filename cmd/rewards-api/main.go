@@ -25,6 +25,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
+	"github.com/DIMO-Network/rewards-api/internal/services/attestation"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/services/fetchapi"
 	"github.com/DIMO-Network/rewards-api/internal/services/identity"
@@ -336,8 +337,11 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Fetch API service.")
 		}
 		vinvcSrv := vinvc.New(fetchapiSrv, &settings, &logger)
-
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, identClient, vinvcSrv, week, &logger)
+		attSrv, err := attestation.NewService(&settings, &logger, chClient, vinvcSrv)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create attestation service.")
+		}
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, identClient, attSrv, week, &logger)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
@@ -441,6 +445,37 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Error occurred completing reward migrations")
 		}
+	case "ensure-attestations":
+		if len(os.Args) < 2 || os.Args[2] == "" {
+			logger.Fatal().Msg("invalid value provided for week")
+		}
+
+		week, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Could not parse week number.")
+		}
+
+		logger = logger.With().Int("week", week).Str("subCommand", subCommand).Logger()
+
+		chClient, err := ch.NewClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
+		}
+		fetchapiSrv, err := fetchapi.New(&settings, &logger)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create Fetch API service.")
+		}
+		vinvcSrv := vinvc.New(fetchapiSrv, &settings, &logger)
+
+		attSrv, err := attestation.NewService(&settings, &logger, chClient, vinvcSrv)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create attestation service.")
+		}
+		err = attSrv.EnsureAttestations(ctx, week)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to pull attestation data.")
+		}
+		attSrv.Close()
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}

@@ -46,7 +46,7 @@ type VINVCService struct {
 func New(fetchService FetchAPIService, settings *config.Settings, logger *zerolog.Logger) *VINVCService {
 	return &VINVCService{
 		fetchService:     fetchService,
-		logger:           logger.With().Str("component", "vinvc_service").Logger(),
+		logger:           logger.With().Str("component", "vinvc-service").Logger(),
 		vinVCDataVersion: settings.VINVCDataVersion,
 		vehicleAddr:      settings.VehicleNFTAddress,
 		chainID:          uint64(settings.DIMORegistryChainID),
@@ -65,13 +65,24 @@ func New(fetchService FetchAPIService, settings *config.Settings, logger *zerolo
 // 2. It was either recorded in the past week OR recorded by a trusted source.
 // 3. The TokenId holds the latest recordedAt for the VIN.
 func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle, weekNum int) (map[int64]struct{}, error) {
-	// map to track VINs and their associated tokenIDs (only for valid VCs)
-	validVinToTokenIDs := make(map[string][]*verifiable.VINSubject)
+	validVinToTokenIDs, err := v.GetLatestValidVINVCs(ctx, activeVehicles, weekNum)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest valid VINVCs: %w", err)
+	}
+	confirmedVINs := v.ResolveVINConflicts(validVinToTokenIDs)
+
+	return confirmedVINs, nil
+}
+
+// GetLatestValidVINVCs retrieves the latest VINVC for the provided vehicle tokenId in the given week.
+func (v *VINVCService) GetLatestValidVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle, weekNum int) (map[string][]*verifiable.VINSubject, error) {
+	// map to track VINs and their associated subjects (only for valid VCs)
+	validVinToCredSubjects := make(map[string][]*verifiable.VINSubject)
 
 	// collect all valid VINVCs and their associated VINs
 	for _, vehicle := range activeVehicles {
 		logger := v.logger.With().Int64("vehicleTokenId", vehicle.TokenID).Logger()
-		credSubject, err := v.GetLatestVINVC(ctx, vehicle.TokenID, weekNum)
+		credSubject, err := v.getLatestValidVINVC(ctx, vehicle.TokenID, weekNum)
 		if err != nil {
 			if errors.Is(err, notFound) {
 				logger.Warn().Msg("no VINVC found for vehicle")
@@ -81,17 +92,15 @@ func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 		}
 
 		vin := credSubject.VehicleIdentificationNumber
-		validVinToTokenIDs[vin] = append(validVinToTokenIDs[vin], credSubject)
+		validVinToCredSubjects[vin] = append(validVinToCredSubjects[vin], credSubject)
 	}
 
-	confirmedVINs := v.resolveVINConflicts(validVinToTokenIDs)
-
-	return confirmedVINs, nil
+	return validVinToCredSubjects, nil
 }
 
-// GetLatestVINVC retrieves the latest VINVC for the provided vehicle tokenId in the given week.
+// getLatestValidVINVC retrieves the latest VINVC for the provided vehicle tokenId in the given week.
 // if a VINVC fails to decode, it is skipped and the next one is fetched.
-func (v *VINVCService) GetLatestVINVC(ctx context.Context, tokenId int64, weekNum int) (*verifiable.VINSubject, error) {
+func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, weekNum int) (*verifiable.VINSubject, error) {
 	before := date.NumToWeekEnd(weekNum)
 	startOfWeek := date.NumToWeekStart(weekNum)
 	opts := &pb.SearchOptions{
@@ -147,8 +156,8 @@ func (v *VINVCService) GetLatestVINVC(ctx context.Context, tokenId int64, weekNu
 	return nil, fmt.Errorf("no VINVC found for vehicle: %w", notFound)
 }
 
-// resolveVINConflicts resolves conflicts between VINs and their associated with multiple tokenIDs.
-func (v *VINVCService) resolveVINConflicts(vinToTokenIDs map[string][]*verifiable.VINSubject) map[int64]struct{} {
+// ResolveVINConflicts resolves conflicts between VINs and their associated with multiple tokenIDs.
+func (v *VINVCService) ResolveVINConflicts(vinToTokenIDs map[string][]*verifiable.VINSubject) map[int64]struct{} {
 	confirmedVINs := make(map[int64]struct{})
 	for vin, subjects := range vinToTokenIDs {
 		if len(subjects) == 0 {

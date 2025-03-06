@@ -26,6 +26,9 @@ rewardsCronJob:
 referralsCronJob:
   enabled: true
   schedule: 0 7 * * 1
+attestationsCronJob:
+  enabled: true
+  schedule: 0 3,15 * * *
 env:
   ENVIRONMENT: dev
   PORT: '8080'
@@ -42,7 +45,8 @@ env:
   USERS_API_GRPC_ADDR: users-api-dev:8086
   ACCOUNTS_API_GRPC_ADDR: accounts-api-dev:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-dev:8086
-  FETCH_API_GRPC_ENDPOINT: fetch-api-dev:8086
+  FETCH_API_GRPC_ADDR: fetch-api-dev:8086
+  ATTESTATION_API_GRPC_ADDR: attestation-api-dev:8086
   META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
   META_TRANSACTION_STATUS_TOPIC: topic.transaction.request.status
   KAFKA_BROKERS: kafka-dev-dimo-kafka-kafka-brokers:9092

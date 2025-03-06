@@ -18,7 +18,8 @@ type Settings struct {
 	DefinitionsAPIGRPCAddr     string          `yaml:"DEFINITIONS_API_GRPC_ADDR"`
 	UsersAPIGRPCAddr           string          `yaml:"USERS_API_GRPC_ADDR"`
 	AccountsAPIGRPCAddr        string          `yaml:"ACCOUNTS_API_GRPC_ADDR"`
-	FetchAPIGRPCEndpoint       string          `yaml:"FETCH_API_GRPC_ENDPOINT"`
+	FetchAPIGRPCAddr           string          `yaml:"FETCH_API_GRPC_ADDR"`
+	AttestationAPIGRPCAddr     string          `yaml:"ATTESTATION_API_GRPC_ADDR"`
 	KafkaBrokers               string          `yaml:"KAFKA_BROKERS"`
 	MetaTransactionSendTopic   string          `yaml:"META_TRANSACTION_SEND_TOPIC"`
 	MetaTransactionStatusTopic string          `yaml:"META_TRANSACTION_STATUS_TOPIC"`
