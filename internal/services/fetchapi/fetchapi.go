@@ -28,7 +28,7 @@ func New(settings *config.Settings, logger *zerolog.Logger) (*FetchAPIService, e
 
 	return &FetchAPIService{
 		client: pb.NewFetchServiceClient(conn),
-		logger: logger.With().Str("component", "fetch_api_service").Logger(),
+		logger: logger.With().Str("component", "fetch-api-service").Logger(),
 	}, nil
 }
 

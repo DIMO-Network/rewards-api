@@ -25,7 +25,7 @@ type Service struct {
 	attestClient pb.AttestationServiceClient
 	grpcConn     *grpc.ClientConn
 	settings     *config.Settings
-	logger       *zerolog.Logger
+	logger       zerolog.Logger
 }
 
 // NewService initializes a new attestation Service with all required dependencies.
@@ -44,7 +44,7 @@ func NewService(settings *config.Settings, logger *zerolog.Logger, chClient *ch.
 		attestClient: attestClient,
 		grpcConn:     conn,
 		settings:     settings,
-		logger:       logger,
+		logger:       logger.With().Str("component", "attestation-service").Logger(),
 	}, nil
 }
 

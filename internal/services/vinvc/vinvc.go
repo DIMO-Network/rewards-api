@@ -46,7 +46,7 @@ type VINVCService struct {
 func New(fetchService FetchAPIService, settings *config.Settings, logger *zerolog.Logger) *VINVCService {
 	return &VINVCService{
 		fetchService:     fetchService,
-		logger:           logger.With().Str("component", "vinvc_service").Logger(),
+		logger:           logger.With().Str("component", "vinvc-service").Logger(),
 		vinVCDataVersion: settings.VINVCDataVersion,
 		vehicleAddr:      settings.VehicleNFTAddress,
 		chainID:          uint64(settings.DIMORegistryChainID),
@@ -74,10 +74,10 @@ func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 	return confirmedVINs, nil
 }
 
-// GetLatestVINVC retrieves the latest VINVC for the provided vehicle tokenId in the given week.
+// GetLatestValidVINVCs retrieves the latest VINVC for the provided vehicle tokenId in the given week.
 func (v *VINVCService) GetLatestValidVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle, weekNum int) (map[string][]*verifiable.VINSubject, error) {
-	// map to track VINs and their associated tokenIDs (only for valid VCs)
-	validVinToTokenIDs := make(map[string][]*verifiable.VINSubject)
+	// map to track VINs and their associated subjects (only for valid VCs)
+	validVinToCredSubjects := make(map[string][]*verifiable.VINSubject)
 
 	// collect all valid VINVCs and their associated VINs
 	for _, vehicle := range activeVehicles {
@@ -92,10 +92,10 @@ func (v *VINVCService) GetLatestValidVINVCs(ctx context.Context, activeVehicles 
 		}
 
 		vin := credSubject.VehicleIdentificationNumber
-		validVinToTokenIDs[vin] = append(validVinToTokenIDs[vin], credSubject)
+		validVinToCredSubjects[vin] = append(validVinToCredSubjects[vin], credSubject)
 	}
 
-	return validVinToTokenIDs, nil
+	return validVinToCredSubjects, nil
 }
 
 // getLatestValidVINVC retrieves the latest VINVC for the provided vehicle tokenId in the given week.
