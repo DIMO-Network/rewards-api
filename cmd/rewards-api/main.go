@@ -337,8 +337,11 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create Fetch API service.")
 		}
 		vinvcSrv := vinvc.New(fetchapiSrv, &settings, &logger)
-
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, identClient, vinvcSrv, week, &logger)
+		attSrv, err := attestation.NewService(&settings, &logger, chClient, vinvcSrv)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create attestation service.")
+		}
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, identClient, attSrv, week, &logger)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
@@ -468,7 +471,7 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create attestation service.")
 		}
-		err = attSrv.EnsureVINVCs(week)
+		err = attSrv.EnsureAttestations(ctx, week)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to pull attestation data.")
 		}
