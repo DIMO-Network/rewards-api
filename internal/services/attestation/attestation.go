@@ -90,6 +90,7 @@ func (s *Service) GetConfirmedVINVCs(ctx context.Context, activeVehicles []*ch.V
 			validTokenIDs[int64(subject.VehicleTokenID)] = struct{}{}
 		}
 	}
+	s.logger.Debug().Int("numValidVinVCs", len(validTokenIDs)).Int("numActiveDevices", len(activeVehicles)).Msg("Found valid VIN VCs")
 
 	// ensure VIN VCs for all active vehicles that do not have a valid VC
 	for _, device := range activeVehicles {
@@ -104,6 +105,13 @@ func (s *Service) GetConfirmedVINVCs(ctx context.Context, activeVehicles []*ch.V
 		subs := validVinToSubjects[vinSubject.VehicleIdentificationNumber]
 		subs = append(subs, vinSubject)
 		validVinToSubjects[vinSubject.VehicleIdentificationNumber] = subs
+	}
+	if s.logger.Debug().Enabled() {
+		count := 0
+		for _, subjects := range validVinToSubjects {
+			count += len(subjects)
+		}
+		s.logger.Debug().Int("numValidVinVCs", count).Int("numActiveDevices", len(activeVehicles)).Msg("After ensuring VIN VCs")
 	}
 
 	return s.vinvcSrv.ResolveVINConflicts(validVinToSubjects), nil

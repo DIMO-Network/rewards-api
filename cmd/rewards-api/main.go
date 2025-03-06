@@ -457,8 +457,12 @@ func main() {
 				logger.Fatal().Err(err).Msg("Could not parse week number.")
 			}
 		}
-		logger = logger.With().Int("week", week).Str("subCommand", subCommand).Logger()
-
+		logger = logger.With().Int("week", week).Str("subCommand", subCommand).Logger().Level(zerolog.DebugLevel)
+		start := time.Now()
+		defer func() {
+			logger.Debug().Str("duration", time.Since(start).String()).Msg("Finished.")
+		}()
+		logger.Debug().Msg("Starting.")
 		chClient, err := ch.NewClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
