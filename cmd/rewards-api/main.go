@@ -457,7 +457,8 @@ func main() {
 				logger.Fatal().Err(err).Msg("Could not parse week number.")
 			}
 		}
-		logger = logger.With().Int("week", week).Str("subCommand", subCommand).Logger().Level(zerolog.DebugLevel)
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		logger = logger.With().Int("week", week).Str("subCommand", subCommand).Logger()
 		start := time.Now()
 		defer func() {
 			logger.Debug().Str("duration", time.Since(start).String()).Msg("Finished.")
