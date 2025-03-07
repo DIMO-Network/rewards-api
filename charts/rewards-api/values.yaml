@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/rewards-api
   pullPolicy: IfNotPresent
-  tag: 59c71ec
+  tag: a7df4c9
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
@@ -28,7 +28,7 @@ referralsCronJob:
   schedule: 0 7 * * 1
 attestationsCronJob:
   enabled: true
-  schedule: "* * 30 2 *"
+  schedule: '* * 30 2 *'
 env:
   ENVIRONMENT: dev
   PORT: '8080'
