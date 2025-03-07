@@ -122,12 +122,12 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	vinVCConfirmed, err := t.vinVCSrv.GetConfirmedVINVCs(ctx, activeDevices, issuanceWeek)
-	if err != nil {
-		// this is a non-fatal error, we can continue without this data
-		t.Logger.Warn().Err(err).Msg("Failed to get confirmed VIN VC VINs. continuing execution.")
-		vinVCConfirmed = map[int64]struct{}{}
-	}
+	// vinVCConfirmed, err := t.vinVCSrv.GetConfirmedVINVCs(ctx, activeDevices, issuanceWeek)
+	// if err != nil {
+	// 	// this is a non-fatal error, we can continue without this data
+	// 	t.Logger.Warn().Err(err).Msg("Failed to get confirmed VIN VC VINs. continuing execution.")
+	// 	vinVCConfirmed = map[int64]struct{}{}
+	// }
 
 	allIntegrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -173,10 +173,10 @@ func (t *BaselineClient) assignPoints() error {
 
 		logger = logger.With().Str("userId", ud.UserId).Logger()
 
-		if _, ok := vinVCConfirmed[device.TokenID]; !ok && len(vinVCConfirmed) > 0 {
-			// TODO: Update this to a continue after we have a better idea of how many vehicles are missing VIN VC.
-			logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle does not have a confirmed VIN VC VIN.")
-		}
+		// if _, ok := vinVCConfirmed[device.TokenID]; !ok && len(vinVCConfirmed) > 0 {
+		// 	// TODO: Update this to a continue after we have a better idea of how many vehicles are missing VIN VC.
+		// 	logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle does not have a confirmed VIN VC VIN.")
+		// }
 
 		if !ud.VinConfirmed {
 			logger.Info().Msg("Device does not have confirmed VIN.")
