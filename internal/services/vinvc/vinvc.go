@@ -101,16 +101,26 @@ func (v *VINVCService) GetLatestValidVINVCs(ctx context.Context, activeVehicles 
 // getLatestValidVINVC retrieves the latest VINVC for the provided vehicle tokenId in the given week.
 // if a VINVC fails to decode, it is skipped and the next one is fetched.
 func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, weekNum int) (*verifiable.VINSubject, error) {
-	before := date.NumToWeekEnd(weekNum)
+	// get time boundaries for the specified week
+	endOfWeek := date.NumToWeekEnd(weekNum)
 	startOfWeek := date.NumToWeekStart(weekNum)
+
+	// initialize search time to the end of the week (plus a second for inclusive search)
+	searchTime := endOfWeek.Add(time.Second)
 	opts := &pb.SearchOptions{
 		DataVersion: &wrapperspb.StringValue{Value: v.vinVCDataVersion},
 		Type:        &wrapperspb.StringValue{Value: cloudevent.TypeVerifableCredential},
 		Subject:     &wrapperspb.StringValue{Value: cloudevent.NFTDID{ChainID: v.chainID, ContractAddress: v.vehicleAddr, TokenID: uint32(tokenId)}.String()},
-		Before:      timestamppb.New(before.Add(time.Second)), // add a second to ensure inclusion of the end of the week
 	}
+
 	logger := v.logger.With().Int64("vehicleTokenId", tokenId).Logger()
-	for startOfWeek.Before(before) {
+
+	// continue searching until we reach the beginning of the week
+	for startOfWeek.Before(searchTime) {
+		// create search options with the current time boundary
+		opts.Before = timestamppb.New(searchTime)
+
+		// fetch the latest cloud event before the current search time
 		cloudEvents, err := v.fetchService.ListCloudEvents(ctx, opts, 1)
 		if err != nil {
 			if status.Code(err) == codes.NotFound {
@@ -118,30 +128,35 @@ func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, w
 			}
 			return nil, fmt.Errorf("failed to get fetch latest VINVC: %w", err)
 		}
+
 		if len(cloudEvents) == 0 {
-			return nil, fmt.Errorf("no VINVC found for vehicle: %w", notFound)
+			// no more events found, exit the loop
+			break
 		}
+
 		cloudEvent := cloudEvents[0]
-		before = cloudEvent.Time // update before time for the next iteration if needed
+		// update search time to look before the current event
+		searchTime = cloudEvent.Time
 		eventLogger := logger.With().Str("cloudEventId", cloudEvent.ID).Str("cloudEventSource", cloudEvent.Source).Logger()
 
 		// parse and validate the credential
 		var cred verifiable.Credential
 		if err := json.Unmarshal(cloudEvent.Data, &cred); err != nil {
-			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential skipping...")
+			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential, skipping...")
+			//
 			continue
 		}
 
 		// parse the credential subject
 		var credSubject verifiable.VINSubject
 		if err := json.Unmarshal(cred.CredentialSubject, &credSubject); err != nil {
-			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential subject skipping...")
+			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential subject, skipping...")
 			continue
 		}
 
 		// skip if VIN is empty
 		if credSubject.VehicleIdentificationNumber == "" {
-			eventLogger.Error().Msg("VINVC has empty VIN skipping...")
+			eventLogger.Error().Msg("VINVC has empty VIN, skipping...")
 			continue
 		}
 
@@ -151,9 +166,12 @@ func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, w
 			continue
 		}
 
+		// found a valid credential, return it
 		return &credSubject, nil
 	}
-	return nil, fmt.Errorf("no VINVC found for vehicle: %w", notFound)
+
+	// no valid credential found within the week
+	return nil, fmt.Errorf("no valid VINVC found for vehicle in week %d: %w", weekNum, notFound)
 }
 
 // ResolveVINConflicts resolves conflicts between VINs and their associated with multiple tokenIDs.
