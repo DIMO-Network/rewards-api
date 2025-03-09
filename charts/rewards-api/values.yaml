@@ -25,7 +25,7 @@ rewardsCronJob:
   schedule: 0 5 * * 1
 referralsCronJob:
   enabled: true
-  schedule: 0 7 * * 1
+  schedule: 0 8 * * 1
 attestationsCronJob:
   enabled: true
   schedule: '* * 30 2 *'
