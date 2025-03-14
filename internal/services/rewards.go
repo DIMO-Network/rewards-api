@@ -179,6 +179,8 @@ func (t *BaselineClient) assignPoints() error {
 		}
 
 		if !ud.VinConfirmed {
+			// TODO(kevin): Remove this warning after we have a better idea of how many vehicles have VIN VC.
+			logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle has VC but VIN is not confirmed.")
 			logger.Info().Msg("Device does not have confirmed VIN.")
 			continue
 		}
