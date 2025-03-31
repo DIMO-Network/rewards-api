@@ -361,6 +361,10 @@ const docTemplate = `{
                     "description": "Points is the number of points used to calculate the potential tokens.",
                     "type": "integer"
                 },
+                "startOfWeek": {
+                    "description": "StartOfWeek is the start of the week for the conversion.",
+                    "type": "string"
+                },
                 "tokens": {
                     "description": "Tokens is the number of tokens ($DIMO/eth not wei) that would be earned for the given number of points.",
                     "allOf": [
