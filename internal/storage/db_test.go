@@ -197,7 +197,7 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 	// Run the performance test
 
 	startTime := time.Now()
-	actualTokens, err := CalculateTokensForPoints(ctx, conn, 1000, 100)
+	_, actualTokens, err := CalculateTokensForPoints(ctx, conn, 1000, 100)
 	require.NoError(t, err)
 	duration := time.Since(startTime)
 
@@ -219,4 +219,85 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 
 	// Performance threshold check
 	assert.Less(t, duration, 1*time.Second, "Query took longer than 1 second to execute")
+}
+
+func TestCalculateTokensForPoints(t *testing.T) {
+	ctx := context.Background()
+	logger := zerolog.Nop()
+	cont, conn := utils.GetDbConnection(ctx, t, logger)
+	defer testcontainers.CleanupContainer(t, cont)
+
+	// Create test data
+	finishedWeek := models.IssuanceWeek{
+		ID:        1,
+		JobStatus: models.IssuanceWeeksJobStatusFinished,
+	}
+	err := finishedWeek.Insert(ctx, conn.DBS().Writer, boil.Infer())
+	assert.NoError(t, err)
+
+	unfinishedWeek := models.IssuanceWeek{
+		ID:        2,
+		JobStatus: models.IssuanceWeeksJobStatusStarted,
+	}
+	err = unfinishedWeek.Insert(ctx, conn.DBS().Writer, boil.Infer())
+	assert.NoError(t, err)
+
+	// Create rewards for the finished week
+	reward := models.Reward{
+		IssuanceWeekID:          1,
+		UserDeviceID:            "test_device",
+		StreakPoints:            100,
+		StreakTokens:            types.NewNullDecimal(new(decimal.Big).Mul(decimal.New(1000, 0), etherDecimal)),
+		SyntheticDevicePoints:   50,
+		SyntheticDeviceTokens:   types.NewNullDecimal(new(decimal.Big).Mul(decimal.New(500, 0), etherDecimal)),
+		AftermarketDevicePoints: 0,
+		AftermarketDeviceTokens: types.NewNullDecimal(decimal.New(0, 0)),
+	}
+	err = reward.Insert(ctx, conn.DBS().Writer, boil.Infer())
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name           string
+		weekID         int
+		points         int
+		expectedWeekID int
+		expectedTokens *decimal.Big
+		expectError    bool
+	}{
+		{
+			name:           "use finished week when provided",
+			weekID:         1,
+			points:         50,
+			expectedWeekID: 1,
+			expectedTokens: new(decimal.Big).SetMantScale(500, 0),
+			expectError:    false,
+		},
+		{
+			name:           "use previous finished week when current is unfinished",
+			weekID:         2,
+			points:         50,
+			expectedWeekID: 1,
+			expectedTokens: new(decimal.Big).SetMantScale(500, 0),
+			expectError:    false,
+		},
+		{
+			name:        "error when no finished week exists",
+			weekID:      0,
+			points:      50,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			weekID, tokens, err := CalculateTokensForPoints(ctx, conn, tt.points, tt.weekID)
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedWeekID, weekID)
+			assert.Equalf(t, tt.expectedTokens.Cmp(tokens), 0, "Expected tokens: %s, got: %s", tt.expectedTokens.String(), tokens.String())
+		})
+	}
 }

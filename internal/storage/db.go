@@ -106,20 +106,36 @@ LIMIT 10;
 `
 
 // CalculateTokensForPoints calculates how many tokens a given number of points is worth.
-func CalculateTokensForPoints(ctx context.Context, dbStore db.Store, points int, weekID int) (*decimal.Big, error) {
-	var tokens types.NullDecimal
-	err := dbStore.DBS().Reader.QueryRowContext(ctx, tokensPerWeekQuery, weekID, points).Scan(&tokens)
+// It returns both the finished week ID used for the calculation and the calculated tokens.
+// If the provided week is not finished, it will use the most recent finished week before it.
+func CalculateTokensForPoints(ctx context.Context, dbStore db.Store, points int, weekID int) (int, *decimal.Big, error) {
+	// Find the first finished week before or equal to the provided week ID
+	finishedWeek, err := models.IssuanceWeeks(
+		models.IssuanceWeekWhere.ID.LTE(weekID),
+		models.IssuanceWeekWhere.JobStatus.EQ(models.IssuanceWeeksJobStatusFinished),
+		qm.OrderBy(models.IssuanceWeekColumns.ID+" DESC"),
+		qm.Limit(1),
+	).One(ctx, dbStore.DBS().Reader)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("no conversion rate found for weekId %v", weekID)
+			return 0, nil, fmt.Errorf("no finished issuance week found before or at week %d", weekID)
 		}
-		return nil, fmt.Errorf("error calculating tokens: %w", err)
+		return 0, nil, fmt.Errorf("error finding finished issuance week: %w", err)
+	}
+
+	var tokens types.NullDecimal
+	err = dbStore.DBS().Reader.QueryRowContext(ctx, tokensPerWeekQuery, finishedWeek.ID, points).Scan(&tokens)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return finishedWeek.ID, nil, fmt.Errorf("no conversion rate found for weekId %v", finishedWeek.ID)
+		}
+		return finishedWeek.ID, nil, fmt.Errorf("error calculating tokens: %w", err)
 	}
 	if tokens.Big == nil {
-		return nil, fmt.Errorf("null conversion rate found for weekId %v", weekID)
+		return finishedWeek.ID, nil, fmt.Errorf("null conversion rate found for weekId %v", finishedWeek.ID)
 	}
 
 	// Divide result by ether
 	result := new(decimal.Big).Quo(tokens.Big, etherDecimal)
-	return result, nil
+	return finishedWeek.ID, result, nil
 }

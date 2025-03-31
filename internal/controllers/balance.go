@@ -109,14 +109,15 @@ func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "points must be positive")
 	}
 
-	potentialTokens, err := storage.CalculateTokensForPoints(c.Context(), r.DB, points, weekID)
+	finishedWeekID, potentialTokens, err := storage.CalculateTokensForPoints(c.Context(), r.DB, points, weekID)
 	if err != nil {
 		return err
 	}
 
 	return c.JSON(HistoricalConversionResponse{
-		Points: points,
-		Tokens: potentialTokens,
+		Points:      points,
+		Tokens:      potentialTokens,
+		StartOfWeek: date.NumToWeekStart(finishedWeekID),
 	})
 }
 
@@ -125,4 +126,6 @@ type HistoricalConversionResponse struct {
 	Points int `json:"points"`
 	// Tokens is the number of tokens ($DIMO/eth not wei) that would be earned for the given number of points.
 	Tokens *decimal.Big `json:"tokens"`
+	// StartOfWeek is the start of the week for the conversion.
+	StartOfWeek time.Time `json:"startOfWeek"`
 }
