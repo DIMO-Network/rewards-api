@@ -32,6 +32,9 @@ type referrerResp struct {
 
 var ErrNoReferrer = errors.New("no referrer found")
 
+// GetReferrer returns the address of the user that referred the given user, using the
+// Mobile API. If no referrer exists then this returns the error ErrNoReferrer.
+// This uses https://api.dimo.co/api#/referral/ReferralController_getReferrer
 func (c *Client) GetReferrer(ctx context.Context, addr common.Address) (common.Address, error) {
 	p := c.base.JoinPath("referral", "referrer", addr.Hex())
 
