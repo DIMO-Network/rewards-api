@@ -32,6 +32,7 @@ env:
   ENABLE_STAKING: true
   DIMO_REGISTRY_CHAIN_ID: 137
   VEHICLE_NFT_ADDRESS: '0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF'
+  MOBILE_API_BASE_URL: 'https://api.dimo.co'
 ingress:
   enabled: true
   className: nginx

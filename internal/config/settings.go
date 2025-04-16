@@ -35,4 +35,5 @@ type Settings struct {
 	DIMORegistryChainID        int             `yaml:"DIMO_REGISTRY_CHAIN_ID"`
 	VehicleNFTAddress          common.Address  `yaml:"VEHICLE_NFT_ADDRESS"`
 	VINVCDataVersion           string          `yaml:"VINVC_DATA_VERSION"`
+	MobileAPIBaseURL           string          `yaml:"MOBILE_API_BASE_URL"`
 }

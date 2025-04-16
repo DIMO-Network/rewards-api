@@ -8,15 +8,12 @@ import (
 
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
+	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	pb "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/ericlagergren/decimal"
 	"go.uber.org/mock/gomock"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/IBM/sarama/mocks"
 	"github.com/ethereum/go-ethereum/common"
@@ -30,11 +27,10 @@ import (
 )
 
 type refUser struct {
-	ID              string
-	Address         common.Address
-	Code            string
-	CodeUsed        string
-	InvalidReferrer bool
+	ID       string
+	Address  common.Address
+	Code     string
+	CodeUsed string
 }
 
 type Referral struct {
@@ -132,25 +128,6 @@ func TestReferrals(t *testing.T) {
 			},
 			Referrals: []Referral{},
 		},
-		{
-			Name: "Referring user was deleted",
-			Devices: []Device{
-				{ID: "Dev1", UserID: "User1", TokenID: 1, Vin: "00000000000000001", FirstEarningWeek: 5},
-			},
-			Users: []refUser{
-				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: "2", InvalidReferrer: true},
-				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
-			},
-			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 1},
-				{Week: 6, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 2},
-				{Week: 7, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 3},
-				{Week: 8, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 4},
-			},
-			Referrals: []Referral{
-				{Referee: mkAddr(1), Referrer: refContractAddr},
-			},
-		},
 	}
 
 	for _, scen := range scens {
@@ -216,43 +193,28 @@ func TestReferrals(t *testing.T) {
 			}
 
 			ctrl := gomock.NewController(t)
-			usersClient := NewMockUsersClient(ctrl)
-			accountsClient := NewMockAccountsClient(ctrl)
-			accountsClient.EXPECT().TempReferral(gomock.Any(), gomock.Any()).Return(
-				nil, status.Error(codes.NotFound, "Not found xdd"),
-			)
+			mac := NewMockMobileAPIClient(ctrl)
 
-			usersClient.EXPECT().GetUsersByEthereumAddress(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(ctx context.Context, in *pb.GetUsersByEthereumAddressRequest, opts ...grpc.CallOption) (*pb.GetUsersByEthereumAddressResponse, error) {
+			mac.EXPECT().GetReferrer(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(ctx context.Context, addr common.Address) (common.Address, error) {
 					for _, u := range scen.Users {
-						if u.Address == common.BytesToAddress(in.EthereumAddress) {
-							uOut := &pb.User{Id: u.ID, EthereumAddressBytes: u.Address.Bytes()}
-
-							if u.InvalidReferrer {
-								uOut.ReferredBy = &pb.UserReferrer{
-									ReferrerValid: false,
-								}
-							} else if u.CodeUsed != "" {
+						if u.Address == addr {
+							if u.CodeUsed != "" {
 								for _, u2 := range scen.Users {
 									if u2.Code == u.CodeUsed {
-										uOut.ReferredBy = &pb.UserReferrer{
-											Id:              u2.ID,
-											EthereumAddress: u2.Address.Bytes(),
-											ReferrerValid:   true,
-										}
-										break
+										return u2.Address, nil
 									}
 								}
 							}
-
-							return &pb.GetUsersByEthereumAddressResponse{Users: []*pb.User{uOut}}, nil
+							break
 						}
 					}
-					return &pb.GetUsersByEthereumAddressResponse{Users: []*pb.User{}}, nil
-				}).AnyTimes()
+					return common.Address{}, mobileapi.ErrNoReferrer
+				},
+			).AnyTimes()
 
-			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient, accountsClient)
-			referralBonusService.ContractAddress = refContractAddr
+			settings.ReferralContractAddress = refContractAddr.Hex()
+			referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, mac)
 
 			refs, err := referralBonusService.CollectReferrals(ctx, 8)
 			require.NoError(t, err)
@@ -290,11 +252,7 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	transferService := NewTokenTransferService(&settings, producer, conn)
 
-	ctrl := gomock.NewController(t)
-	usersClient := NewMockUsersClient(ctrl)
-	accountsClient := NewMockAccountsClient(ctrl)
-
-	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, usersClient, accountsClient)
+	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, nil)
 
 	refs := Referrals{
 		Referees:        []common.Address{mkAddr(1)},

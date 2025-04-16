@@ -24,7 +24,7 @@ import (
 
 var dincSource = common.HexToAddress("0x4F098Ea7cAd393365b4d251Dd109e791e6190239")
 
-var notFound = errors.New("not found")
+var errNotFound = errors.New("not found")
 
 // FetchAPIService defines the interface Fetch API.
 type FetchAPIService interface {
@@ -84,7 +84,7 @@ func (v *VINVCService) GetLatestValidVINVCs(ctx context.Context, activeVehicles 
 		logger := v.logger.With().Int64("vehicleTokenId", vehicle.TokenID).Logger()
 		credSubject, err := v.getLatestValidVINVC(ctx, vehicle.TokenID, weekNum)
 		if err != nil {
-			if errors.Is(err, notFound) {
+			if errors.Is(err, errNotFound) {
 				logger.Warn().Msg("no VINVC found for vehicle")
 				continue
 			}
@@ -124,7 +124,7 @@ func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, w
 		cloudEvents, err := v.fetchService.ListCloudEvents(ctx, opts, 1)
 		if err != nil {
 			if status.Code(err) == codes.NotFound {
-				return nil, fmt.Errorf("no VINVC found for vehicle: %w", notFound)
+				return nil, fmt.Errorf("no VINVC found for vehicle: %w", errNotFound)
 			}
 			return nil, fmt.Errorf("failed to get fetch latest VINVC: %w", err)
 		}
@@ -171,7 +171,7 @@ func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, w
 	}
 
 	// no valid credential found within the week
-	return nil, fmt.Errorf("no valid VINVC found for vehicle in week %d: %w", weekNum, notFound)
+	return nil, fmt.Errorf("no valid VINVC found for vehicle in week %d: %w", weekNum, errNotFound)
 }
 
 // ResolveVINConflicts resolves conflicts between VINs and their associated with multiple tokenIDs.
