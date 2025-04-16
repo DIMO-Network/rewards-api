@@ -86,6 +86,8 @@ github.com/DIMO-Network/fetch-api v0.0.7 h1:rVnTvGb7BoqJwppA2xlgRr5+aYVca3f6u6zd
 github.com/DIMO-Network/fetch-api v0.0.7/go.mod h1:W51V8G+5kjxGVJzsRK6e4Hzoh8kS/T2kQmsTUqaDyqE=
 github.com/DIMO-Network/model-garage v0.4.14 h1:pXkjITgDlHjiBxwYqjUphFrs4NY3Iaf7A3DfFNzTiTo=
 github.com/DIMO-Network/model-garage v0.4.14/go.mod h1:N4Tm1X7fU2IewHDfLhmx5aQqOnbxrC4LuhPBZccc25s=
+github.com/DIMO-Network/nameindexer v0.1.2 h1:xar3D+fe7RFy887BVWh+B1qhUo/K6tIzK3Ld1NTuRgo=
+github.com/DIMO-Network/nameindexer v0.1.2/go.mod h1:BmonIrd69A4Whe+7WHiyTP6RJf3KQiooOLBISqkeyII=
 github.com/DIMO-Network/shared v0.12.9 h1:I41R/d84WedhQERdT7Iu7Bq8OnmLLQormfQb9g+vl1M=
 github.com/DIMO-Network/shared v0.12.9/go.mod h1:lDHUKwwT2LW6Zvd42Nb33dXklRNTmfyOlbUNx2dQfGY=
 github.com/DIMO-Network/users-api v0.9.4 h1:JLSLTGMJvCsnHMTHxfY+h51Dkghwh+dZypcA59bPMyU=
