@@ -72,8 +72,6 @@ github.com/ClickHouse/clickhouse-go/v2 v2.32.2 h1:Y8fAXt0CpLhqNXMLlSddg+cMfAr7zH
 github.com/ClickHouse/clickhouse-go/v2 v2.32.2/go.mod h1:/vE8N/+9pozLkIiTMWbNUGviccDv/czEGS1KACvpXIk=
 github.com/DATA-DOG/go-sqlmock v1.4.1 h1:ThlnYciV1iM/V0OSF/dtkqWb6xo5qITT1TJBG1MRDJM=
 github.com/DATA-DOG/go-sqlmock v1.4.1/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
-github.com/DIMO-Network/accounts-api v0.2.9 h1:ojWFQAQvIRTFcwAg5yNpi65VLh3wnopg9jTtLZMCors=
-github.com/DIMO-Network/accounts-api v0.2.9/go.mod h1:P7JXtmtFKZYhDSof772UFpnSOcCWFHK9t8zLOpk5XEc=
 github.com/DIMO-Network/attestation-api v0.0.20 h1:9vQizVFdWeKch9FQ1VMzUZ1/XBh6sBNQ8DRS7TQNFp4=
 github.com/DIMO-Network/attestation-api v0.0.20/go.mod h1:gYJOJrkvboebXhkHIJuant3NakbBZxkNmkwgvdsDYzg=
 github.com/DIMO-Network/clickhouse-infra v0.0.3 h1:B6/4IY9IxLcyydET14IjHUT+A5SDEis7p//DoFzrMk4=
@@ -86,8 +84,6 @@ github.com/DIMO-Network/fetch-api v0.0.7 h1:rVnTvGb7BoqJwppA2xlgRr5+aYVca3f6u6zd
 github.com/DIMO-Network/fetch-api v0.0.7/go.mod h1:W51V8G+5kjxGVJzsRK6e4Hzoh8kS/T2kQmsTUqaDyqE=
 github.com/DIMO-Network/model-garage v0.4.14 h1:pXkjITgDlHjiBxwYqjUphFrs4NY3Iaf7A3DfFNzTiTo=
 github.com/DIMO-Network/model-garage v0.4.14/go.mod h1:N4Tm1X7fU2IewHDfLhmx5aQqOnbxrC4LuhPBZccc25s=
-github.com/DIMO-Network/nameindexer v0.1.2 h1:xar3D+fe7RFy887BVWh+B1qhUo/K6tIzK3Ld1NTuRgo=
-github.com/DIMO-Network/nameindexer v0.1.2/go.mod h1:BmonIrd69A4Whe+7WHiyTP6RJf3KQiooOLBISqkeyII=
 github.com/DIMO-Network/shared v0.12.9 h1:I41R/d84WedhQERdT7Iu7Bq8OnmLLQormfQb9g+vl1M=
 github.com/DIMO-Network/shared v0.12.9/go.mod h1:lDHUKwwT2LW6Zvd42Nb33dXklRNTmfyOlbUNx2dQfGY=
 github.com/DIMO-Network/users-api v0.9.4 h1:JLSLTGMJvCsnHMTHxfY+h51Dkghwh+dZypcA59bPMyU=

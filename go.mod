@@ -6,7 +6,6 @@ replace github.com/ericlagergren/decimal => github.com/ericlagergren/decimal v0.
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.32.2
-	github.com/DIMO-Network/accounts-api v0.2.9
 	github.com/DIMO-Network/attestation-api v0.0.20
 	github.com/DIMO-Network/clickhouse-infra v0.0.3
 	github.com/DIMO-Network/device-definitions-api v1.2.89
@@ -48,7 +47,6 @@ require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/ClickHouse/ch-go v0.65.1 // indirect
-	github.com/DIMO-Network/nameindexer v0.1.2
 	github.com/DIMO-Network/yaml v0.1.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
