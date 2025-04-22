@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"math/big"
 	"strconv"
 	"time"
@@ -22,7 +21,7 @@ import (
 // @Security     BearerAuth
 // @Router       /user/history/balance [get]
 func (r *RewardsController) GetBalanceHistory(c *fiber.Ctx) error {
-	maybeAddr, err := r.getCallerEthAddress(c)
+	addr, err := GetTokenEthAddr(c)
 	if err != nil {
 		return err
 	}
@@ -30,12 +29,6 @@ func (r *RewardsController) GetBalanceHistory(c *fiber.Ctx) error {
 	balanceHistory := BalanceHistory{
 		BalanceHistory: []Balance{},
 	}
-
-	if maybeAddr == nil {
-		return c.JSON(balanceHistory)
-	}
-
-	addr := *maybeAddr
 
 	// Terrible no good.
 	tfs, err := models.TokenTransfers(
@@ -94,7 +87,7 @@ func (r *RewardsController) GetHistoricalConversion(c *fiber.Ctx) error {
 	if dateStr != "" {
 		weekTime, err := time.Parse(time.RFC3339, dateStr)
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid time format use RFC-3339 e.g. (2024-12-23T12:41:42Z)"))
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid time format use RFC-3339 e.g. (2024-12-23T12:41:42Z)")
 		}
 		weekID = date.GetWeekNum(weekTime)
 	} else {

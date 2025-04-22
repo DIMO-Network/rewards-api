@@ -25,7 +25,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	userID := getUserID(c)
 	logger := r.Logger.With().Str("userId", userID).Logger()
 
-	maybeAddr, err := r.getCallerEthAddress(c)
+	addr, err := GetTokenEthAddr(c)
 	if err != nil {
 		return err
 	}
@@ -33,12 +33,6 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 	txHistory := TransactionHistory{
 		Transactions: []APITransaction{},
 	}
-
-	if maybeAddr == nil {
-		return c.JSON(txHistory)
-	}
-
-	addr := *maybeAddr
 
 	type enrichedTransfer struct {
 		models.TokenTransfer `boil:",bind"`
