@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
@@ -20,7 +18,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/DIMO-Network/shared/set"
-	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
@@ -34,7 +31,6 @@ type RewardsController struct {
 	ChClient          *ch.Client
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
-	UsersClient       pb_users.UserServiceClient
 	Settings          *config.Settings
 	Tokens            []*contracts.Token
 }
@@ -65,21 +61,7 @@ func (r *RewardsController) getCallerEthAddress(c *fiber.Ctx) (*common.Address, 
 		return tokenAddr, nil
 	}
 
-	userID := getUserID(c)
-	user, err := r.UsersClient.GetUser(c.Context(), &pb_users.GetUserRequest{Id: userID})
-	if err != nil {
-		if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed searching users-api for id %s: %w", userID, err)
-	}
-
-	if len(user.EthereumAddressBytes) == 20 {
-		addr := common.BytesToAddress(user.EthereumAddressBytes)
-		return &addr, nil
-	}
-
-	return nil, nil
+	return nil, fiber.NewError(fiber.StatusUnauthorized, "No Ethereum address in JWT.")
 }
 
 // GetUserRewards godoc
