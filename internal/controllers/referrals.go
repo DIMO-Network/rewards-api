@@ -18,25 +18,17 @@ type ReferralsController struct {
 	Settings *config.Settings
 }
 
-func (r *ReferralsController) getCallerEthAddress(c *fiber.Ctx) (*common.Address, error) {
-	tokenAddr := GetUserEthAddr(c)
-	if tokenAddr != nil {
-		return tokenAddr, nil
-	}
-
-	return nil, fiber.NewError(fiber.StatusUnauthorized, "No Ethereum address in JWT.")
-}
-
 // GetUserReferralHistory godoc
 // @Description  A summary of the user's referrals.
 // @Success      200 {object} controllers.UserResponse
 // @Security     BearerAuth
 // @Router       /user/referrals [get]
 func (r *ReferralsController) GetUserReferralHistory(c *fiber.Ctx) error {
+	// Fairly certain that no one uses this endpoint.
 	userID := getUserID(c)
 	logger := r.Logger.With().Str("userId", userID).Logger()
 
-	userAddr, err := r.getCallerEthAddress(c)
+	userAddr, err := GetTokenEthAddr(c)
 	if err != nil {
 		return err
 	}

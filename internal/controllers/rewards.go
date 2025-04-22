@@ -42,27 +42,28 @@ func getUserID(c *fiber.Ctx) string {
 	return userID
 }
 
-func GetUserEthAddr(c *fiber.Ctx) *common.Address {
+var zeroAddr common.Address
+
+const ethAddrClaimName = "ethereum_address"
+
+func GetTokenEthAddr(c *fiber.Ctx) (common.Address, error) {
 	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-	ethAddr, ok := claims["ethereum_address"].(string)
-	if !ok || !common.IsHexAddress(ethAddr) {
-		return nil
+	claims := token.Claims.(jwt.MapClaims) // These should never fail.
+	ethAddrAny, ok := claims[ethAddrClaimName]
+	if !ok {
+		return zeroAddr, fiber.NewError(fiber.StatusUnauthorized, fmt.Sprintf("No %s claim in JWT.", ethAddrClaimName))
 	}
-	e := common.HexToAddress(ethAddr)
-	return &e
+	ethAddrStr, ok := ethAddrAny.(string) // These might
+	if !ok {
+		return zeroAddr, fiber.NewError(fiber.StatusUnauthorized, fmt.Sprintf("Claim %s has unexpected type %T.", ethAddrClaimName, ethAddrAny))
+	}
+	if !common.IsHexAddress(ethAddrStr) {
+		return zeroAddr, fiber.NewError(fiber.StatusUnauthorized, fmt.Sprintf("Claim %s is not a valid Ethereum address.", ethAddrClaimName))
+	}
+	return common.HexToAddress(ethAddrStr), nil
 }
 
 var opaqueInternalError = fiber.NewError(fiber.StatusInternalServerError, "Internal error.")
-
-func (r *RewardsController) getCallerEthAddress(c *fiber.Ctx) (*common.Address, error) {
-	tokenAddr := GetUserEthAddr(c)
-	if tokenAddr != nil {
-		return tokenAddr, nil
-	}
-
-	return nil, fiber.NewError(fiber.StatusUnauthorized, "No Ethereum address in JWT.")
-}
 
 // GetUserRewards godoc
 // @Description  A summary of the user's rewards.
@@ -77,31 +78,28 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	weekNum := date.GetWeekNum(now)
 	weekStart := date.NumToWeekStart(weekNum)
 
-	maybeAddr, err := r.getCallerEthAddress(c)
+	userAddr, err := GetTokenEthAddr(c)
 	if err != nil {
 		return err
 	}
 
-	var addrBalance *big.Int
+	addrBalance := big.NewInt(0)
 
-	if maybeAddr != nil {
-		balanceStart := time.Now()
-		addrBalance = big.NewInt(0)
-		for _, tk := range r.Tokens {
-			val, err := tk.BalanceOf(nil, *maybeAddr)
-			if err != nil {
-				return fmt.Errorf("failed checking balance: %w", err)
-			}
-			addrBalance.Add(addrBalance, val)
+	balanceStart := time.Now()
+	for _, tk := range r.Tokens {
+		val, err := tk.BalanceOf(nil, userAddr)
+		if err != nil {
+			return fmt.Errorf("failed checking balance: %w", err)
 		}
-		if balDur := time.Since(balanceStart); balDur >= 5*time.Second {
-			logger.Warn().Msgf("Long token balance checks: took %s.", balDur)
-		}
+		addrBalance.Add(addrBalance, val)
+	}
+	if balDur := time.Since(balanceStart); balDur >= 5*time.Second {
+		logger.Warn().Msgf("Long token balance checks: took %s.", balDur)
 	}
 
-	devicesReq := &pb_devices.ListUserDevicesForUserRequest{UserId: userID}
-	if maybeAddr != nil {
-		devicesReq.EthereumAddress = maybeAddr.Hex()
+	devicesReq := &pb_devices.ListUserDevicesForUserRequest{
+		UserId:          userID, // Unclear that we need to keep including this.
+		EthereumAddress: userAddr.Hex(),
 	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesReq)
@@ -390,15 +388,14 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 	userID := getUserID(c)
 	logger := r.Logger.With().Str("userId", userID).Logger()
 
-	maybeAddr, err := r.getCallerEthAddress(c)
+	userAddr, err := GetTokenEthAddr(c)
 	if err != nil {
 		return err
 	}
 
-	devicesReq := &pb_devices.ListUserDevicesForUserRequest{UserId: userID}
-
-	if maybeAddr != nil {
-		devicesReq.EthereumAddress = maybeAddr.Hex()
+	devicesReq := &pb_devices.ListUserDevicesForUserRequest{
+		UserId:          userID,
+		EthereumAddress: userAddr.Hex(),
 	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesReq)
