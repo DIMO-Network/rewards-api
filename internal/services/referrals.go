@@ -3,16 +3,17 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"time"
 
-	pb_accounts "github.com/DIMO-Network/accounts-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
+	"github.com/DIMO-Network/rewards-api/internal/dex"
+	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
-	pb "github.com/DIMO-Network/users-api/pkg/grpc"
 	"github.com/IBM/sarama"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
@@ -20,18 +21,12 @@ import (
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
-//go:generate mockgen -source=./referrals.go -destination=users_client_mock_test.go -package=services
-type UsersClient interface {
-	GetUsersByEthereumAddress(ctx context.Context, in *pb.GetUsersByEthereumAddressRequest, opts ...grpc.CallOption) (*pb.GetUsersByEthereumAddressResponse, error)
-}
-
-type AccountsClient interface {
-	TempReferral(ctx context.Context, req *pb_accounts.TempReferralRequest, opts ...grpc.CallOption) (*pb_accounts.TempReferralResponse, error)
+//go:generate mockgen -source=./referrals.go -destination=referrals_mock_test.go -package=services
+type MobileAPIClient interface {
+	GetReferrer(ctx context.Context, addr common.Address) (common.Address, error)
 }
 
 type ReferralsClient struct {
@@ -39,8 +34,7 @@ type ReferralsClient struct {
 	ContractAddress common.Address
 	Week            int
 	Logger          *zerolog.Logger
-	UsersClient     UsersClient
-	AccountsClient  AccountsClient
+	MobileAPIClient MobileAPIClient
 }
 
 type Referrals struct {
@@ -55,8 +49,7 @@ func NewReferralBonusService(
 	transferService *TransferService,
 	week int,
 	logger *zerolog.Logger,
-	userClient UsersClient,
-	accountsClient AccountsClient,
+	mac MobileAPIClient,
 ) *ReferralsClient {
 
 	return &ReferralsClient{
@@ -64,8 +57,7 @@ func NewReferralBonusService(
 		ContractAddress: common.HexToAddress(settings.ReferralContractAddress),
 		Week:            week,
 		Logger:          logger,
-		UsersClient:     userClient,
-		AccountsClient:  accountsClient,
+		MobileAPIClient: mac,
 	}
 }
 
@@ -157,78 +149,34 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			continue
 		}
 
-		accResp, err := c.AccountsClient.TempReferral(ctx, &pb_accounts.TempReferralRequest{WalletAddress: user.Bytes()})
+		referrer, err := c.MobileAPIClient.GetReferrer(ctx, user)
 		if err != nil {
-			if s, ok := status.FromError(err); ok {
-				if s.Code() != codes.NotFound {
-					return refs, err
-				}
-				// Otherwise, the address was simply not found in accounts-api. See if this is an old-style user, in users-api.
-			} else {
-				return refs, err
+			if errors.Is(err, mobileapi.ErrNoReferrer) {
+				// Not referred, move on.
+				continue
 			}
-		} else {
-			if accResp.WasReferred {
-				referrerID := "DELETED"
-				referrerAddr := c.ContractAddress
+			return refs, err
+		}
 
-				if accResp.ReferrerAccountId != "" && len(accResp.ReferrerWalletAddress) == common.AddressLength {
-					referrerID = accResp.ReferrerAccountId
-					referrerAddr = common.BytesToAddress(accResp.ReferrerWalletAddress)
-
-					logger.Info().Str("referringUser", referrerAddr.Hex()).Msg("Referral complete.")
-				}
-
-				refs.RefereeUserIDs = append(refs.RefereeUserIDs, accResp.AccountId)
-				refs.Referees = append(refs.Referees, user)
-				refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, referrerID)
-				refs.Referrers = append(refs.Referrers, referrerAddr)
-			}
-
+		if referrer == user {
+			// The referrals API is supposed to stop this, but let's double-check.
+			logger.Warn().Msg("User referred by himself.")
 			continue
 		}
 
-		resp, err := c.UsersClient.GetUsersByEthereumAddress(ctx, &pb.GetUsersByEthereumAddressRequest{EthereumAddress: user.Bytes()})
+		refereeUserID, err := addressToUserID(user)
+		if err != nil {
+			return refs, err
+		}
+		referrerUserID, err := addressToUserID(referrer)
 		if err != nil {
 			return refs, err
 		}
 
-		for _, potUser := range resp.Users { // These are ordered by creation time, descending.
-			if potUser.ReferredBy == nil {
-				continue
-			}
-
-			referrerID := "DELETED"
-			referrerAddr := c.ContractAddress
-
-			if potUser.ReferredBy.ReferrerValid {
-				referrerAddr = common.BytesToAddress(potUser.ReferredBy.EthereumAddress)
-				if referrerAddr == user {
-					logger.Warn().Msg("User referred by his own address.")
-					continue
-				}
-
-				if blacklisted, err := models.BlacklistExists(ctx, c.TransferService.db.DBS().Reader, referrerAddr.Hex()); err != nil {
-					return refs, err
-				} else if blacklisted {
-					logger.Warn().Msgf("Referring user %s blacklisted.", referrerAddr)
-					continue
-				}
-
-				logger.Debug().Str("referrer", common.BytesToAddress(potUser.ReferredBy.EthereumAddress).Hex()).Msg("User referred.")
-				referrerID = potUser.ReferredBy.Id
-				referrerAddr = common.BytesToAddress(potUser.ReferredBy.EthereumAddress)
-			} else {
-				logger.Debug().Msg("Referring user deleted.")
-			}
-
-			refs.RefereeUserIDs = append(refs.RefereeUserIDs, potUser.Id)
-			refs.Referees = append(refs.Referees, user)
-			refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, referrerID)
-			refs.Referrers = append(refs.Referrers, referrerAddr)
-
-			break
-		}
+		refs.RefereeUserIDs = append(refs.RefereeUserIDs, refereeUserID)
+		refs.Referees = append(refs.Referees, user)
+		refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, referrerUserID)
+		refs.Referrers = append(refs.Referrers, referrer)
 	}
 
 	logger.Info().Msgf("Sending out %d referrals.", len(refs.Referees))
@@ -351,4 +299,14 @@ func (c *ReferralsClient) sendRequest(requestID string, data []byte) error {
 	)
 
 	return err
+}
+
+func addressToUserID(addr common.Address) (string, error) {
+	userIDArgs := dex.IDTokenSubject{
+		UserId: addr.Hex(),
+		ConnId: "web3",
+	}
+
+	ub, err := proto.Marshal(&userIDArgs)
+	return base64.RawURLEncoding.EncodeToString(ub), err
 }

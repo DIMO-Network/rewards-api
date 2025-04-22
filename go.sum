@@ -72,8 +72,6 @@ github.com/ClickHouse/clickhouse-go/v2 v2.32.2 h1:Y8fAXt0CpLhqNXMLlSddg+cMfAr7zH
 github.com/ClickHouse/clickhouse-go/v2 v2.32.2/go.mod h1:/vE8N/+9pozLkIiTMWbNUGviccDv/czEGS1KACvpXIk=
 github.com/DATA-DOG/go-sqlmock v1.4.1 h1:ThlnYciV1iM/V0OSF/dtkqWb6xo5qITT1TJBG1MRDJM=
 github.com/DATA-DOG/go-sqlmock v1.4.1/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
-github.com/DIMO-Network/accounts-api v0.2.9 h1:ojWFQAQvIRTFcwAg5yNpi65VLh3wnopg9jTtLZMCors=
-github.com/DIMO-Network/accounts-api v0.2.9/go.mod h1:P7JXtmtFKZYhDSof772UFpnSOcCWFHK9t8zLOpk5XEc=
 github.com/DIMO-Network/attestation-api v0.0.20 h1:9vQizVFdWeKch9FQ1VMzUZ1/XBh6sBNQ8DRS7TQNFp4=
 github.com/DIMO-Network/attestation-api v0.0.20/go.mod h1:gYJOJrkvboebXhkHIJuant3NakbBZxkNmkwgvdsDYzg=
 github.com/DIMO-Network/clickhouse-infra v0.0.3 h1:B6/4IY9IxLcyydET14IjHUT+A5SDEis7p//DoFzrMk4=

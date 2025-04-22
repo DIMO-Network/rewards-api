@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -15,7 +16,6 @@ import (
 
 	_ "github.com/lib/pq"
 
-	pb_accounts "github.com/DIMO-Network/accounts-api/pkg/grpc"
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	_ "github.com/DIMO-Network/rewards-api/docs"
@@ -29,6 +29,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/services/fetchapi"
 	"github.com/DIMO-Network/rewards-api/internal/services/identity"
+	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
 	"github.com/DIMO-Network/rewards-api/internal/services/vinvc"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared"
@@ -381,23 +382,14 @@ func main() {
 
 		transferService := services.NewTokenTransferService(&settings, producer, pdb)
 
-		usersConn, err := grpc.NewClient(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		mapURL, err := url.ParseRequestURI(settings.MobileAPIBaseURL)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create users API client.")
+			logger.Fatal().Err(err).Msg("Couldn't parse Mobile API URL.")
 		}
-		defer usersConn.Close()
 
-		usersClient := pb_users.NewUserServiceClient(usersConn)
+		mAPI := mobileapi.New(mapURL)
 
-		accountsConn, err := grpc.NewClient(settings.AccountsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create users API client.")
-		}
-		defer accountsConn.Close()
-
-		accountsClient := pb_accounts.NewAccountsClient(accountsConn)
-
-		referralsClient := services.NewReferralBonusService(&settings, transferService, week, &logger, usersClient, accountsClient)
+		referralsClient := services.NewReferralBonusService(&settings, transferService, week, &logger, mAPI)
 		err = referralsClient.ReferralsIssuance(ctx)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
