@@ -97,12 +97,10 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		logger.Warn().Msgf("Long token balance checks: took %s.", balDur)
 	}
 
-	devicesReq := &pb_devices.ListUserDevicesForUserRequest{
+	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
 		UserId:          userID, // Unclear that we need to keep including this.
 		EthereumAddress: userAddr.Hex(),
-	}
-
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesReq)
+	})
 	if err != nil {
 		return err
 	}
