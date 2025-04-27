@@ -54,7 +54,7 @@ sqlboiler psql --no-tests --wipe
 ### Generate API documentation
 
 ```
-swag init -g cmd/rewards-api/main.go --parseDependency --parseInternal --generatedTime true --parseDepth 2
+swag init -g cmd/rewards-api/main.go --parseDependency --parseInternal --parseDepth 2
 ```
 
 ### Simulating a production run
