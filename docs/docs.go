@@ -128,24 +128,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/user/referrals": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "A summary of the user's referrals.",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/internal_controllers.UserResponse"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {

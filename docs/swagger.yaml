@@ -457,16 +457,6 @@ paths:
             $ref: '#/definitions/internal_controllers.TransactionHistory'
       security:
       - BearerAuth: []
-  /user/referrals:
-    get:
-      description: A summary of the user's referrals.
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/internal_controllers.UserResponse'
-      security:
-      - BearerAuth: []
 securityDefinitions:
   BearerAuth:
     in: header

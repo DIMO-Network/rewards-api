@@ -158,12 +158,6 @@ func main() {
 			Tokens:            tks,
 		}
 
-		referralsController := controllers.ReferralsController{
-			DB:       pdb,
-			Logger:   &logger,
-			Settings: &settings,
-		}
-
 		deviceController := controllers.DeviceController{
 			DB:     pdb,
 			Logger: &logger,
@@ -188,9 +182,6 @@ func main() {
 		user.Get("/history", rewardsController.GetUserRewardsHistory)
 		user.Get("/history/transactions", rewardsController.GetTransactionHistory)
 		user.Get("/history/balance", rewardsController.GetBalanceHistory)
-
-		// We never ended up using this.
-		user.Get("/user/referrals", referralsController.GetUserReferralHistory)
 
 		go startGRPCServer(&settings, pdb, &logger)
 
