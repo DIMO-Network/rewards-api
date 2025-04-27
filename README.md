@@ -65,6 +65,5 @@ swag init -g cmd/rewards-api/main.go --parseDependency --parseInternal --generat
    ```sh
    kubectl port-forward -n prod services/device-definitions-api-prod 8086:8086
    kubectl port-forward -n prod services/devices-api-prod 8087:8086
-   kubectl port-forward -n prod services/accounts-api-prod 8088:8086
    ```
 4. Run the job with, e.g., `go run ./cmd/rewards-api calculate 93`

@@ -13,7 +13,6 @@ require (
 	github.com/DIMO-Network/fetch-api v0.0.7
 	github.com/DIMO-Network/model-garage v0.4.14
 	github.com/DIMO-Network/shared v0.12.9
-	github.com/DIMO-Network/users-api v0.9.4
 	github.com/IBM/sarama v1.45.1
 	github.com/burdiyan/kafkautil v0.0.0-20240215092415-7e6d3d0fc870
 	github.com/docker/go-connections v0.5.0

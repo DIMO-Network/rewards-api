@@ -35,7 +35,6 @@ import (
 	"github.com/DIMO-Network/shared"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/db"
-	pb_users "github.com/DIMO-Network/users-api/pkg/grpc"
 
 	"github.com/IBM/sarama"
 	"github.com/burdiyan/kafkautil"
@@ -108,15 +107,8 @@ func main() {
 		}
 		defer definitionsConn.Close()
 
-		usersConn, err := grpc.NewClient(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create users API client.")
-		}
-		defer usersConn.Close()
-
 		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
-		usersClient := pb_users.NewUserServiceClient(usersConn)
 		chClient, err := ch.NewClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
@@ -164,14 +156,12 @@ func main() {
 			ChClient:          chClient,
 			Settings:          &settings,
 			Tokens:            tks,
-			UsersClient:       usersClient,
 		}
 
 		referralsController := controllers.ReferralsController{
-			DB:          pdb,
-			Logger:      &logger,
-			Settings:    &settings,
-			UsersClient: usersClient,
+			DB:       pdb,
+			Logger:   &logger,
+			Settings: &settings,
 		}
 
 		deviceController := controllers.DeviceController{

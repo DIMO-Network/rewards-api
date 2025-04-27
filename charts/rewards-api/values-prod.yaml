@@ -17,7 +17,6 @@ env:
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys
   DEVICES_API_GRPC_ADDR: devices-api-prod:8086
   USERS_API_GRPC_ADDR: users-api-prod:8086
-  ACCOUNTS_API_GRPC_ADDR: accounts-api-prod:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-prod:8086
   FETCH_API_GRPC_ADDR: fetch-api-prod:8086
   ATTESTATION_API_GRPC_ADDR: attestation-api-prod:8086

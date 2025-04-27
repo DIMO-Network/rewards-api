@@ -16,8 +16,6 @@ type Settings struct {
 	GRPCPort                   string          `yaml:"GRPC_PORT"`
 	DevicesAPIGRPCAddr         string          `yaml:"DEVICES_API_GRPC_ADDR"`
 	DefinitionsAPIGRPCAddr     string          `yaml:"DEFINITIONS_API_GRPC_ADDR"`
-	UsersAPIGRPCAddr           string          `yaml:"USERS_API_GRPC_ADDR"`
-	AccountsAPIGRPCAddr        string          `yaml:"ACCOUNTS_API_GRPC_ADDR"`
 	FetchAPIGRPCAddr           string          `yaml:"FETCH_API_GRPC_ADDR"`
 	AttestationAPIGRPCAddr     string          `yaml:"ATTESTATION_API_GRPC_ADDR"`
 	KafkaBrokers               string          `yaml:"KAFKA_BROKERS"`
