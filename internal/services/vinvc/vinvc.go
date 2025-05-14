@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"slices"
 	"time"
 
 	"github.com/DIMO-Network/attestation-api/pkg/verifiable"
+	"github.com/DIMO-Network/cloudevent"
 	pb "github.com/DIMO-Network/fetch-api/pkg/grpc"
-	"github.com/DIMO-Network/model-garage/pkg/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
@@ -110,7 +111,7 @@ func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, w
 	opts := &pb.SearchOptions{
 		DataVersion: &wrapperspb.StringValue{Value: v.vinVCDataVersion},
 		Type:        &wrapperspb.StringValue{Value: cloudevent.TypeVerifableCredential},
-		Subject:     &wrapperspb.StringValue{Value: cloudevent.NFTDID{ChainID: v.chainID, ContractAddress: v.vehicleAddr, TokenID: uint32(tokenId)}.String()},
+		Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: v.chainID, ContractAddress: v.vehicleAddr, TokenID: big.NewInt(tokenId)}.String()},
 	}
 
 	logger := v.logger.With().Int64("vehicleTokenId", tokenId).Logger()

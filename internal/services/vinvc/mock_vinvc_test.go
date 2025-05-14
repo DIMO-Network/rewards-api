@@ -15,7 +15,7 @@ import (
 	reflect "reflect"
 
 	grpc "github.com/DIMO-Network/fetch-api/pkg/grpc"
-	cloudevent "github.com/DIMO-Network/model-garage/pkg/cloudevent"
+	cloudevent "github.com/DIMO-Network/cloudevent"
 	gomock "go.uber.org/mock/gomock"
 )
 
