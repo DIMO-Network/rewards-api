@@ -90,7 +90,7 @@ func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
 		}
 
 		apiTx := APITransaction{
-			ChainID:     tx.TokenTransfer.ChainID,
+			ChainID:     tx.ChainID,
 			Time:        tx.BlockTimestamp,
 			From:        common.BytesToAddress(tx.AddressFrom),
 			To:          to,
