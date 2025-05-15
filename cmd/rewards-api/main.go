@@ -210,33 +210,6 @@ func main() {
 			}
 		}()
 
-		kclient2, err := createKafkaClient(&settings)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create Kafka client.")
-		}
-
-		consumer2, err := sarama.NewConsumerGroupFromClient(settings.ConsumerGroup, kclient2)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create Kafka consumer.")
-		}
-
-		msgHandler, err := services.NewEventConsumer(pdb, &logger, &tc)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create new event consumer.")
-		}
-
-		go func() {
-			for {
-				err = consumer2.Consume(ctx, []string{settings.ContractEventTopic}, msgHandler)
-				if err != nil {
-					logger.Err(err).Msg("error while processing messages")
-					if ctx.Err() != nil {
-						return
-					}
-				}
-			}
-		}()
-
 		logger.Info().Msgf("Starting HTTP server on port %s.", settings.Port)
 		if err := app.Listen(":" + settings.Port); err != nil {
 			logger.Fatal().Err(err).Msgf("Fiber server failed.")
