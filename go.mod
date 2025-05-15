@@ -8,11 +8,11 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.34.0
 	github.com/DIMO-Network/attestation-api v0.0.20
 	github.com/DIMO-Network/clickhouse-infra v0.0.3
-	github.com/DIMO-Network/cloudevent v0.0.5-0.20250514184900-f8c602c72300
+	github.com/DIMO-Network/cloudevent v0.1.0
 	github.com/DIMO-Network/device-definitions-api v1.2.89
 	github.com/DIMO-Network/devices-api v1.32.56
 	github.com/DIMO-Network/fetch-api v0.0.7
-	github.com/DIMO-Network/model-garage v0.5.7-0.20250513205220-9cb46f1764ea
+	github.com/DIMO-Network/model-garage v0.6.0
 	github.com/DIMO-Network/shared v0.12.9
 	github.com/IBM/sarama v1.45.1
 	github.com/burdiyan/kafkautil v0.0.0-20240215092415-7e6d3d0fc870
@@ -26,7 +26,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/lib/pq v1.10.9
 	github.com/pkg/errors v0.9.1
-	github.com/pressly/goose/v3 v3.24.1
+	github.com/pressly/goose/v3 v3.24.3
 	github.com/rs/zerolog v1.33.0
 	github.com/segmentio/ksuid v1.0.4
 	github.com/stretchr/testify v1.10.0
@@ -37,9 +37,9 @@ require (
 	github.com/volatiletech/sqlboiler/v4 v4.19.0
 	github.com/volatiletech/strmangle v0.0.8
 	go.uber.org/mock v0.5.2
-	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e
-	google.golang.org/grpc v1.70.0
-	google.golang.org/protobuf v1.36.5
+	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
+	google.golang.org/grpc v1.71.0
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -115,7 +115,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/lovoo/goka v1.1.11 // indirect
 	github.com/lufia/plan9stats v0.0.0-20240819163618-b1d8f4d146e7 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
@@ -188,16 +188,16 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
-	golang.org/x/mod v0.23.0 // indirect
-	golang.org/x/net v0.36.0 // indirect
+	golang.org/x/mod v0.24.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
-	golang.org/x/tools v0.30.0 // indirect
+	golang.org/x/tools v0.33.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250102185135-69823020774d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
