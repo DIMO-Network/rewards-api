@@ -4,12 +4,13 @@ package vinvc_test
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"testing"
 	"time"
 
 	"github.com/DIMO-Network/attestation-api/pkg/verifiable"
+	"github.com/DIMO-Network/cloudevent"
 	pb "github.com/DIMO-Network/fetch-api/pkg/grpc"
-	"github.com/DIMO-Network/model-garage/pkg/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/services/vinvc"
@@ -302,10 +303,10 @@ func (m vehicleIDMatcher) Matches(x interface{}) bool {
 	if !ok {
 		return false
 	}
-	return filter.GetSubject().GetValue() == cloudevent.NFTDID{
+	return filter.GetSubject().GetValue() == cloudevent.ERC721DID{
 		ChainID:         137,
 		ContractAddress: vehicleAddr,
-		TokenID:         uint32(m.tokenID),
+		TokenID:         big.NewInt(m.tokenID),
 	}.String()
 }
 
