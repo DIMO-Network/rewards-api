@@ -3,7 +3,7 @@ package utils
 import (
 	"math/big"
 
-	"github.com/volatiletech/sqlboiler/v4/types"
+	"github.com/aarondl/sqlboiler/v4/types"
 )
 
 func NullDecimalToIntDefaultZero(num types.NullDecimal) *big.Int {

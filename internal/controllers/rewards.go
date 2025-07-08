@@ -18,10 +18,10 @@ import (
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/DIMO-Network/shared/set"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"golang.org/x/exp/slices"
 )
 

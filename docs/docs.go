@@ -87,6 +87,7 @@ const docTemplate = `{
                     }
                 ],
                 "description": "A summary of the user's DIMO balance across all chains.",
+                "deprecated": true,
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -105,6 +106,7 @@ const docTemplate = `{
                     }
                 ],
                 "description": "A summary of the user's DIMO transaction history, all time.",
+                "deprecated": true,
                 "parameters": [
                     {
                         "enum": [

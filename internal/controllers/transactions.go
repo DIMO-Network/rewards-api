@@ -4,16 +4,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
-	"github.com/volatiletech/null/v8"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"golang.org/x/exp/slices"
 )
-
-// Thanks, Jade!
-const transactionLimit = 50
 
 // GetTransactionHistory godoc
 // @Description  A summary of the user's DIMO transaction history, all time.
@@ -21,84 +14,10 @@ const transactionLimit = 50
 // @Security     BearerAuth
 // @Param        type query string false "A label for a transaction type." Enums(Baseline, Referrals, Marketplace, Other)
 // @Router       /user/history/transactions [get]
+// @Deprecated
 func (r *RewardsController) GetTransactionHistory(c *fiber.Ctx) error {
-	userID := getUserID(c)
-	logger := r.Logger.With().Str("userId", userID).Logger()
-
-	addr, err := GetTokenEthAddr(c)
-	if err != nil {
-		return err
-	}
-
 	txHistory := TransactionHistory{
 		Transactions: []APITransaction{},
-	}
-
-	type enrichedTransfer struct {
-		models.TokenTransfer `boil:",bind"`
-		Description          null.String
-		Type                 null.String
-	}
-
-	txes := []*enrichedTransfer{}
-
-	mods := []qm.QueryMod{
-		qm.Select(models.TableNames.TokenTransfers + ".*, " + models.KnownWalletTableColumns.Type + ", " + models.KnownWalletTableColumns.Description),
-		qm.From(models.TableNames.TokenTransfers),
-		qm.LeftOuterJoin(models.TableNames.KnownWallets + " ON " + models.TokenTransferTableColumns.ChainID + " = " + models.KnownWalletTableColumns.ChainID + " AND " + models.TokenTransferTableColumns.AddressFrom + " = " + models.KnownWalletTableColumns.Address),
-		qm.Expr(
-			models.TokenTransferWhere.AddressTo.EQ(addr.Bytes()),
-			qm.Or2(models.TokenTransferWhere.AddressFrom.EQ(addr.Bytes())),
-		),
-		qm.OrderBy(models.TokenTransferTableColumns.BlockTimestamp + " DESC, " + models.TokenTransferTableColumns.ChainID + " ASC, " + models.TokenTransferTableColumns.LogIndex + " DESC"),
-		qm.Limit(transactionLimit),
-	}
-
-	if typ := c.Query("type"); typ != "" {
-		if typ == "Other" {
-			mods = append(mods, models.KnownWalletWhere.Type.IsNull())
-		} else if slices.Contains(models.AllWalletType(), typ) {
-			mods = append(mods, models.KnownWalletWhere.Type.EQ(null.StringFrom(typ)))
-		} else {
-			return fiber.NewError(fiber.StatusBadRequest, "Unrecognized type filter.")
-		}
-	}
-
-	queryStart := time.Now()
-	err = models.NewQuery(mods...).Bind(c.Context(), r.DB.DBS().Reader, &txes)
-	if err != nil {
-		logger.Err(err).Msg("Database failure retrieving incoming transactions.")
-		return opaqueInternalError
-	}
-	if queryDur := time.Since(queryStart); queryDur >= 5*time.Second {
-		logger.Info().Msgf("Long transaction history query: took %s.", queryDur)
-	}
-
-	for _, tx := range txes {
-		to := common.BytesToAddress(tx.AddressTo)
-
-		var description string
-
-		if tx.Description.Valid {
-			description = tx.Description.String
-		} else {
-			if to == addr {
-				description = "Incoming transfer"
-			} else {
-				description = "Outgoing transfer"
-			}
-		}
-
-		apiTx := APITransaction{
-			ChainID:     tx.ChainID,
-			Time:        tx.BlockTimestamp,
-			From:        common.BytesToAddress(tx.AddressFrom),
-			To:          to,
-			Value:       tx.Amount.Int(nil),
-			Description: description,
-			Type:        tx.Type.Ptr(),
-		}
-		txHistory.Transactions = append(txHistory.Transactions, apiTx)
 	}
 
 	return c.JSON(txHistory)

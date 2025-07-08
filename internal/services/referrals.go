@@ -15,12 +15,12 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared"
 	"github.com/IBM/sarama"
+	"github.com/aarondl/null/v8"
+	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
-	"github.com/volatiletech/null/v8"
-	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/types"
 	"google.golang.org/protobuf/proto"
 )
 

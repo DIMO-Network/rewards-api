@@ -6,13 +6,9 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/storage"
-	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/ericlagergren/decimal"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 // GetBalanceHistory godoc
@@ -20,45 +16,10 @@ import (
 // @Success      200 {object} controllers.BalanceHistory
 // @Security     BearerAuth
 // @Router       /user/history/balance [get]
+// @Deprecated
 func (r *RewardsController) GetBalanceHistory(c *fiber.Ctx) error {
-	addr, err := GetTokenEthAddr(c)
-	if err != nil {
-		return err
-	}
-
 	balanceHistory := BalanceHistory{
 		BalanceHistory: []Balance{},
-	}
-
-	// Terrible no good.
-	tfs, err := models.TokenTransfers(
-		qm.Where(models.TokenTransferTableColumns.AddressFrom+" != "+models.TokenTransferTableColumns.AddressTo),
-		models.TokenTransferWhere.Amount.NEQ(types.NewDecimal(decimal.New(0, 0))),
-		qm.Expr(
-			models.TokenTransferWhere.AddressTo.EQ(addr.Bytes()),
-			qm.Or2(models.TokenTransferWhere.AddressFrom.EQ(addr.Bytes())),
-		),
-		qm.OrderBy(models.TokenTransferTableColumns.BlockTimestamp+" ASC"),
-	).All(c.Context(), r.DB.DBS().Reader)
-	if err != nil {
-		return err
-	}
-
-	runningBalance := big.NewInt(0)
-
-	for _, tf := range tfs {
-		value := tf.Amount.Int(nil)
-		if common.BytesToAddress(tf.AddressFrom) == addr {
-			runningBalance = new(big.Int).Sub(runningBalance, value)
-		} else {
-			runningBalance = new(big.Int).Add(runningBalance, value)
-		}
-
-		if l := len(balanceHistory.BalanceHistory); l == 0 || balanceHistory.BalanceHistory[l-1].Time != tf.BlockTimestamp {
-			balanceHistory.BalanceHistory = append(balanceHistory.BalanceHistory, Balance{Time: tf.BlockTimestamp, Balance: runningBalance})
-		} else {
-			balanceHistory.BalanceHistory[l-1].Balance = runningBalance
-		}
 	}
 
 	return c.JSON(balanceHistory)

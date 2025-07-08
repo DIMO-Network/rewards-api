@@ -429,6 +429,7 @@ paths:
       - BearerAuth: []
   /user/history/balance:
     get:
+      deprecated: true
       description: A summary of the user's DIMO balance across all chains.
       responses:
         "200":
@@ -439,6 +440,7 @@ paths:
       - BearerAuth: []
   /user/history/transactions:
     get:
+      deprecated: true
       description: A summary of the user's DIMO transaction history, all time.
       parameters:
       - description: A label for a transaction type.
