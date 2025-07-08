@@ -12,16 +12,16 @@ import (
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/db"
 	"github.com/IBM/sarama"
+	"github.com/aarondl/null/v8"
+	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/null/v8"
-	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 type consumerGroupHandler struct {

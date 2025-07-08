@@ -15,6 +15,9 @@ require (
 	github.com/DIMO-Network/model-garage v0.6.0
 	github.com/DIMO-Network/shared v0.12.9
 	github.com/IBM/sarama v1.45.1
+	github.com/aarondl/null/v8 v8.1.3
+	github.com/aarondl/sqlboiler/v4 v4.19.5
+	github.com/aarondl/strmangle v0.0.9
 	github.com/burdiyan/kafkautil v0.0.0-20240215092415-7e6d3d0fc870
 	github.com/docker/go-connections v0.5.0
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
@@ -33,9 +36,6 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.35.0
-	github.com/volatiletech/null/v8 v8.1.2
-	github.com/volatiletech/sqlboiler/v4 v4.19.0
-	github.com/volatiletech/strmangle v0.0.8
 	go.uber.org/mock v0.5.2
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
 	google.golang.org/grpc v1.71.0
@@ -53,6 +53,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/aarondl/inflect v0.0.2 // indirect
+	github.com/aarondl/randomize v0.0.2 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/avast/retry-go/v4 v4.6.0 // indirect
@@ -177,8 +179,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.55.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	github.com/volatiletech/inflect v0.0.1 // indirect
-	github.com/volatiletech/randomize v0.0.1 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
@@ -205,8 +205,8 @@ require (
 )
 
 tool (
+	github.com/aarondl/sqlboiler/v4
+	github.com/aarondl/sqlboiler/v4/drivers/sqlboiler-psql
 	github.com/swaggo/swag/cmd/swag
-	github.com/volatiletech/sqlboiler/v4
-	github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql
 	go.uber.org/mock/mockgen
 )

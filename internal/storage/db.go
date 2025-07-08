@@ -8,11 +8,11 @@ import (
 
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 var (

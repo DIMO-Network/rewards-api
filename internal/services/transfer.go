@@ -16,12 +16,12 @@ import (
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/aarondl/null/v8"
+	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/segmentio/ksuid"
-	"github.com/volatiletech/null/v8"
-	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 type TransferService struct {

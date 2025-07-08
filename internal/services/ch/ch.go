@@ -10,10 +10,10 @@ import (
 	"github.com/DIMO-Network/clickhouse-infra/pkg/connect"
 	"github.com/DIMO-Network/model-garage/pkg/vss"
 	"github.com/DIMO-Network/rewards-api/internal/config"
-	"github.com/volatiletech/sqlboiler/v4/drivers"
-	"github.com/volatiletech/sqlboiler/v4/queries"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"github.com/volatiletech/sqlboiler/v4/queries/qmhelper"
+	"github.com/aarondl/sqlboiler/v4/drivers"
+	"github.com/aarondl/sqlboiler/v4/queries"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/aarondl/sqlboiler/v4/queries/qmhelper"
 )
 
 // Client is a ClickHouse client that interacts with the ClickHouse database.

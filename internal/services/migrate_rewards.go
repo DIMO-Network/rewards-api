@@ -8,9 +8,9 @@ import (
 	pbdefs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/shared/db"
+	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/ericlagergren/decimal"
 	"github.com/rs/zerolog"
-	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 func MigrateRewardsService(ctx context.Context, logger *zerolog.Logger, pdb db.Store, allIntegrations *pbdefs.GetIntegrationResponse, week int) error {
