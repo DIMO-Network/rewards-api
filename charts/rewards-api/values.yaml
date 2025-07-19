@@ -42,7 +42,6 @@ env:
   JWT_KEY_SET_URL: https://auth.dev.dimo.zone/keys
   AWS_REGION: us-east-2
   DEVICES_API_GRPC_ADDR: devices-api-dev:8086
-  USERS_API_GRPC_ADDR: users-api-dev:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-dev:8086
   FETCH_API_GRPC_ADDR: fetch-api-dev:8086
   ATTESTATION_API_GRPC_ADDR: attestation-api-dev:8086
