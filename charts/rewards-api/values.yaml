@@ -63,11 +63,6 @@ env:
   VEHICLE_NFT_CONTRACT_ADDRESS: '0x45fbCD3ef7361d156e8b16F5538AE36DEdf61Da8'
   VINVC_DATA_VERSION: VINVCv1.0
   MOBILE_API_BASE_URL: https://dimo-app-backend-development.up.railway.app
-config:
-  tokens:
-    - chainId: 80002
-      address: '0x21cFE003997fB7c2B3cfe5cf71e7833B7B2eCe10'
-      rpcUrl: $AMOY_RPC_URL
 service:
   type: ClusterIP
   ports:

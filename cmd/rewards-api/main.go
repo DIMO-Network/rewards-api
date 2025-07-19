@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -21,7 +20,6 @@ import (
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"
 	"github.com/DIMO-Network/rewards-api/internal/config"
-	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
@@ -39,14 +37,12 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/burdiyan/kafkautil"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/gofiber/swagger"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"gopkg.in/yaml.v3"
 )
 
 var settingsPath = "settings.yaml"
@@ -114,40 +110,6 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
 		}
 
-		f, err := os.Open("config.yaml")
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Couldn't load config.")
-		}
-		defer f.Close()
-
-		cs, err := io.ReadAll(f)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Couldn't load config file.")
-		}
-
-		rc := os.ExpandEnv(string(cs))
-
-		var tc services.TokenConfig
-		if err := yaml.Unmarshal([]byte(rc), &tc); err != nil {
-			logger.Fatal().Err(err).Msg("Couldn't load token config.")
-		}
-
-		var tks []*contracts.Token
-
-		for _, tkCopy := range tc.Tokens {
-			client, err := ethclient.Dial(tkCopy.RPCURL)
-			if err != nil {
-				logger.Fatal().Err(err).Msgf("Failed to create client for chain %d.", tkCopy.ChainID)
-			}
-
-			token, err := contracts.NewToken(tkCopy.Address, client)
-			if err != nil {
-				logger.Fatal().Err(err).Msgf("Failed to instantiate token for chain %d.", tkCopy.ChainID)
-			}
-
-			tks = append(tks, token)
-		}
-
 		rewardsController := controllers.RewardsController{
 			DB:                pdb,
 			Logger:            &logger,
@@ -155,7 +117,6 @@ func main() {
 			DevicesClient:     deviceClient,
 			ChClient:          chClient,
 			Settings:          &settings,
-			Tokens:            tks,
 		}
 
 		deviceController := controllers.DeviceController{

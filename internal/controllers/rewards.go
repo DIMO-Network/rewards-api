@@ -11,7 +11,6 @@ import (
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
-	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/models"
@@ -32,7 +31,6 @@ type RewardsController struct {
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
 	Settings          *config.Settings
-	Tokens            []*contracts.Token
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -84,18 +82,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	}
 
 	addrBalance := big.NewInt(0)
-
-	balanceStart := time.Now()
-	for _, tk := range r.Tokens {
-		val, err := tk.BalanceOf(nil, userAddr)
-		if err != nil {
-			return fmt.Errorf("failed checking balance: %w", err)
-		}
-		addrBalance.Add(addrBalance, val)
-	}
-	if balDur := time.Since(balanceStart); balDur >= 5*time.Second {
-		logger.Warn().Msgf("Long token balance checks: took %s.", balDur)
-	}
 
 	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
 		UserId:          userID, // Unclear that we need to keep including this.
