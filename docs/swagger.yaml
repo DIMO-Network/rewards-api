@@ -22,6 +22,7 @@ definitions:
     - 1024
     - 2048
     - 4096
+    format: int32
     type: integer
     x-enum-varnames:
     - Clamped
@@ -89,6 +90,7 @@ definitions:
     enum:
     - 0
     - 1
+    format: int32
     type: integer
     x-enum-varnames:
     - GDA
@@ -102,6 +104,7 @@ definitions:
     - 4
     - 5
     - 6
+    format: int32
     type: integer
     x-enum-comments:
       AwayFromZero: no IEEE 754-2008 equivalent
@@ -111,6 +114,14 @@ definitions:
       ToPositiveInf: == IEEE 754-2008 roundTowardPositive
       ToZero: == IEEE 754-2008 roundTowardZero
       unnecessary: placeholder for x / y with UnlimitedPrecision.
+    x-enum-descriptions:
+    - == IEEE 754-2008 roundTiesToEven
+    - == IEEE 754-2008 roundTiesToAway
+    - == IEEE 754-2008 roundTowardZero
+    - no IEEE 754-2008 equivalent
+    - == IEEE 754-2008 roundTowardNegative
+    - == IEEE 754-2008 roundTowardPositive
+    - placeholder for x / y with UnlimitedPrecision.
     x-enum-varnames:
     - ToNearestEven
     - ToNearestAway
