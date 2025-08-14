@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/DIMO-Network/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
-	"github.com/DIMO-Network/shared"
-	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/pkg/db"
 	"github.com/IBM/sarama"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -45,13 +45,15 @@ func NewTokenTransferService(
 }
 
 func (ts *TransferService) sendRequest(requestID string, addr common.Address, data []byte) error {
-	event := shared.CloudEvent[transferData]{
-		ID:          ksuid.New().String(),
-		Source:      "rewards-api",
-		SpecVersion: "1.0",
-		Subject:     requestID,
-		Time:        time.Now(),
-		Type:        "zone.dimo.transaction.request",
+	event := cloudevent.CloudEvent[transferData]{
+		CloudEventHeader: cloudevent.CloudEventHeader{
+			ID:          ksuid.New().String(),
+			Source:      "rewards-api",
+			SpecVersion: "1.0",
+			Subject:     requestID,
+			Time:        time.Now(),
+			Type:        "zone.dimo.transaction.request",
+		},
 		Data: transferData{
 			ID:   requestID,
 			To:   addr,

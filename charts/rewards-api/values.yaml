@@ -62,6 +62,7 @@ env:
   VEHICLE_NFT_CONTRACT_ADDRESS: '0x45fbCD3ef7361d156e8b16F5538AE36DEdf61Da8'
   VINVC_DATA_VERSION: VINVCv1.0
   MOBILE_API_BASE_URL: https://dimo-app-backend-development.up.railway.app
+  STORAGE_NODE_DEV_LICENSE: '0x52fD9Dc294066792785CcD85eFB9A0Bd48DE01E4'
 service:
   type: ClusterIP
   ports:

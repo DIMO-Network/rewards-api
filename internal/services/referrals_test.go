@@ -6,12 +6,13 @@ import (
 	"os"
 	"testing"
 
+	"github.com/DIMO-Network/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
-	"github.com/DIMO-Network/shared"
+	"github.com/DIMO-Network/shared/pkg/settings"
 	"github.com/ericlagergren/decimal"
 	"go.uber.org/mock/gomock"
 
@@ -41,7 +42,7 @@ type Referral struct {
 func TestReferrals(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := settings.LoadConfig[config.Settings]("settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +235,7 @@ func TestReferralsBatchRequest(t *testing.T) {
 
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := settings.LoadConfig[config.Settings]("settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,10 +262,10 @@ func TestReferralsBatchRequest(t *testing.T) {
 		ReferrerUserIDs: []string{""},
 	}
 
-	var out []shared.CloudEvent[transferData]
+	var out []cloudevent.CloudEvent[transferData]
 
 	checker := func(b2 []byte) error {
-		var o shared.CloudEvent[transferData]
+		var o cloudevent.CloudEvent[transferData]
 		err := json.Unmarshal(b2, &o)
 		require.NoError(t, err)
 		out = append(out, o)

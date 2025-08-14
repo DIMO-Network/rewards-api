@@ -7,7 +7,7 @@ import (
 
 	pbdefs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/models"
-	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/pkg/db"
 	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/ericlagergren/decimal"
 	"github.com/rs/zerolog"

@@ -13,7 +13,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
-	"github.com/DIMO-Network/shared/set"
+	"github.com/DIMO-Network/shared/pkg/set"
 	"github.com/aarondl/null/v8"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"

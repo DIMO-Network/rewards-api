@@ -8,12 +8,12 @@ import (
 	"errors"
 	"time"
 
+	"github.com/DIMO-Network/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/internal/dex"
 	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
 	"github.com/DIMO-Network/rewards-api/models"
-	"github.com/DIMO-Network/shared"
 	"github.com/IBM/sarama"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
@@ -271,13 +271,15 @@ func (c *ReferralsClient) BatchTransferReferralBonuses(requestID string, referre
 }
 
 func (c *ReferralsClient) sendRequest(requestID string, data []byte) error {
-	event := shared.CloudEvent[transferData]{
-		ID:          requestID,
-		Source:      "rewards-api",
-		SpecVersion: "1.0",
-		Subject:     c.ContractAddress.Hex(),
-		Time:        time.Now(),
-		Type:        "zone.dimo.referrals.request",
+	event := cloudevent.CloudEvent[transferData]{
+		CloudEventHeader: cloudevent.CloudEventHeader{
+			ID:          requestID,
+			Source:      "rewards-api",
+			SpecVersion: "1.0",
+			Subject:     c.ContractAddress.Hex(),
+			Time:        time.Now(),
+			Type:        "zone.dimo.referrals.request",
+		},
 		Data: transferData{
 			ID:   requestID,
 			To:   c.ContractAddress,

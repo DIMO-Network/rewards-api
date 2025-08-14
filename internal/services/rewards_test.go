@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DIMO-Network/cloudevent"
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -16,7 +17,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/utils"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
-	"github.com/DIMO-Network/shared"
+	"github.com/DIMO-Network/shared/pkg/settings"
 	"github.com/IBM/sarama/mocks"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -117,7 +118,7 @@ func TestGetWeekNumForCron(t *testing.T) {
 func TestStreak(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := settings.LoadConfig[config.Settings]("settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -475,7 +476,7 @@ func TestStreak(t *testing.T) {
 func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := settings.LoadConfig[config.Settings]("settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -668,7 +669,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 func TestBaselineIssuance(t *testing.T) {
 	ctx := context.Background()
 
-	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	settings, err := settings.LoadConfig[config.Settings]("settings.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -853,10 +854,10 @@ func TestBaselineIssuance(t *testing.T) {
 			config.Producer.Return.Errors = true
 			producer := mocks.NewSyncProducer(t, config)
 
-			var out []shared.CloudEvent[transferData]
+			var out []cloudevent.CloudEvent[transferData]
 
 			checker := func(b2 []byte) error {
-				var o shared.CloudEvent[transferData]
+				var o cloudevent.CloudEvent[transferData]
 				err := json.Unmarshal(b2, &o)
 				require.NoError(t, err)
 				out = append(out, o)
