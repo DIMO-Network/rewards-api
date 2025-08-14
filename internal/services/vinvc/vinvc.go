@@ -35,12 +35,13 @@ type FetchAPIService interface {
 
 // VINVCService is a client for interacting with the VINVC service.
 type VINVCService struct {
-	fetchService     FetchAPIService
-	logger           zerolog.Logger
-	vinVCDataVersion string
-	vehicleAddr      common.Address
-	chainID          uint64
-	trustedRecorders []string
+	fetchService          FetchAPIService
+	logger                zerolog.Logger
+	vinVCDataVersion      string
+	vehicleAddr           common.Address
+	chainID               uint64
+	trustedRecorders      []string
+	storageNodeDevLicense common.Address
 }
 
 // New creates a new instance of VINVCClient.
@@ -57,6 +58,7 @@ func New(fetchService FetchAPIService, settings *config.Settings, logger *zerolo
 				ContractAddress: dincSource,
 			}.String(),
 		},
+		storageNodeDevLicense: settings.StorageNodeDevLicense,
 	}
 }
 
@@ -110,8 +112,9 @@ func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, w
 	searchTime := endOfWeek.Add(time.Second)
 	opts := &pb.SearchOptions{
 		DataVersion: &wrapperspb.StringValue{Value: v.vinVCDataVersion},
-		Type:        &wrapperspb.StringValue{Value: cloudevent.TypeVerifableCredential},
+		Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
 		Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: v.chainID, ContractAddress: v.vehicleAddr, TokenID: big.NewInt(tokenId)}.String()},
+		Source:      &wrapperspb.StringValue{Value: v.storageNodeDevLicense.Hex()},
 	}
 
 	logger := v.logger.With().Int64("vehicleTokenId", tokenId).Logger()
