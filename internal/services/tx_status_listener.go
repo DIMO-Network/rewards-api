@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/DIMO-Network/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
 	"github.com/DIMO-Network/rewards-api/models"
-	"github.com/DIMO-Network/shared"
-	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/pkg/db"
 	"github.com/IBM/sarama"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
@@ -110,7 +110,7 @@ type BaselineProcessor struct {
 }
 
 func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) error {
-	event := shared.CloudEvent[ceData]{}
+	event := cloudevent.CloudEvent[ceData]{}
 	err := json.Unmarshal(msg.Value, &event)
 	if err != nil {
 		return err
@@ -148,7 +148,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 	return nil
 }
 
-func (s *TransferStatusProcessor) processBaselineEvent(event shared.CloudEvent[ceData]) error {
+func (s *TransferStatusProcessor) processBaselineEvent(event cloudevent.CloudEvent[ceData]) error {
 	tx, err := s.DB.DBS().Writer.BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
@@ -244,7 +244,7 @@ func (s *TransferStatusProcessor) processBaselineEvent(event shared.CloudEvent[c
 	return nil
 }
 
-func (s *TransferStatusProcessor) processReferralEvent(cloudEvent shared.CloudEvent[ceData]) error {
+func (s *TransferStatusProcessor) processReferralEvent(cloudEvent cloudevent.CloudEvent[ceData]) error {
 	tx, err := s.DB.DBS().Writer.BeginTx(context.Background(), nil)
 	if err != nil {
 		return err

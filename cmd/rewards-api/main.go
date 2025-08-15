@@ -30,9 +30,9 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
 	"github.com/DIMO-Network/rewards-api/internal/services/vinvc"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
-	"github.com/DIMO-Network/shared"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
-	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/pkg/db"
+	"github.com/DIMO-Network/shared/pkg/settings"
 
 	"github.com/IBM/sarama"
 	"github.com/burdiyan/kafkautil"
@@ -66,7 +66,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	settings, err := shared.LoadConfig[config.Settings](settingsPath)
+	settings, err := settings.LoadConfig[config.Settings](settingsPath)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to load settings.")
 	}

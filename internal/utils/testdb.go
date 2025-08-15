@@ -7,13 +7,12 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/rewards-api/internal/database"
-	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/pkg/db"
 	"github.com/docker/go-connections/nat"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func GetDbConnection(ctx context.Context, t *testing.T, logger zerolog.Logger) (testcontainers.Container, db.Store) {
@@ -26,11 +25,7 @@ func GetDbConnection(ctx context.Context, t *testing.T, logger zerolog.Logger) (
 		postgres.WithDatabase("rewards_api"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(5*time.Second),
-		),
+		postgres.BasicWaitStrategies(),
 	)
 	require.NoError(t, err)
 

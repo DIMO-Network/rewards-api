@@ -7,7 +7,7 @@ import (
 	"math/big"
 
 	"github.com/DIMO-Network/rewards-api/models"
-	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/pkg/db"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/ericlagergren/decimal"

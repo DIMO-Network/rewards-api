@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/DIMO-Network/clickhouse-infra/pkg/connect/config"
-	"github.com/DIMO-Network/shared/db"
+	"github.com/DIMO-Network/shared/pkg/db"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -34,4 +34,5 @@ type Settings struct {
 	VehicleNFTAddress          common.Address  `yaml:"VEHICLE_NFT_ADDRESS"`
 	VINVCDataVersion           string          `yaml:"VINVC_DATA_VERSION"`
 	MobileAPIBaseURL           string          `yaml:"MOBILE_API_BASE_URL"`
+	StorageNodeDevLicense      common.Address  `yaml:"STORAGE_NODE_DEV_LICENSE"`
 }

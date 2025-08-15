@@ -148,6 +148,7 @@ const docTemplate = `{
         },
         "decimal.Condition": {
             "type": "integer",
+            "format": "int32",
             "enum": [
                 1,
                 2,
@@ -230,6 +231,7 @@ const docTemplate = `{
         },
         "decimal.OperatingMode": {
             "type": "integer",
+            "format": "int32",
             "enum": [
                 0,
                 1
@@ -241,6 +243,7 @@ const docTemplate = `{
         },
         "decimal.RoundingMode": {
             "type": "integer",
+            "format": "int32",
             "enum": [
                 0,
                 1,
@@ -259,6 +262,15 @@ const docTemplate = `{
                 "ToZero": "== IEEE 754-2008 roundTowardZero",
                 "unnecessary": "placeholder for x / y with UnlimitedPrecision."
             },
+            "x-enum-descriptions": [
+                "== IEEE 754-2008 roundTiesToEven",
+                "== IEEE 754-2008 roundTiesToAway",
+                "== IEEE 754-2008 roundTowardZero",
+                "no IEEE 754-2008 equivalent",
+                "== IEEE 754-2008 roundTowardNegative",
+                "== IEEE 754-2008 roundTowardPositive",
+                "placeholder for x / y with UnlimitedPrecision."
+            ],
             "x-enum-varnames": [
                 "ToNearestEven",
                 "ToNearestAway",
