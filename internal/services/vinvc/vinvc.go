@@ -9,7 +9,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/DIMO-Network/attestation-api/pkg/verifiable"
+	"github.com/DIMO-Network/attestation-api/pkg/types"
 	"github.com/DIMO-Network/cloudevent"
 	pb "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -78,9 +78,9 @@ func (v *VINVCService) GetConfirmedVINVCs(ctx context.Context, activeVehicles []
 }
 
 // GetLatestValidVINVCs retrieves the latest VINVC for the provided vehicle tokenId in the given week.
-func (v *VINVCService) GetLatestValidVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle, weekNum int) (map[string][]*verifiable.VINSubject, error) {
+func (v *VINVCService) GetLatestValidVINVCs(ctx context.Context, activeVehicles []*ch.Vehicle, weekNum int) (map[string][]*types.VINSubject, error) {
 	// map to track VINs and their associated subjects (only for valid VCs)
-	validVinToCredSubjects := make(map[string][]*verifiable.VINSubject)
+	validVinToCredSubjects := make(map[string][]*types.VINSubject)
 
 	// collect all valid VINVCs and their associated VINs
 	for _, vehicle := range activeVehicles {
@@ -103,7 +103,7 @@ func (v *VINVCService) GetLatestValidVINVCs(ctx context.Context, activeVehicles 
 
 // getLatestValidVINVC retrieves the latest VINVC for the provided vehicle tokenId in the given week.
 // if a VINVC fails to decode, it is skipped and the next one is fetched.
-func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, weekNum int) (*verifiable.VINSubject, error) {
+func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, weekNum int) (*types.VINSubject, error) {
 	// get time boundaries for the specified week
 	endOfWeek := date.NumToWeekEnd(weekNum)
 	startOfWeek := date.NumToWeekStart(weekNum)
@@ -144,7 +144,7 @@ func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, w
 		eventLogger := logger.With().Str("cloudEventId", cloudEvent.ID).Str("cloudEventSource", cloudEvent.Source).Logger()
 
 		// parse and validate the credential
-		var cred verifiable.Credential
+		var cred types.Credential
 		if err := json.Unmarshal(cloudEvent.Data, &cred); err != nil {
 			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential, skipping...")
 			//
@@ -152,7 +152,7 @@ func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, w
 		}
 
 		// parse the credential subject
-		var credSubject verifiable.VINSubject
+		var credSubject types.VINSubject
 		if err := json.Unmarshal(cred.CredentialSubject, &credSubject); err != nil {
 			eventLogger.Error().Err(err).Msg("failed to unmarshal VIN credential subject, skipping...")
 			continue
@@ -179,7 +179,7 @@ func (v *VINVCService) getLatestValidVINVC(ctx context.Context, tokenId int64, w
 }
 
 // ResolveVINConflicts resolves conflicts between VINs and their associated with multiple tokenIDs.
-func (v *VINVCService) ResolveVINConflicts(vinToTokenIDs map[string][]*verifiable.VINSubject) map[int64]struct{} {
+func (v *VINVCService) ResolveVINConflicts(vinToTokenIDs map[string][]*types.VINSubject) map[int64]struct{} {
 	confirmedVINs := make(map[int64]struct{})
 	for vin, subjects := range vinToTokenIDs {
 		if len(subjects) == 0 {
@@ -215,7 +215,7 @@ func (v *VINVCService) ResolveVINConflicts(vinToTokenIDs map[string][]*verifiabl
 }
 
 // getLatestTokenID returns the latest vehicleTokenId based on the recordedAt and vehicleTokenId.
-func getLatestTokenID(subs []*verifiable.VINSubject) int64 {
+func getLatestTokenID(subs []*types.VINSubject) int64 {
 	maxSub := subs[0]
 	for _, sub := range subs {
 		if maxSub.RecordedAt.Before(sub.RecordedAt) {
@@ -231,7 +231,7 @@ func getLatestTokenID(subs []*verifiable.VINSubject) int64 {
 // A credential is valid if:
 // 1. It is not expired.
 // 2. It was either recorded in the provided week OR recorded by a trusted source.
-func (v *VINVCService) isValidVC(logger *zerolog.Logger, vehicleTokenID uint32, cred *verifiable.Credential, subject *verifiable.VINSubject, weekNum int) bool {
+func (v *VINVCService) isValidVC(logger *zerolog.Logger, vehicleTokenID uint32, cred *types.Credential, subject *types.VINSubject, weekNum int) bool {
 	if vehicleTokenID != subject.VehicleTokenID {
 		logger.Warn().Uint32("vehicleTokenId", vehicleTokenID).Uint32("vcVehicleTokenId", subject.VehicleTokenID).Msg("tokenId mismatch")
 		return false
@@ -239,15 +239,10 @@ func (v *VINVCService) isValidVC(logger *zerolog.Logger, vehicleTokenID uint32, 
 	// Check expiration - credential should not be expired
 	startOfWeek := date.NumToWeekStart(weekNum)
 	endOfWeek := date.NumToWeekEnd(weekNum)
-	expiresAt, err := time.Parse(time.RFC3339, cred.ValidTo)
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to parse ValidTo date")
-		return false
-	}
 
-	if startOfWeek.After(expiresAt) {
+	if startOfWeek.After(cred.ValidTo) {
 		// Credential expired before the start of the week
-		logger.Info().Str("validTo", cred.ValidTo).Msg("VINVC is expired")
+		logger.Info().Time("validTo", cred.ValidTo).Msg("VINVC is expired")
 		return false
 	}
 

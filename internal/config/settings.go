@@ -17,7 +17,6 @@ type Settings struct {
 	DevicesAPIGRPCAddr         string          `yaml:"DEVICES_API_GRPC_ADDR"`
 	DefinitionsAPIGRPCAddr     string          `yaml:"DEFINITIONS_API_GRPC_ADDR"`
 	FetchAPIGRPCAddr           string          `yaml:"FETCH_API_GRPC_ADDR"`
-	AttestationAPIGRPCAddr     string          `yaml:"ATTESTATION_API_GRPC_ADDR"`
 	KafkaBrokers               string          `yaml:"KAFKA_BROKERS"`
 	MetaTransactionSendTopic   string          `yaml:"META_TRANSACTION_SEND_TOPIC"`
 	MetaTransactionStatusTopic string          `yaml:"META_TRANSACTION_STATUS_TOPIC"`

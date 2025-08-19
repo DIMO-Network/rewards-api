@@ -23,7 +23,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
-	"github.com/DIMO-Network/rewards-api/internal/services/attestation"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/services/fetchapi"
 	"github.com/DIMO-Network/rewards-api/internal/services/identity"
@@ -348,44 +347,6 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Error occurred completing reward migrations")
 		}
-	case "ensure-attestations":
-		var week int
-		if len(os.Args) == 2 {
-			// We have to subtract 1 because we're getting the number of the newly beginning week.
-			week = date.GetWeekNumForCron(time.Now()) - 1
-		} else {
-			var err error
-			week, err = strconv.Atoi(os.Args[2])
-			if err != nil {
-				logger.Fatal().Err(err).Msg("Could not parse week number.")
-			}
-		}
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		logger = logger.With().Int("week", week).Str("subCommand", subCommand).Logger()
-		start := time.Now()
-		defer func() {
-			logger.Debug().Str("duration", time.Since(start).String()).Msg("Finished.")
-		}()
-		logger.Debug().Msg("Starting.")
-		chClient, err := ch.NewClient(&settings)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
-		}
-		fetchapiSrv, err := fetchapi.New(&settings, &logger)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create Fetch API service.")
-		}
-		vinvcSrv := vinvc.New(fetchapiSrv, &settings, &logger)
-
-		attSrv, err := attestation.NewService(&settings, &logger, chClient, vinvcSrv)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create attestation service.")
-		}
-		err = attSrv.EnsureAttestations(ctx, week)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to pull attestation data.")
-		}
-		attSrv.Close()
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}
