@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DIMO-Network/attestation-api/pkg/verifiable"
+	"github.com/DIMO-Network/attestation-api/pkg/types"
 	"github.com/DIMO-Network/cloudevent"
 	pb "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -56,11 +56,11 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// Create valid credential
-				cred := verifiable.Credential{
-					ValidFrom: yesterday.Format(time.RFC3339),
-					ValidTo:   nextWeek.Format(time.RFC3339),
+				cred := types.Credential{
+					ValidFrom: yesterday,
+					ValidTo:   nextWeek,
 				}
-				subject := verifiable.VINSubject{
+				subject := types.VINSubject{
 					VehicleIdentificationNumber: "1HGCM82633A123456",
 					VehicleTokenID:              1,
 					RecordedAt:                  yesterday,
@@ -82,11 +82,11 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// First vehicle has valid VC
-				cred1 := verifiable.Credential{
-					ValidFrom: yesterday.Format(time.RFC3339),
-					ValidTo:   nextWeek.Format(time.RFC3339),
+				cred1 := types.Credential{
+					ValidFrom: yesterday,
+					ValidTo:   nextWeek,
 				}
-				subject1 := verifiable.VINSubject{
+				subject1 := types.VINSubject{
 					VehicleIdentificationNumber: "1HGCM82633A123456",
 					VehicleTokenID:              1,
 					RecordedAt:                  yesterday,
@@ -97,11 +97,11 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 				// Second vehicle has expired VC
 				twoWeeksAgo := now.AddDate(0, 0, -14)
 				expiredWeekAgo := now.AddDate(0, 0, -7)
-				cred2 := verifiable.Credential{
-					ValidFrom: twoWeeksAgo.Format(time.RFC3339),
-					ValidTo:   expiredWeekAgo.Format(time.RFC3339), // Expired
+				cred2 := types.Credential{
+					ValidFrom: twoWeeksAgo,
+					ValidTo:   expiredWeekAgo, // Expired
 				}
-				subject2 := verifiable.VINSubject{
+				subject2 := types.VINSubject{
 					VehicleIdentificationNumber: "JH4DA9470MS012345",
 					VehicleTokenID:              2,
 					RecordedAt:                  twoWeeksAgo,
@@ -128,18 +128,18 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// Both vehicles point to same VIN
-				cred := verifiable.Credential{
-					ValidFrom: yesterday.Format(time.RFC3339),
-					ValidTo:   nextWeek.Format(time.RFC3339),
+				cred := types.Credential{
+					ValidFrom: yesterday,
+					ValidTo:   nextWeek,
 				}
-				subject := verifiable.VINSubject{
+				subject := types.VINSubject{
 					VehicleIdentificationNumber: "1HGCM82633A123456", // Same VIN
 					VehicleTokenID:              1,
 					RecordedAt:                  yesterday.Add(time.Hour),
 					RecordedBy:                  "SOME_RECORDER",
 				}
 				cloudEvent := createTestCloudEvent(t, cred, subject)
-				subject2 := verifiable.VINSubject{
+				subject2 := types.VINSubject{
 					VehicleIdentificationNumber: "1HGCM82633A123456", // Same VIN
 					VehicleTokenID:              2,
 					RecordedAt:                  yesterday,
@@ -164,11 +164,11 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// Both vehicles point to same VIN
-				cred := verifiable.Credential{
-					ValidFrom: yesterday.Format(time.RFC3339),
-					ValidTo:   nextWeek.Format(time.RFC3339),
+				cred := types.Credential{
+					ValidFrom: yesterday,
+					ValidTo:   nextWeek,
 				}
-				subject := verifiable.VINSubject{
+				subject := types.VINSubject{
 					VehicleIdentificationNumber: "1HGCM82633A123456", // Same VIN
 					VehicleTokenID:              1,
 					RecordedAt:                  yesterday,
@@ -227,11 +227,11 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// Create credential with empty VIN
-				cred := verifiable.Credential{
-					ValidFrom: yesterday.Format(time.RFC3339),
-					ValidTo:   nextWeek.Format(time.RFC3339),
+				cred := types.Credential{
+					ValidFrom: yesterday,
+					ValidTo:   nextWeek,
 				}
-				subject := verifiable.VINSubject{
+				subject := types.VINSubject{
 					VehicleIdentificationNumber: "", // Empty VIN
 					VehicleTokenID:              1,
 					RecordedAt:                  yesterday,
@@ -271,7 +271,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 }
 
 // Helper function to create a cloud event with credential
-func createTestCloudEvent(t *testing.T, cred verifiable.Credential, subject verifiable.VINSubject) cloudevent.CloudEvent[json.RawMessage] {
+func createTestCloudEvent(t *testing.T, cred types.Credential, subject types.VINSubject) cloudevent.CloudEvent[json.RawMessage] {
 	// Marshal the subject to JSON
 	subjectBytes, err := json.Marshal(subject)
 	require.NoError(t, err)
