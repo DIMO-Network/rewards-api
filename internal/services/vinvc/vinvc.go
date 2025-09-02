@@ -96,22 +96,20 @@ func (v *VINVCService) GetLatestValidVINVCs(ctx context.Context, activeVehicles 
 	// collect all valid VINVCs and their associated VINs
 	for _, vehicle := range activeVehicles {
 		group.Go(func() error {
-			logger := v.logger.With().Int64("vehicleTokenId", vehicle.TokenID).Logger()
 			credSubject, err := v.getLatestValidVINVC(gCtx, vehicle.TokenID, weekNum)
 			if err != nil {
 				if errors.Is(err, errNotFound) {
-					logger.Warn().Msg("no VINVC found for vehicle")
+					v.logger.Warn().Int64("vehicleTokenId", vehicle.TokenID).Msg("no VINVC found for vehicle")
 					return nil
 				}
 				return fmt.Errorf("failed to get latest VINVC: %w", err)
 			}
-			vin := credSubject.VehicleIdentificationNumber
-			vinStore.Add(vin, credSubject)
+			vinStore.Add(credSubject.VehicleIdentificationNumber, credSubject)
 			return nil
 		})
 	}
 	if err := group.Wait(); err != nil {
-		return nil, fmt.Errorf("failed to get latest valid VINVCs: %w", err)
+		return nil, err
 	}
 	return &vinStore, nil
 }
