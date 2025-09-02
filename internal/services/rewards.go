@@ -320,6 +320,10 @@ func (t *BaselineClient) assignPoints() error {
 			ExistingDisconnectionStreak: lastWeek.DisconnectionStreak,
 		}
 		streak := ComputeStreak(streakInput)
+		if streak.ConnectionStreak == 0 {
+			// Don't keep these dead rows around.
+			continue
+		}
 		setStreakFields(thisWeek, streak, 0)
 		if err := thisWeek.Insert(ctx, t.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
 			return err
