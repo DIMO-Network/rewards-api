@@ -7,7 +7,7 @@ replace github.com/ericlagergren/decimal => github.com/ericlagergren/decimal v0.
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.40.1
 	github.com/DIMO-Network/attestation-api v0.1.7
-	github.com/DIMO-Network/clickhouse-infra v0.0.4
+	github.com/DIMO-Network/clickhouse-infra v0.0.6
 	github.com/DIMO-Network/cloudevent v0.1.2
 	github.com/DIMO-Network/device-definitions-api v1.5.6
 	github.com/DIMO-Network/devices-api v1.32.56
@@ -19,7 +19,7 @@ require (
 	github.com/aarondl/sqlboiler/v4 v4.19.5
 	github.com/aarondl/strmangle v0.0.9
 	github.com/burdiyan/kafkautil v0.0.0-20240215092415-7e6d3d0fc870
-	github.com/docker/go-connections v0.5.0
+	github.com/docker/go-connections v0.6.0
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/ethereum/go-ethereum v1.16.2
 	github.com/friendsofgo/errors v0.9.2
@@ -38,6 +38,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.38.0
 	go.uber.org/mock v0.5.2
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
+	golang.org/x/sync v0.16.0
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.7
 )
@@ -158,7 +159,7 @@ require (
 	github.com/supranational/blst v0.3.15 // indirect
 	github.com/swaggo/files/v2 v2.0.2 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
-	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.35.0 // indirect
+	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.38.0 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
@@ -178,8 +179,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/net v0.42.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
