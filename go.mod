@@ -7,7 +7,7 @@ replace github.com/ericlagergren/decimal => github.com/ericlagergren/decimal v0.
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.40.3
 	github.com/DIMO-Network/attestation-api v0.1.9
-	github.com/DIMO-Network/clickhouse-infra v0.0.6
+	github.com/DIMO-Network/clickhouse-infra v0.0.7
 	github.com/DIMO-Network/cloudevent v0.1.4
 	github.com/DIMO-Network/device-definitions-api v1.5.8
 	github.com/DIMO-Network/devices-api v1.41.7
