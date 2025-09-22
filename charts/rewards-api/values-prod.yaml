@@ -2,7 +2,7 @@ replicaCount: 2
 image:
   repository: dimozone/rewards-api
   pullPolicy: IfNotPresent
-  tag: 1.28.5
+  tag: 1.28.6
 cronJob:
   enabled: true
   schedule: 0 5 * * 1
@@ -14,8 +14,8 @@ env:
   DB_NAME: rewards_api
   DB_MAX_OPEN_CONNECTIONS: '50'
   DB_MAX_IDLE_CONNECTIONS: '15'
-  CLICKHOUSE_READ_TIMEOUT: '30m'
-  CLICKHOUSE_DIAL_TIMEOUT: '5m'
+  CLICKHOUSE_READ_TIMEOUT: 30m
+  CLICKHOUSE_DIAL_TIMEOUT: 5m
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys
   DEVICES_API_GRPC_ADDR: devices-api-prod:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-prod:8086
