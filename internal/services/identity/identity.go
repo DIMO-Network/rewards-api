@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"slices"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const jsonContentType = "application/json"
@@ -18,6 +20,20 @@ const jsonContentType = "application/json"
 const query = `
 	query GetStake($vehicleId: Int!) {
 		vehicle(tokenId: $vehicleId) {
+			owner
+			aftermarketDevice {
+				tokenId
+				beneficiary
+				manufacturer {
+					tokenId
+				}
+			}
+			syntheticDevice {
+				tokenId
+				connection {
+					address
+				}
+			}
 			stake {
 				points
 				endsAt
@@ -38,6 +54,20 @@ type payload struct {
 type resp struct {
 	Data struct {
 		Vehicle *struct {
+			Owner             common.Address `json:"owner"`
+			AftermarketDevice *struct {
+				TokenID      int            `json:"tokenId"`
+				Beneficiary  common.Address `json:"beneficiary"`
+				Manufacturer struct {
+					TokenID int `json:"tokenId"`
+				} `json:"manufacturer"`
+			} `json:"aftermarketDevice"`
+			SyntheticDevice *struct {
+				TokenID    int `json:"tokenId"`
+				Connection struct {
+					Address common.Address `json:"address"`
+				} `json:"connection"`
+			} `json:"syntheticDevice"`
 			Stake *struct {
 				Points int       `json:"points"`
 				EndsAt time.Time `json:"endsAt"`
