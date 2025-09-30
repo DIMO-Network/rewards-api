@@ -18,7 +18,7 @@ import (
 const jsonContentType = "application/json"
 
 const query = `
-	query GetStake($vehicleId: Int!) {
+	query DescribeVehicle($vehicleId: Int!) {
 		vehicle(tokenId: $vehicleId) {
 			owner
 			aftermarketDevice {
