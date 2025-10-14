@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/DIMO-Network/cloudevent"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/contracts"
-	"github.com/DIMO-Network/rewards-api/internal/dex"
 	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/IBM/sarama"
@@ -21,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
-	"google.golang.org/protobuf/proto"
 )
 
 //go:generate mockgen -source=./referrals.go -destination=referrals_mock_test.go -package=services
@@ -38,10 +35,8 @@ type ReferralsClient struct {
 }
 
 type Referrals struct {
-	Referees        []common.Address
-	Referrers       []common.Address
-	RefereeUserIDs  []string
-	ReferrerUserIDs []string
+	Referees  []common.Address
+	Referrers []common.Address
 }
 
 func NewReferralBonusService(
@@ -164,18 +159,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			continue
 		}
 
-		refereeUserID, err := addressToUserID(user)
-		if err != nil {
-			return refs, err
-		}
-		referrerUserID, err := addressToUserID(referrer)
-		if err != nil {
-			return refs, err
-		}
-
-		refs.RefereeUserIDs = append(refs.RefereeUserIDs, refereeUserID)
 		refs.Referees = append(refs.Referees, user)
-		refs.ReferrerUserIDs = append(refs.ReferrerUserIDs, referrerUserID)
 		refs.Referrers = append(refs.Referrers, referrer)
 	}
 
@@ -210,8 +194,6 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 
 			refereesBatch := refs.Referees[i:j]
 			referrersBatch := refs.Referrers[i:j]
-			refereeIDsBatch := refs.RefereeUserIDs[i:j]
-			referrerIDsBatch := refs.ReferrerUserIDs[i:j]
 
 			tx, err := c.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
 			if err != nil {
@@ -229,17 +211,11 @@ func (c *ReferralsClient) transfer(ctx context.Context, refs Referrals) error {
 			}
 
 			for n := range refereesBatch {
-				referrerID := null.StringFrom(referrerIDsBatch[n])
-				if referrerID.String == "" {
-					referrerID.Valid = false
-				}
 				r := models.Referral{
 					Referee:        refereesBatch[n].Bytes(),
 					Referrer:       referrersBatch[n].Bytes(),
 					RequestID:      reqID,
 					IssuanceWeekID: c.Week,
-					RefereeUserID:  refereeIDsBatch[n],
-					ReferrerUserID: referrerID,
 				}
 				if err := r.Insert(ctx, tx, boil.Infer()); err != nil {
 					return err
@@ -301,14 +277,4 @@ func (c *ReferralsClient) sendRequest(requestID string, data []byte) error {
 	)
 
 	return err
-}
-
-func addressToUserID(addr common.Address) (string, error) {
-	userIDArgs := dex.IDTokenSubject{
-		UserId: addr.Hex(),
-		ConnId: "web3",
-	}
-
-	ub, err := proto.Marshal(&userIDArgs)
-	return base64.RawURLEncoding.EncodeToString(ub), err
 }
