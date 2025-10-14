@@ -256,10 +256,8 @@ func TestReferralsBatchRequest(t *testing.T) {
 	referralBonusService := NewReferralBonusService(&settings, transferService, 1, &logger, nil)
 
 	refs := Referrals{
-		Referees:        []common.Address{mkAddr(1)},
-		Referrers:       []common.Address{mkAddr(2)},
-		RefereeUserIDs:  []string{"xdd"},
-		ReferrerUserIDs: []string{""},
+		Referees:  []common.Address{mkAddr(1)},
+		Referrers: []common.Address{mkAddr(2)},
 	}
 
 	var out []cloudevent.CloudEvent[transferData]
