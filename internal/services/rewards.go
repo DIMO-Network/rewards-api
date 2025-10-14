@@ -310,9 +310,10 @@ func (t *BaselineClient) assignPoints() error {
 	// We didn't see any data for these remaining devices this week.
 	for _, lastWeek := range lastWeekByDevice {
 		thisWeek := &models.Reward{
-			IssuanceWeekID: issuanceWeek,
-			UserDeviceID:   lastWeek.UserDeviceID,
-			UserID:         lastWeek.UserID,
+			IssuanceWeekID:    issuanceWeek,
+			UserDeviceID:      lastWeek.UserDeviceID,
+			UserID:            lastWeek.UserID,
+			UserDeviceTokenID: lastWeek.UserDeviceTokenID,
 		}
 		streakInput := StreakInput{
 			ConnectedThisWeek:           false,
