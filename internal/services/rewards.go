@@ -3,17 +3,19 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
+	"github.com/DIMO-Network/rewards-api/internal/services/identity"
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
-	"github.com/DIMO-Network/shared/pkg/set"
 	"github.com/aarondl/null/v8"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,8 +24,6 @@ import (
 	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -42,7 +42,7 @@ type BaselineClient struct {
 }
 
 type StakeChecker interface {
-	GetVehicleStakePoints(vehicleID uint64) (int, error)
+	DescribeVehicle(vehicleID int) (*identity.VehicleDescr, error)
 }
 
 type VINVCService interface {
@@ -84,6 +84,46 @@ func NewBaselineRewardService(
 		StakeChecker:       stakeChecker,
 		StakingEnabled:     settings.EnableStaking,
 	}
+}
+
+type ConnectionDescr struct {
+	// LegacyID is the old "integration" KSUID. May be empty for newer connections.
+	LegacyID string
+	// Vendor is the old "vendor" name. May be empty for newer connections.
+	Vendor string
+	// Points is the points from DIP-2.
+	Points int
+
+	ConnectionAddr common.Address
+}
+
+var ConnectionsByMfrTokenID = map[int]ConnectionDescr{
+	137: {
+		LegacyID:       "27qftVRWQYpVDcO5DltO5Ojbjxk",
+		Vendor:         "AutoPi",
+		Points:         6000,
+		ConnectionAddr: common.HexToAddress("0x5e31bBc786D7bEd95216383787deA1ab0f1c1897"),
+	},
+	142: {
+		LegacyID:       "2ULfuC8U9dOqRshZBAi0lMM1Rrx",
+		Vendor:         "Macaron",
+		Points:         3000,
+		ConnectionAddr: common.HexToAddress("0x4c674ddE8189aEF6e3b58F5a36d7438b2b1f6Bc2"),
+	},
+	144: {
+		LegacyID:       "2lcaMFuCO0HJIUfdq8o780Kx5n3",
+		Vendor:         "Ruptela",
+		Points:         6000,
+		ConnectionAddr: common.HexToAddress("0xF26421509Efe92861a587482100c6d728aBf1CD0"),
+	},
+}
+
+var SoftwareConnsByAddr = map[common.Address]ConnectionDescr{
+	common.HexToAddress("0xc4035Fecb1cc906130423EF05f9C20977F643722"): {
+		LegacyID: "26A5Dk3vvvQutjSyF0Jka2DP5lg",
+		Vendor:   "Tesla",
+		Points:   6000,
+	},
 }
 
 func (t *BaselineClient) assignPoints() error {
@@ -158,94 +198,82 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	for _, device := range activeDevices {
-		logger := t.Logger.With().Int64("vehicleTokenId", device.TokenID).Logger()
+		logger := t.Logger.With().Int("vehicleId", device.TokenID).Logger()
 
-		ud, err := t.DevicesClient.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{TokenId: device.TokenID})
+		vehicle, err := t.StakeChecker.DescribeVehicle(int(device.TokenID))
 		if err != nil {
-			if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+			if errors.Is(err, identity.ErrNotFound) {
 				logger.Info().Msg("Device was active during the week but was later deleted.")
 				continue
 			}
-			return err
+			return fmt.Errorf("failed to describe vehicle %d: %w", device.TokenID, err)
 		}
 
-		integsSignalsThisWeek := set.New(device.Integrations...)
+		// ud, err := t.DevicesClient.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{TokenId: device.TokenID})
+		// if err != nil {
+		// 	if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+		// 		logger.Info().Msg("Device was active during the week but was later deleted.")
+		// 		continue
+		// 	}
+		// 	return err
+		// }
 
-		logger = logger.With().Str("userId", ud.UserId).Logger()
+		// if _, ok := vinVCConfirmed[device.TokenID]; !ok && len(vinVCConfirmed) > 0 {
+		// 	// TODO: Update this to a continue after we have a better idea of how many vehicles are missing VIN VC.
+		// 	logger.Warn().Int64("vehicleId", device.TokenID).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle does not have a confirmed VIN VC VIN.")
+		// }
 
-		if _, ok := vinVCConfirmed[device.TokenID]; !ok && len(vinVCConfirmed) > 0 {
-			// TODO: Update this to a continue after we have a better idea of how many vehicles are missing VIN VC.
-			logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle does not have a confirmed VIN VC VIN.")
-		}
+		// if !ud.VinConfirmed {
+		// 	// TODO(kevin): Remove this warning after we have a better idea of how many vehicles have VIN VC.
+		// 	logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle has VC but VIN is not confirmed.")
+		// 	logger.Info().Msg("Device does not have confirmed VIN.")
+		// 	continue
+		// }
 
-		if !ud.VinConfirmed {
-			// TODO(kevin): Remove this warning after we have a better idea of how many vehicles have VIN VC.
-			logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle has VC but VIN is not confirmed.")
-			logger.Info().Msg("Device does not have confirmed VIN.")
-			continue
-		}
-
-		if len(ud.OwnerAddress) != 20 {
-			logger.Info().Msg("User has minted a car but has no owner address?")
-			continue
-		}
-
-		vOwner := common.BytesToAddress(ud.OwnerAddress)
+		vOwner := vehicle.Owner
 
 		thisWeek := &models.Reward{
 			IssuanceWeekID:                 issuanceWeek,
-			UserDeviceTokenID:              int(*ud.TokenId),
+			UserDeviceTokenID:              device.TokenID,
 			UserEthereumAddress:            null.StringFrom(vOwner.Hex()),
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
 
-		if ad := ud.AftermarketDevice; ad != nil {
-			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
-			// this week.
-			if ad.ManufacturerTokenId == 0 {
-				logger.Warn().Msgf("Aftermarket device %d does not have a manufacturer.", ad.TokenId)
-				continue
-			}
-
-			integr, ok := amMfrTokenToIntegration[ad.ManufacturerTokenId]
+		if ad := vehicle.AftermarketDevice; ad != nil {
+			conn, ok := ConnectionsByMfrTokenID[ad.Manufacturer.TokenID]
 			if !ok {
-				logger.Warn().Msgf("Aftermarket device manufacturer %d does not have an associated integration.", ad.ManufacturerTokenId)
+				logger.Warn().Msgf("Aftermarket device manufacturer %d does not have an associated connection.", ad.Manufacturer.TokenID)
 				continue
 			}
 
-			if integsSignalsThisWeek.Contains(integr.Id) {
+			if slices.Contains(device.Sources, conn.ConnectionAddr.Hex()) {
 				if len(ad.Beneficiary) == 20 {
-					bene := common.BytesToAddress(ad.Beneficiary)
+					bene := ad.Beneficiary
 					if vOwner != bene {
-						logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", bene.Hex(), ad.TokenId)
+						logger.Info().Msgf("Sending tokens to beneficiary %s for aftermarket device %d.", bene.Hex(), ad.TokenID)
 						thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(bene.Hex())
 					}
 				} else {
-					logger.Warn().Msgf("Aftermarket device %d is not returning a beneficiary.", ad.TokenId)
+					logger.Warn().Msgf("Aftermarket device %d is not returning a beneficiary.", ad.TokenID)
 				}
 
-				thisWeek.AftermarketTokenID = types.NewNullDecimal(new(decimal.Big).SetUint64(ad.TokenId))
-				thisWeek.AftermarketDevicePoints = int(integr.Points)
-				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
+				thisWeek.AftermarketTokenID = types.NewNullDecimal(decimal.New(int64(ad.TokenID)))
+				thisWeek.AftermarketDevicePoints = int(conn.Points)
+				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, conn.LegacyID)
 			}
 		}
 
-		if sd := ud.SyntheticDevice; sd != nil {
-			if sd.IntegrationTokenId == 0 {
-				logger.Warn().Msgf("Synthetic device %d does not have an integration.", sd.IntegrationTokenId)
-				continue
-			}
-
-			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
+		if sd := vehicle.SyntheticDevice; sd != nil {
+			conn, ok := SoftwareConnsByAddr[sd.Connection.Address]
 			if !ok {
-				logger.Warn().Msgf("Synthetic device %d has integration %d without metadata.", sd.TokenId, sd.IntegrationTokenId)
+				logger.Warn().Msgf("Unfamiliar with connection %s.", sd.Connection.Address)
 				continue
 			}
 
-			if integsSignalsThisWeek.Contains(integr.Id) {
-				thisWeek.SyntheticDeviceID = null.IntFrom(int(sd.TokenId))
-				thisWeek.SyntheticDevicePoints = int(integr.Points)
-				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, integr.Id)
+			if slices.Contains(device.Sources, conn.ConnectionAddr.Hex()) {
+				thisWeek.SyntheticDeviceID = null.IntFrom(sd.TokenID)
+				thisWeek.SyntheticDevicePoints = conn.Points
+				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, conn.LegacyID)
 			}
 		}
 
@@ -268,16 +296,9 @@ func (t *BaselineClient) assignPoints() error {
 		streak := ComputeStreak(streakInput)
 
 		stakePoints := 0
-
-		if t.StakingEnabled {
-			var err error
-			stakePoints, err = t.StakeChecker.GetVehicleStakePoints(*ud.TokenId)
-			if err != nil {
-				return fmt.Errorf("failed to check staking for vehicle %d: %w", device.TokenID, err)
-			}
-			if stakePoints != 0 {
-				logger.Info().Uint64("vehicleId", *ud.TokenId).Msgf("Adding %d points from staking.", stakePoints)
-			}
+		if vehicle.Stake != nil && !vehicle.Stake.EndsAt.Before(week.EndsAt) {
+			stakePoints = vehicle.Stake.Points
+			logger.Info().Int("vehicleId", device.TokenID).Msgf("Adding %d points from staking.", stakePoints)
 		}
 
 		setStreakFields(thisWeek, streak, stakePoints)

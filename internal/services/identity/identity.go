@@ -6,11 +6,14 @@ package identity
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"slices"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const jsonContentType = "application/json"
@@ -35,14 +38,31 @@ type payload struct {
 	Variables map[string]any `json:"variables"`
 }
 
+type VehicleDescr struct {
+	Owner             common.Address `json:"owner"`
+	AftermarketDevice *struct {
+		TokenID      int            `json:"tokenId"`
+		Owner        common.Address `json:"owner"`
+		Beneficiary  common.Address `json:"beneficiary"`
+		Manufacturer struct {
+			TokenID int `json:"tokenId"`
+		} `json:"manufacturer"`
+	} `json:"aftermarketDevice"`
+	SyntheticDevice *struct {
+		TokenID    int `json:"tokenId"`
+		Connection struct {
+			Address common.Address `json:"address"`
+		} `json:"connection"`
+	} `json:"syntheticDevice"`
+	Stake *struct {
+		Points int       `json:"points"`
+		EndsAt time.Time `json:"endsAt"`
+	} `json:"stake"`
+}
+
 type resp struct {
 	Data struct {
-		Vehicle *struct {
-			Stake *struct {
-				Points int       `json:"points"`
-				EndsAt time.Time `json:"endsAt"`
-			} `json:"stake"`
-		} `json:"vehicle"`
+		Vehicle *VehicleDescr `json:"vehicle"`
 	} `json:"data"`
 	Errors []struct {
 		Path       []string `json:"path"`
@@ -52,10 +72,7 @@ type resp struct {
 	} `json:"errors"`
 }
 
-// GetVehicleStakePoints returns the number of points that should be added to the vehicle's weekly
-// total because of $DIMO staking. This number will be 0 if the vehicle has no attached stake, or
-// if the attached stake has ended.
-func (c *Client) GetVehicleStakePoints(vehicleID uint64) (int, error) {
+func (c *Client) DescribeVehicle(vehicleID int) (*VehicleDescr, error) {
 	p := payload{
 		Query: query,
 		Variables: map[string]any{
@@ -65,29 +82,29 @@ func (c *Client) GetVehicleStakePoints(vehicleID uint64) (int, error) {
 
 	reqBytes, err := json.Marshal(p)
 	if err != nil {
-		return 0, fmt.Errorf("couldn't marshal request body: %w", err)
+		return nil, fmt.Errorf("couldn't marshal request body: %w", err)
 	}
 
 	res, err := c.Client.Post(c.QueryURL, jsonContentType, bytes.NewBuffer(reqBytes))
 	if err != nil {
-		return 0, fmt.Errorf("request failed: %w", err)
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("status code %d", res.StatusCode)
+		return nil, fmt.Errorf("status code %d", res.StatusCode)
 	}
 
 	resBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return 0, fmt.Errorf("couldn't read response body: %w", err)
+		return nil, fmt.Errorf("couldn't read response body: %w", err)
 	}
 
 	var resBody resp
 
 	err = json.Unmarshal(resBytes, &resBody)
 	if err != nil {
-		return 0, fmt.Errorf("couldn't parse response body: %w", err)
+		return nil, fmt.Errorf("couldn't parse response body: %w", err)
 	}
 
 	if len(resBody.Errors) != 0 {
@@ -95,17 +112,19 @@ func (c *Client) GetVehicleStakePoints(vehicleID uint64) (int, error) {
 			oneError := resBody.Errors[0]
 			if slices.Equal([]string{"vehicle"}, oneError.Path) && oneError.Extensions.Code == "NOT_FOUND" {
 				// This is actually kinda bad. Why can't we find the vehicle?
-				return 0, nil
+				return nil, ErrNotFound
 			}
 		}
 
-		return 0, fmt.Errorf("unexpected error: %v", resBody.Errors)
+		return nil, fmt.Errorf("unexpected error: %v", resBody.Errors)
 	}
 
 	// Really shouldn't be possible for vehicle to be nil without an error.
-	if resBody.Data.Vehicle == nil || resBody.Data.Vehicle.Stake == nil || resBody.Data.Vehicle.Stake.EndsAt.Before(time.Now()) {
-		return 0, nil
+	if resBody.Data.Vehicle == nil {
+		return nil, fmt.Errorf("no error, but vehicle response is null")
 	}
 
-	return resBody.Data.Vehicle.Stake.Points, nil
+	return resBody.Data.Vehicle, nil
 }
+
+var ErrNotFound = errors.New("no vehicle with that token id found")
