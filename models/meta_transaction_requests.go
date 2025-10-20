@@ -858,7 +858,7 @@ func (o *MetaTransactionRequest) AddTransferMetaTransactionRequestRewards(ctx co
 				strmangle.SetParamNames("\"", "\"", 1, []string{"transfer_meta_transaction_request_id"}),
 				strmangle.WhereClause("\"", "\"", 2, rewardPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.IssuanceWeekID, rel.UserDeviceID}
+			values := []interface{}{o.ID, rel.IssuanceWeekID, rel.UserDeviceTokenID}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)

@@ -152,9 +152,9 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
-	lastWeekByDevice := make(map[string]*models.Reward)
+	lastWeekByVehicleTokenID := make(map[int]*models.Reward)
 	for _, reward := range lastWeekRewards {
-		lastWeekByDevice[reward.UserDeviceID] = reward
+		lastWeekByVehicleTokenID[reward.UserDeviceTokenID] = reward
 	}
 
 	for _, device := range activeDevices {
@@ -193,10 +193,8 @@ func (t *BaselineClient) assignPoints() error {
 		vOwner := common.BytesToAddress(ud.OwnerAddress)
 
 		thisWeek := &models.Reward{
-			UserDeviceID:                   ud.Id,
 			IssuanceWeekID:                 issuanceWeek,
-			UserID:                         ud.UserId,
-			UserDeviceTokenID:              types.NewNullDecimal(new(decimal.Big).SetUint64(*ud.TokenId)),
+			UserDeviceTokenID:              int(*ud.TokenId),
 			UserEthereumAddress:            null.StringFrom(vOwner.Hex()),
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
@@ -262,7 +260,7 @@ func (t *BaselineClient) assignPoints() error {
 			ExistingConnectionStreak:    0,
 			ExistingDisconnectionStreak: 0,
 		}
-		if lastWeek, ok := lastWeekByDevice[ud.Id]; ok {
+		if lastWeek, ok := lastWeekByVehicleTokenID[int(*ud.TokenId)]; ok {
 			streakInput.ExistingConnectionStreak = lastWeek.ConnectionStreak
 			streakInput.ExistingDisconnectionStreak = lastWeek.DisconnectionStreak
 		}
@@ -286,7 +284,7 @@ func (t *BaselineClient) assignPoints() error {
 
 		// Anything left in this map is considered disconnected.
 		// This is a no-op if the device doesn't have a record from last week.
-		delete(lastWeekByDevice, ud.Id)
+		delete(lastWeekByVehicleTokenID, int(*ud.TokenId))
 
 		// If this VIN has never earned before, make note of that.
 		// Used by referrals, not this job. Have to be careful about VINs because
@@ -308,11 +306,9 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	// We didn't see any data for these remaining devices this week.
-	for _, lastWeek := range lastWeekByDevice {
+	for _, lastWeek := range lastWeekByVehicleTokenID {
 		thisWeek := &models.Reward{
 			IssuanceWeekID:    issuanceWeek,
-			UserDeviceID:      lastWeek.UserDeviceID,
-			UserID:            lastWeek.UserID,
 			UserDeviceTokenID: lastWeek.UserDeviceTokenID,
 		}
 		streakInput := StreakInput{

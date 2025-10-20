@@ -800,7 +800,7 @@ func (o *IssuanceWeek) AddRewards(ctx context.Context, exec boil.ContextExecutor
 				strmangle.SetParamNames("\"", "\"", 1, []string{"issuance_week_id"}),
 				strmangle.WhereClause("\"", "\"", 2, rewardPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.IssuanceWeekID, rel.UserDeviceID}
+			values := []interface{}{o.ID, rel.IssuanceWeekID, rel.UserDeviceTokenID}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)

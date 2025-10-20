@@ -47,15 +47,13 @@ type User struct {
 
 type OldReward struct {
 	Week              int
-	DeviceID          string
 	UserID            string
 	ConnStreak        int
 	DiscStreak        int
-	UserDeviceTokenID int64
+	UserDeviceTokenID int
 }
 
 type NewReward struct {
-	DeviceID                       string
 	TokenID                        int
 	Address                        common.Address
 	ConnStreak                     int
@@ -138,10 +136,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}, SDTokenID: 1, SDIntegrationID: 3},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -157,10 +155,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 1, StreakPoints: 0, SyntheticDevicePoints: 0, SyntheticDeviceID: 0},
+				{TokenID: 1, ConnStreak: 1, DiscStreak: 1, StreakPoints: 0, SyntheticDevicePoints: 0, SyntheticDeviceID: 0},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -176,10 +174,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, SyntheticDeviceID: 0},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, SyntheticDeviceID: 0},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -195,10 +193,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{}},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 22, DiscStreak: 2, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 22, DiscStreak: 2, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), ConnStreak: 4, DiscStreak: 3, StreakPoints: 0, SyntheticDevicePoints: 0, SyntheticDeviceID: 0},
+				{TokenID: 1, ConnStreak: 4, DiscStreak: 3, StreakPoints: 0, SyntheticDevicePoints: 0, SyntheticDeviceID: 0},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -215,7 +213,7 @@ func TestStreak(t *testing.T) {
 			},
 			Previous: []OldReward{},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 1, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 4000, SyntheticDeviceID: 3},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 1, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 4000, SyntheticDeviceID: 3},
 			},
 			PrevVIN: []VIN{},
 			NewVIN:  []VIN{{VIN: mkVIN(1), FirstToken: 1}},
@@ -231,11 +229,11 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(2), TokenID: 2, UserID: "User2", VIN: mkVIN(1), IntsWithData: []string{teslaIntegration}, SDTokenID: 2, SDIntegrationID: 2},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 1, StreakPoints: 0, AftermarketDevicePoints: 0},
-				{DeviceID: mkID(2), TokenID: 2, Address: mkAddr(2), ConnStreak: 1, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 4000, SyntheticDeviceID: 2},
+				{TokenID: 1, ConnStreak: 1, DiscStreak: 1, StreakPoints: 0, AftermarketDevicePoints: 0},
+				{TokenID: 2, Address: mkAddr(2), ConnStreak: 1, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 4000, SyntheticDeviceID: 2},
 			},
 			PrevVIN: []VIN{{VIN: mkVIN(1), FirstToken: 1}},
 			NewVIN:  []VIN{},
@@ -249,10 +247,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration, macaronIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, SyntheticDeviceID: 0},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, SyntheticDeviceID: 0},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -268,10 +266,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration, macaronIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 142},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 2000, SyntheticDeviceID: 0},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 2000, SyntheticDeviceID: 0},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -287,10 +285,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, macaronIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 142, SDTokenID: 1, SDIntegrationID: 3},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, AftermarketDevicePoints: 2000, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, AftermarketDevicePoints: 2000, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -306,10 +304,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, autoPiIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137, SDTokenID: 1, SDIntegrationID: 3},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1, AftermarketDevicePoints: 6000},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1, AftermarketDevicePoints: 6000},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -325,10 +323,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137, SDTokenID: 21, SDIntegrationID: 3},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 21},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 2, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 21},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -344,10 +342,10 @@ func TestStreak(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, teslaIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 142, SDTokenID: 1, SDIntegrationID: 3},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -389,10 +387,9 @@ func TestStreak(t *testing.T) {
 
 				rw := models.Reward{
 					IssuanceWeekID:      lst.Week,
-					UserDeviceID:        lst.DeviceID,
 					ConnectionStreak:    lst.ConnStreak,
 					DisconnectionStreak: lst.DiscStreak,
-					UserDeviceTokenID:   types.NewNullDecimal(decimal.New(lst.UserDeviceTokenID, 0)),
+					UserDeviceTokenID:   lst.UserDeviceTokenID,
 				}
 				err = rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
 				if err != nil {
@@ -426,7 +423,7 @@ func TestStreak(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceTokenID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -435,18 +432,13 @@ func TestStreak(t *testing.T) {
 
 			for _, c := range rw {
 				nr := NewReward{
-					DeviceID:                c.UserDeviceID,
 					ConnStreak:              c.ConnectionStreak,
 					DiscStreak:              c.DisconnectionStreak,
 					StreakPoints:            c.StreakPoints,
 					AftermarketDevicePoints: c.AftermarketDevicePoints,
 					SyntheticDevicePoints:   c.SyntheticDevicePoints,
 					SyntheticDeviceID:       c.SyntheticDeviceID.Int,
-				}
-
-				if !c.UserDeviceTokenID.IsZero() {
-					n, _ := c.UserDeviceTokenID.Int64()
-					nr.TokenID = int(n)
+					TokenID:                 c.UserDeviceTokenID,
 				}
 
 				if c.UserEthereumAddress.Valid {
@@ -496,10 +488,10 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137, Beneficiary: mkAddr(2).Bytes()},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, RewardsReceiverEthereumAddress: mkAddr(2)},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, RewardsReceiverEthereumAddress: mkAddr(2)},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -516,10 +508,10 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, RewardsReceiverEthereumAddress: mkAddr(1)},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, RewardsReceiverEthereumAddress: mkAddr(1)},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -536,10 +528,10 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137, Beneficiary: mkAddr(1).Bytes()},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, RewardsReceiverEthereumAddress: mkAddr(1)},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, RewardsReceiverEthereumAddress: mkAddr(1)},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -582,10 +574,9 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 
 				rw := models.Reward{
 					IssuanceWeekID:      lst.Week,
-					UserDeviceID:        lst.DeviceID,
 					ConnectionStreak:    lst.ConnStreak,
 					DisconnectionStreak: lst.DiscStreak,
-					UserDeviceTokenID:   types.NewNullDecimal(decimal.New(lst.UserDeviceTokenID, 0)),
+					UserDeviceTokenID:   lst.UserDeviceTokenID,
 				}
 				err = rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
 				if err != nil {
@@ -617,7 +608,7 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 			err = rwBonusService.assignPoints()
 			assert.NoError(t, err)
 
-			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceTokenID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -626,17 +617,12 @@ func TestBeneficiaryAddressSetForRewards(t *testing.T) {
 
 			for _, c := range rw {
 				nr := NewReward{
-					DeviceID:                c.UserDeviceID,
 					ConnStreak:              c.ConnectionStreak,
 					DiscStreak:              c.DisconnectionStreak,
 					StreakPoints:            c.StreakPoints,
 					AftermarketDevicePoints: c.AftermarketDevicePoints,
 					SyntheticDevicePoints:   c.SyntheticDevicePoints,
-				}
-
-				if !c.UserDeviceTokenID.IsZero() {
-					n, _ := c.UserDeviceTokenID.Int64()
-					nr.TokenID = int(n)
+					TokenID:                 c.UserDeviceTokenID,
 				}
 
 				if c.UserEthereumAddress.Valid {
@@ -690,10 +676,10 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137, Beneficiary: mkAddr(2).Bytes()},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, RewardsReceiverEthereumAddress: mkAddr(2)},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000, RewardsReceiverEthereumAddress: mkAddr(2)},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -710,10 +696,10 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{autoPiIntegration}, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 1000, AftermarketDevicePoints: 6000},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -730,10 +716,10 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}, SDTokenID: 1, SDIntegrationID: 3},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -749,10 +735,10 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration, autoPiIntegration}, SDTokenID: 1, SDIntegrationID: 3, AMTokenID: 12, AMSerial: ksuid.New().String(), ManufacturerTokenID: 137, Beneficiary: mkAddr(2).Bytes()},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, UserID: "User1", ConnStreak: 3, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1, AftermarketDevicePoints: 0},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1, AftermarketDevicePoints: 0},
 			},
 			PrevVIN: []VIN{
 				{VIN: mkVIN(1), FirstWeek: 4, FirstToken: 1},
@@ -770,11 +756,11 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: mkID(1), TokenID: 1, UserID: "User1", VIN: mkVIN(1), IntsWithData: []string{smartcarIntegration}, SDTokenID: 1, SDIntegrationID: 3},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New: []NewReward{
-				{DeviceID: mkID(2), ConnStreak: 0, DiscStreak: 0, StreakPoints: 0, AftermarketDevicePoints: 0, TokenID: 2},
-				{DeviceID: mkID(1), TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
+				{TokenID: 2, ConnStreak: 0, DiscStreak: 0, StreakPoints: 0, AftermarketDevicePoints: 0},
+				{TokenID: 1, Address: mkAddr(1), ConnStreak: 4, DiscStreak: 0, StreakPoints: 0, SyntheticDevicePoints: 1000, SyntheticDeviceID: 1},
 			},
 			PrevVIN: []VIN{{VIN: mkVIN(1), FirstToken: 1}},
 			NewVIN:  []VIN{},
@@ -788,7 +774,7 @@ func TestBaselineIssuance(t *testing.T) {
 				{ID: mkID(2), TokenID: 1, UserID: "User2", VIN: mkVIN(1), IntsWithData: []string{}},
 			},
 			Previous: []OldReward{
-				{Week: 4, DeviceID: mkID(1), ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
+				{Week: 4, ConnStreak: 1, DiscStreak: 0, UserDeviceTokenID: 1},
 			},
 			New:     []NewReward{},
 			PrevVIN: []VIN{{VIN: mkVIN(1), FirstToken: 1}},
@@ -827,10 +813,9 @@ func TestBaselineIssuance(t *testing.T) {
 
 				rw := models.Reward{
 					IssuanceWeekID:      lst.Week,
-					UserDeviceID:        lst.DeviceID,
 					ConnectionStreak:    lst.ConnStreak,
 					DisconnectionStreak: lst.DiscStreak,
-					UserDeviceTokenID:   types.NewNullDecimal(decimal.New(lst.UserDeviceTokenID, 0)),
+					UserDeviceTokenID:   lst.UserDeviceTokenID,
 				}
 				err = rw.Insert(ctx, conn.DBS().Writer, boil.Infer())
 				if err != nil {
@@ -879,7 +864,7 @@ func TestBaselineIssuance(t *testing.T) {
 			err = rwBonusService.BaselineIssuance()
 			assert.NoError(t, err)
 
-			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceID)).All(ctx, conn.DBS().Reader)
+			rw, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek), qm.OrderBy(models.RewardColumns.IssuanceWeekID+","+models.RewardColumns.UserDeviceTokenID)).All(ctx, conn.DBS().Reader)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -943,7 +928,7 @@ func TestBaselineIssuance(t *testing.T) {
 			if len(rw) > 0 && scen.Name != "EmptyVehicles" {
 				expected = append(expected, contracts.RewardTransferInfo{
 					User:                       user,
-					VehicleId:                  rw[0].UserDeviceTokenID.Int(nil),
+					VehicleId:                  big.NewInt(int64(rw[0].UserDeviceTokenID)),
 					AftermarketDeviceId:        utils.NullDecimalToIntDefaultZero(rw[0].AftermarketTokenID),
 					ValueFromAftermarketDevice: utils.NullDecimalToIntDefaultZero(rw[0].AftermarketDeviceTokens),
 					SyntheticDeviceId:          big.NewInt(int64(rw[0].SyntheticDeviceID.Int)),

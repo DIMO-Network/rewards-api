@@ -128,7 +128,7 @@ func (c *BaselineClient) transferTokens(ctx context.Context) error {
 		for _, row := range transfer {
 			trx := contracts.RewardTransferInfo{
 				User:                       common.HexToAddress(row.RewardsReceiverEthereumAddress.String),
-				VehicleId:                  row.UserDeviceTokenID.Int(nil),
+				VehicleId:                  big.NewInt(int64(row.UserDeviceTokenID)),
 				AftermarketDeviceId:        utils.NullDecimalToIntDefaultZero(row.AftermarketTokenID),
 				ValueFromAftermarketDevice: utils.NullDecimalToIntDefaultZero(row.AftermarketDeviceTokens),
 				SyntheticDeviceId:          big.NewInt(int64(row.SyntheticDeviceID.Int)),

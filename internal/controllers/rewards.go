@@ -128,21 +128,24 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 	}
 
-	outLi := make([]*UserResponseDevice, len(devices.UserDevices))
+	outLi := make([]*UserResponseDevice, 0, len(devices.UserDevices))
 	userPts := 0
 	userTokens := big.NewInt(0)
 
 	for i, device := range devices.UserDevices {
+		if device.TokenId == nil {
+			continue
+		}
+
 		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
 
 		outInts := []UserResponseIntegration{}
 
-		vehicleMinted := device.TokenId != nil
+		vehicleMinted := true
 
-		var vehicleIntegsWithSignals []string
-		if device.TokenId != nil {
-			vehicleIntegsWithSignals = integrationsByTokenID[*device.TokenId]
-		}
+		// If the vehicle has no signals this week then this will return the
+		// nil slice and everything is fine.
+		vehicleIntegsWithSignals := integrationsByTokenID[*device.TokenId]
 
 		integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
 
@@ -201,7 +204,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 		}
 
 		rewards, err := models.Rewards(
-			models.RewardWhere.UserDeviceID.EQ(device.Id),
+			models.RewardWhere.UserDeviceTokenID.EQ(int(*device.TokenId)),
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
 		).All(c.Context(), r.DB.DBS().Reader.DB)
 		if err != nil {
@@ -388,14 +391,16 @@ func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
 		return opaqueInternalError
 	}
 
-	deviceIDs := make([]string, len(devices.UserDevices))
-	for i := range devices.UserDevices {
-		deviceIDs[i] = devices.UserDevices[i].Id
+	vehicleTokenIDs := make([]int, 0, len(devices.UserDevices))
+	for _, ud := range devices.UserDevices {
+		if ud.TokenId != nil {
+			vehicleTokenIDs = append(vehicleTokenIDs, int(*ud.TokenId))
+		}
 	}
 
 	rs, err := models.Rewards(
-		models.RewardWhere.UserDeviceID.IN(deviceIDs),
-		qm.OrderBy(models.RewardColumns.IssuanceWeekID+" asc"),
+		models.RewardWhere.UserDeviceTokenID.IN(vehicleTokenIDs),
+		qm.OrderBy(models.RewardColumns.IssuanceWeekID+" ASC"),
 	).All(c.Context(), r.DB.DBS().Reader)
 	if err != nil {
 		logger.Err(err).Msg("Database failure retrieving rewards.")

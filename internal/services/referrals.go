@@ -16,6 +16,7 @@ import (
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/types"
+	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
@@ -81,7 +82,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 	ownersOfLevel2FirstTimeVehicles := make(map[common.Address]struct{})
 
 	for _, r := range vehicleNFTsHittingLevel2 {
-		logger := c.Logger.With().Int64("vehicleId", r.UserDeviceTokenID.Int(nil).Int64()).Str("user", r.UserEthereumAddress.String).Logger()
+		logger := c.Logger.With().Int("vehicleId", r.UserDeviceTokenID).Str("user", r.UserEthereumAddress.String).Logger()
 
 		if beforeHit, err := models.Rewards(
 			models.RewardWhere.IssuanceWeekID.LT(issuanceWeek),
@@ -95,7 +96,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 		}
 
 		firstTimeVIN, err := models.Vins(
-			models.VinWhere.FirstEarningTokenID.EQ(types.NewDecimal(r.UserDeviceTokenID.Big)),
+			models.VinWhere.FirstEarningTokenID.EQ(types.NewDecimal(decimal.New(int64(r.UserDeviceTokenID), 0))),
 		).Exists(ctx, c.TransferService.db.DBS().Reader)
 		if err != nil {
 			return refs, err
@@ -130,7 +131,7 @@ func (c *ReferralsClient) CollectReferrals(ctx context.Context, issuanceWeek int
 			}
 			// This is the good case.
 		} else {
-			logger.Debug().Msgf("User owned a vehicle %d which previously hit Level 2.", userHitBefore.UserDeviceTokenID.Big)
+			logger.Debug().Msgf("User owned a vehicle %d which previously hit Level 2.", userHitBefore.UserDeviceTokenID)
 			continue
 		}
 

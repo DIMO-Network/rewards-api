@@ -12,7 +12,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/ericlagergren/decimal"
 	"github.com/rs/zerolog"
-	"github.com/segmentio/ksuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 
@@ -29,8 +28,8 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
 	defer testcontainers.CleanupContainer(t, cont)
 
-	userDeviceID1 := ksuid.New().String()
-	userDeviceID2 := ksuid.New().String()
+	userDeviceID1 := 1
+	userDeviceID2 := 2
 
 	wk := models.IssuanceWeek{
 		ID:        80,
@@ -42,7 +41,7 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 
 	reward1 := models.Reward{
 		IssuanceWeekID:          80,
-		UserDeviceID:            userDeviceID1,
+		UserDeviceTokenID:       userDeviceID1,
 		ConnectionStreak:        6,
 		StreakPoints:            1000,
 		AftermarketDevicePoints: 0,
@@ -51,7 +50,7 @@ func TestTokenAssignmentNoDecrease(t *testing.T) {
 
 	reward2 := models.Reward{
 		IssuanceWeekID:          80,
-		UserDeviceID:            userDeviceID2,
+		UserDeviceTokenID:       userDeviceID2,
 		ConnectionStreak:        2,
 		StreakPoints:            0,
 		AftermarketDevicePoints: 0,
@@ -87,8 +86,8 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 	cont, conn := utils.GetDbConnection(ctx, t, logger)
 	defer testcontainers.CleanupContainer(t, cont)
 
-	userDeviceID1 := ksuid.New().String()
-	userDeviceID2 := ksuid.New().String()
+	userDeviceID1 := 1
+	userDeviceID2 := 2
 
 	wk := models.IssuanceWeek{
 		ID:        92,
@@ -100,7 +99,7 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 
 	reward1 := models.Reward{
 		IssuanceWeekID:          92,
-		UserDeviceID:            userDeviceID1,
+		UserDeviceTokenID:       userDeviceID1,
 		ConnectionStreak:        6,
 		StreakPoints:            1000,
 		SyntheticDevicePoints:   0,
@@ -109,7 +108,7 @@ func TestTokenAssignmentOneDecrease(t *testing.T) {
 
 	reward2 := models.Reward{
 		IssuanceWeekID:          92,
-		UserDeviceID:            userDeviceID2,
+		UserDeviceTokenID:       userDeviceID2,
 		ConnectionStreak:        2,
 		StreakPoints:            0,
 		SyntheticDevicePoints:   0,
@@ -159,7 +158,7 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 	fmt.Printf("Starting to insert test records...\n")
 	insertStart := time.Now()
 
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		streakPoints := rand.Int() % 1000
 		aftermarketPoints := rand.Int() % 1000
 		syntheticPoints := rand.Int() % 1000
@@ -173,8 +172,7 @@ func TestCalculateTokensForPointsPerformance(t *testing.T) {
 		syntheticTokens.Mul(syntheticTokens, etherDecimal)
 		reward := models.Reward{
 			IssuanceWeekID:          100,
-			UserDeviceID:            ksuid.New().String(),
-			UserID:                  ksuid.New().String(),
+			UserDeviceTokenID:       i + 1,
 			StreakPoints:            streakPoints,
 			AftermarketDevicePoints: aftermarketPoints,
 			SyntheticDevicePoints:   syntheticPoints,
@@ -245,7 +243,7 @@ func TestCalculateTokensForPoints(t *testing.T) {
 	// Create rewards for the finished week
 	reward := models.Reward{
 		IssuanceWeekID:          1,
-		UserDeviceID:            "test_device",
+		UserDeviceTokenID:       6,
 		StreakPoints:            100,
 		StreakTokens:            types.NewNullDecimal(new(decimal.Big).Mul(decimal.New(1000, 0), etherDecimal)),
 		SyntheticDevicePoints:   50,

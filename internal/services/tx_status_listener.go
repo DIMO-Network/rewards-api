@@ -15,8 +15,6 @@ import (
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
-	"github.com/aarondl/sqlboiler/v4/types"
-	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -202,7 +200,7 @@ func (s *TransferStatusProcessor) processBaselineEvent(event cloudevent.CloudEve
 
 				rewardRow, err := models.Rewards(
 					models.RewardWhere.TransferMetaTransactionRequestID.EQ(null.StringFrom(event.Data.RequestID)),
-					models.RewardWhere.UserDeviceTokenID.EQ(types.NewNullDecimal(new(decimal.Big).SetBigMantScale(userDeviceTokenID, 0))),
+					models.RewardWhere.UserDeviceTokenID.EQ(int(userDeviceTokenID.Int64())),
 				).One(context.Background(), tx)
 				if err != nil {
 					return err

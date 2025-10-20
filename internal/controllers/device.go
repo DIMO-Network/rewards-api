@@ -54,7 +54,7 @@ func (r *DeviceController) GetDevice(c *fiber.Ctx) error {
 			Start:     date.NumToWeekStart(r.IssuanceWeekID),
 			End:       date.NumToWeekEnd(r.IssuanceWeekID),
 			Tokens:    tokens,
-			VehicleID: r.UserDeviceTokenID.Int(nil),
+			VehicleID: r.UserDeviceTokenID,
 		}
 	}
 
@@ -65,7 +65,7 @@ type DeviceWeek struct {
 	Start     time.Time `json:"start"`
 	End       time.Time `json:"end"`
 	Tokens    *big.Int  `json:"tokens"`
-	VehicleID *big.Int  `json:"vehicleId"`
+	VehicleID int       `json:"vehicleId"`
 }
 
 type DeviceSummary struct {
