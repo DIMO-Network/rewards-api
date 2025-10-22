@@ -116,11 +116,15 @@ func (t *BaselineClient) assignPoints() error {
 		return err
 	}
 
+	activityQueryStart := time.Now()
+
 	// These describe the active integrations for each device active this week.
 	activeDevices, err := t.DataService.DescribeActiveDevices(ctx, weekStart, weekEnd)
 	if err != nil {
 		return err
 	}
+
+	t.Logger.Info().Msgf("Activity query took %s.", time.Since(activityQueryStart))
 
 	vinVCConfirmed, err := t.vinVCSrv.GetConfirmedVINVCs(ctx, activeDevices, issuanceWeek)
 	if err != nil {
@@ -158,7 +162,7 @@ func (t *BaselineClient) assignPoints() error {
 	}
 
 	for _, device := range activeDevices {
-		logger := t.Logger.With().Int64("vehicleTokenId", device.TokenID).Logger()
+		logger := t.Logger.With().Int64("vehicleId", device.TokenID).Logger()
 
 		ud, err := t.DevicesClient.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{TokenId: device.TokenID})
 		if err != nil {
@@ -171,16 +175,14 @@ func (t *BaselineClient) assignPoints() error {
 
 		integsSignalsThisWeek := set.New(device.Integrations...)
 
-		logger = logger.With().Str("userId", ud.UserId).Logger()
-
 		if _, ok := vinVCConfirmed[device.TokenID]; !ok && len(vinVCConfirmed) > 0 {
 			// TODO: Update this to a continue after we have a better idea of how many vehicles are missing VIN VC.
-			logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle does not have a confirmed VIN VC VIN.")
+			logger.Warn().Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle does not have a confirmed VIN VC VIN.")
 		}
 
 		if !ud.VinConfirmed {
 			// TODO(kevin): Remove this warning after we have a better idea of how many vehicles have VIN VC.
-			logger.Warn().Str("deviceId", ud.Id).Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle has VC but VIN is not confirmed.")
+			logger.Warn().Bool("vinConfirmed", ud.VinConfirmed).Msg("Vehicle has VC but VIN is not confirmed.")
 			logger.Info().Msg("Device does not have confirmed VIN.")
 			continue
 		}
