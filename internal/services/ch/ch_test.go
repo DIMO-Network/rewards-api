@@ -106,7 +106,7 @@ func (c *CHTestSuite) Test_DescribeActiveDevices() {
 }
 
 func (c *CHTestSuite) Test_GetIntegrations() {
-	resp, err := c.chClient.GetIntegrationsForVehicles(context.TODO(), []uint64{3, 7, 11, 13}, weekEnd.Add(-7*day), weekEnd)
+	resp, err := c.chClient.GetSourcesForVehicles(context.TODO(), []uint64{3, 7, 11, 13}, weekEnd.Add(-7*day), weekEnd)
 	c.Require().NoError(err)
 
 	c.Len(resp, 2)

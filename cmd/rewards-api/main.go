@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -306,6 +308,52 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}
+	case "describe":
+		tokenID, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Couldn't parse vehicle token id.")
+		}
+
+		identClient := &identity.Client{
+			QueryURL: settings.IdentityQueryURL,
+			Client:   &http.Client{},
+		}
+
+		vehDesc, err := identClient.DescribeVehicle(uint64(tokenID))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to describe vehicle.")
+		}
+
+		b, err := json.MarshalIndent(vehDesc, "", "  ")
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to marshal vehicle description.")
+		}
+
+		fmt.Println(string(b))
+	case "owner":
+		ok := common.IsHexAddress(os.Args[2])
+		if !ok {
+			logger.Fatal().Msg("Couldn't parse owner address.")
+		}
+
+		owner := common.HexToAddress(os.Args[2])
+
+		identClient := &identity.Client{
+			QueryURL: settings.IdentityQueryURL,
+			Client:   &http.Client{},
+		}
+
+		vehDesc, err := identClient.GetVehicles(owner)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to describe vehicle.")
+		}
+
+		b, err := json.MarshalIndent(vehDesc, "", "  ")
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to marshal vehicle description.")
+		}
+
+		fmt.Println(string(b))
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}

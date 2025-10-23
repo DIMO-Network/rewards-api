@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/constants"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
+	"github.com/DIMO-Network/rewards-api/internal/services/identity"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/pkg/db"
@@ -30,6 +31,7 @@ type RewardsController struct {
 	ChClient          *ch.Client
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
+	IdentClient       *identity.Client
 	Settings          *config.Settings
 }
 
@@ -83,128 +85,86 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 	addrBalance := big.NewInt(0)
 
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
-		UserId:          userID, // Unclear that we need to keep including this.
-		EthereumAddress: userAddr.Hex(),
-	})
+	vehicleDescrs, err := r.IdentClient.GetVehicles(userAddr)
 	if err != nil {
 		return err
-	}
-
-	allIntegrations, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
-	if err != nil {
-		return opaqueInternalError
 	}
 
 	var vehicleIDs []uint64
-
-	for _, ud := range devices.UserDevices {
-		if ud.TokenId != nil {
-			vehicleIDs = append(vehicleIDs, *ud.TokenId)
-		}
+	for _, ud := range vehicleDescrs {
+		vehicleIDs = append(vehicleIDs, uint64(ud.TokenID))
 	}
 
-	integrationsByTokenID := make(map[uint64][]string)
+	sourcesByTokenID := make(map[uint64][]string)
 
-	vehicles, err := r.ChClient.GetIntegrationsForVehicles(c.Context(), vehicleIDs, weekStart, now)
+	vehicleSources, err := r.ChClient.GetSourcesForVehicles(c.Context(), vehicleIDs, weekStart, now)
 	if err != nil {
 		return err
 	}
 
-	for _, v := range vehicles {
-		integrationsByTokenID[uint64(v.TokenID)] = v.Integrations
+	for _, v := range vehicleSources {
+		sourcesByTokenID[uint64(v.TokenID)] = v.Sources
 	}
 
-	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
-	swIntegrsByTokenID := make(map[uint64]*pb_defs.Integration)
-
-	for _, intDesc := range allIntegrations.Integrations {
-		if intDesc.ManufacturerTokenId == 0 {
-			// Must be a software integration. Sort after this loop.
-			swIntegrsByTokenID[intDesc.TokenId] = intDesc
-		} else {
-			// Must be the integration associated with a manufacturer.
-			amMfrTokenToIntegration[intDesc.ManufacturerTokenId] = intDesc
-		}
-	}
-
-	outLi := make([]*UserResponseDevice, 0, len(devices.UserDevices))
+	outLi := make([]*UserResponseDevice, 0, len(vehicleDescrs))
 	userPts := 0
 	userTokens := big.NewInt(0)
 
-	for _, device := range devices.UserDevices {
-		if device.TokenId == nil {
-			continue
-		}
-
-		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
+	for _, device := range vehicleDescrs {
+		dlog := logger.With().Int("vehicleId", device.TokenID).Logger()
 
 		outInts := []UserResponseIntegration{}
 
-		vehicleMinted := true
-
 		// If the vehicle has no signals this week then this will return the
 		// nil slice and everything is fine.
-		vehicleIntegsWithSignals := integrationsByTokenID[*device.TokenId]
+		vehicleIntegsWithSignals := sourcesByTokenID[uint64(device.TokenID)]
 
 		integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
 
 		if ad := device.AftermarketDevice; ad != nil {
-			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
-			// this week.
-			if ad.ManufacturerTokenId == 0 {
-				return fmt.Errorf("aftermarket device %d does not have a manufacturer", ad.TokenId)
+			conn, ok := constants.ConnsByMfrId[ad.Manufacturer.TokenID]
+			if ok {
+				uri := UserResponseIntegration{
+					ID:                   conn.LegacyID,
+					Vendor:               conn.LegacyVendor,
+					DataThisWeek:         false,
+					Points:               0,
+					OnChainPairingStatus: "Paired",
+				}
+
+				// if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
+				// 	uri.Points = int(integr.Points)
+				// 	uri.DataThisWeek = true
+				// }
+
+				outInts = append(outInts, uri)
 			}
 
-			integr, ok := amMfrTokenToIntegration[ad.ManufacturerTokenId]
-			if !ok {
-				return fmt.Errorf("aftermarket device manufacturer %d does not have an associated integration", ad.ManufacturerTokenId)
-			}
-
-			uri := UserResponseIntegration{
-				ID:                   integr.Id,
-				Vendor:               integr.Vendor,
-				DataThisWeek:         false,
-				Points:               0,
-				OnChainPairingStatus: "Paired",
-			}
-
-			if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
-				uri.Points = int(integr.Points)
-				uri.DataThisWeek = true
-			}
-
-			outInts = append(outInts, uri)
 		}
 
 		if sd := device.SyntheticDevice; sd != nil {
-			if sd.IntegrationTokenId == 0 {
-				return fmt.Errorf("synthetic device %d does not have an integration", sd.IntegrationTokenId)
+			conn, ok := constants.ConnsByAddr[sd.Connection.Address]
+			if ok {
+				uri := UserResponseIntegration{
+					ID:                   conn.LegacyID,
+					Vendor:               conn.LegacyVendor,
+					DataThisWeek:         false,
+					Points:               0,
+					OnChainPairingStatus: "Paired",
+				}
+
+				if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
+					uri.Points = int(integr.Points)
+					uri.DataThisWeek = true
+				}
+
+				outInts = append(outInts, uri)
 			}
 
-			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
-			if !ok {
-				return fmt.Errorf("synthetic device %d has integration %d without metadata", sd.TokenId, sd.IntegrationTokenId)
-			}
-
-			uri := UserResponseIntegration{
-				ID:                   integr.Id,
-				Vendor:               integr.Vendor,
-				DataThisWeek:         false,
-				Points:               0,
-				OnChainPairingStatus: "Paired",
-			}
-
-			if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
-				uri.Points = int(integr.Points)
-				uri.DataThisWeek = true
-			}
-
-			outInts = append(outInts, uri)
 		}
 
 		rewards, err := models.Rewards(
-			models.RewardWhere.UserDeviceTokenID.EQ(int(*device.TokenId)),
+			models.RewardWhere.UserDeviceTokenID.EQ(device.TokenID),
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
 		).All(c.Context(), r.DB.DBS().Reader.DB)
 		if err != nil {
@@ -240,9 +200,10 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			disconnectionStreak = rewards[0].DisconnectionStreak
 		}
 
+		tokTemp := uint64(device.TokenID)
+
 		outLi = append(outLi, &UserResponseDevice{
-			ID:                   device.Id,
-			TokenID:              device.TokenId,
+			TokenID:              &tokTemp,
 			Points:               pts,
 			Tokens:               tkns,
 			ConnectedThisWeek:    slices.ContainsFunc(outInts, func(uri UserResponseIntegration) bool { return uri.Points > 0 }),
@@ -251,7 +212,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			ConnectionStreak:     connectionStreak,
 			DisconnectionStreak:  disconnectionStreak,
 			Level:                *getLevelResp(lvl),
-			Minted:               vehicleMinted,
+			Minted:               true,
 			OptedIn:              true,
 			VINConfirmed:         device.VinConfirmed,
 		})
