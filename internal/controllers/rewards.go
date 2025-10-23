@@ -132,7 +132,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	userPts := 0
 	userTokens := big.NewInt(0)
 
-	for i, device := range devices.UserDevices {
+	for _, device := range devices.UserDevices {
 		if device.TokenId == nil {
 			continue
 		}
@@ -240,7 +240,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			disconnectionStreak = rewards[0].DisconnectionStreak
 		}
 
-		outLi[i] = &UserResponseDevice{
+		outLi = append(outLi, &UserResponseDevice{
 			ID:                   device.Id,
 			TokenID:              device.TokenId,
 			Points:               pts,
@@ -254,7 +254,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			Minted:               vehicleMinted,
 			OptedIn:              true,
 			VINConfirmed:         device.VinConfirmed,
-		}
+		})
 	}
 
 	out := UserResponse{
