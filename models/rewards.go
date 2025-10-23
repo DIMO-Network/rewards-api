@@ -30,10 +30,8 @@ type Reward struct {
 	DisconnectionStreak              int               `boil:"disconnection_streak" json:"disconnection_streak" toml:"disconnection_streak" yaml:"disconnection_streak"`
 	StreakPoints                     int               `boil:"streak_points" json:"streak_points" toml:"streak_points" yaml:"streak_points"`
 	IntegrationIds                   types.StringArray `boil:"integration_ids" json:"integration_ids" toml:"integration_ids" yaml:"integration_ids"`
-	IntegrationPoints                int               `boil:"integration_points" json:"integration_points" toml:"integration_points" yaml:"integration_points"`
 	CreatedAt                        time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt                        time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	Tokens                           types.NullDecimal `boil:"tokens" json:"tokens,omitempty" toml:"tokens" yaml:"tokens,omitempty"`
 	UserEthereumAddress              null.String       `boil:"user_ethereum_address" json:"user_ethereum_address,omitempty" toml:"user_ethereum_address" yaml:"user_ethereum_address,omitempty"`
 	UserDeviceTokenID                int               `boil:"user_device_token_id" json:"user_device_token_id" toml:"user_device_token_id" yaml:"user_device_token_id"`
 	TransferMetaTransactionRequestID null.String       `boil:"transfer_meta_transaction_request_id" json:"transfer_meta_transaction_request_id,omitempty" toml:"transfer_meta_transaction_request_id" yaml:"transfer_meta_transaction_request_id,omitempty"`
@@ -58,10 +56,8 @@ var RewardColumns = struct {
 	DisconnectionStreak              string
 	StreakPoints                     string
 	IntegrationIds                   string
-	IntegrationPoints                string
 	CreatedAt                        string
 	UpdatedAt                        string
-	Tokens                           string
 	UserEthereumAddress              string
 	UserDeviceTokenID                string
 	TransferMetaTransactionRequestID string
@@ -81,10 +77,8 @@ var RewardColumns = struct {
 	DisconnectionStreak:              "disconnection_streak",
 	StreakPoints:                     "streak_points",
 	IntegrationIds:                   "integration_ids",
-	IntegrationPoints:                "integration_points",
 	CreatedAt:                        "created_at",
 	UpdatedAt:                        "updated_at",
-	Tokens:                           "tokens",
 	UserEthereumAddress:              "user_ethereum_address",
 	UserDeviceTokenID:                "user_device_token_id",
 	TransferMetaTransactionRequestID: "transfer_meta_transaction_request_id",
@@ -106,10 +100,8 @@ var RewardTableColumns = struct {
 	DisconnectionStreak              string
 	StreakPoints                     string
 	IntegrationIds                   string
-	IntegrationPoints                string
 	CreatedAt                        string
 	UpdatedAt                        string
-	Tokens                           string
 	UserEthereumAddress              string
 	UserDeviceTokenID                string
 	TransferMetaTransactionRequestID string
@@ -129,10 +121,8 @@ var RewardTableColumns = struct {
 	DisconnectionStreak:              "rewards.disconnection_streak",
 	StreakPoints:                     "rewards.streak_points",
 	IntegrationIds:                   "rewards.integration_ids",
-	IntegrationPoints:                "rewards.integration_points",
 	CreatedAt:                        "rewards.created_at",
 	UpdatedAt:                        "rewards.updated_at",
-	Tokens:                           "rewards.tokens",
 	UserEthereumAddress:              "rewards.user_ethereum_address",
 	UserDeviceTokenID:                "rewards.user_device_token_id",
 	TransferMetaTransactionRequestID: "rewards.transfer_meta_transaction_request_id",
@@ -241,10 +231,8 @@ var RewardWhere = struct {
 	DisconnectionStreak              whereHelperint
 	StreakPoints                     whereHelperint
 	IntegrationIds                   whereHelpertypes_StringArray
-	IntegrationPoints                whereHelperint
 	CreatedAt                        whereHelpertime_Time
 	UpdatedAt                        whereHelpertime_Time
-	Tokens                           whereHelpertypes_NullDecimal
 	UserEthereumAddress              whereHelpernull_String
 	UserDeviceTokenID                whereHelperint
 	TransferMetaTransactionRequestID whereHelpernull_String
@@ -264,10 +252,8 @@ var RewardWhere = struct {
 	DisconnectionStreak:              whereHelperint{field: "\"rewards_api\".\"rewards\".\"disconnection_streak\""},
 	StreakPoints:                     whereHelperint{field: "\"rewards_api\".\"rewards\".\"streak_points\""},
 	IntegrationIds:                   whereHelpertypes_StringArray{field: "\"rewards_api\".\"rewards\".\"integration_ids\""},
-	IntegrationPoints:                whereHelperint{field: "\"rewards_api\".\"rewards\".\"integration_points\""},
 	CreatedAt:                        whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"created_at\""},
 	UpdatedAt:                        whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
-	Tokens:                           whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"tokens\""},
 	UserEthereumAddress:              whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"user_ethereum_address\""},
 	UserDeviceTokenID:                whereHelperint{field: "\"rewards_api\".\"rewards\".\"user_device_token_id\""},
 	TransferMetaTransactionRequestID: whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_meta_transaction_request_id\""},
@@ -339,9 +325,9 @@ func (r *rewardR) GetTransferMetaTransactionRequest() *MetaTransactionRequest {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
-	rewardColumnsWithoutDefault = []string{"issuance_week_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points", "user_device_token_id"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "tokens", "user_ethereum_address", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
+	rewardAllColumns            = []string{"issuance_week_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "created_at", "updated_at", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
+	rewardColumnsWithoutDefault = []string{"issuance_week_id", "connection_streak", "disconnection_streak", "streak_points", "user_device_token_id"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "user_ethereum_address", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
 	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_token_id"}
 	rewardGeneratedColumns      = []string{}
 )

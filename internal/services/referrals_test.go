@@ -64,7 +64,6 @@ func TestReferrals(t *testing.T) {
 		Week             int
 		DeviceID         string
 		UserID           string
-		Earning          bool
 		ConnectionStreak int
 	}
 
@@ -87,10 +86,10 @@ func TestReferrals(t *testing.T) {
 				{ID: "User2", Address: mkAddr(2), Code: "2", CodeUsed: ""},
 			},
 			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 1},
-				{Week: 6, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 2},
-				{Week: 7, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 3},
-				{Week: 8, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 4},
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 1},
+				{Week: 6, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 2},
+				{Week: 7, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 3},
+				{Week: 8, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 4},
 			},
 			Referrals: []Referral{
 				{Referee: mkAddr(1), Referrer: mkAddr(2)},
@@ -105,10 +104,10 @@ func TestReferrals(t *testing.T) {
 				{ID: "User1", Address: mkAddr(1), Code: "1", CodeUsed: ""},
 			},
 			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 1},
-				{Week: 6, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 2},
-				{Week: 7, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 3},
-				{Week: 8, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 4},
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 1},
+				{Week: 6, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 2},
+				{Week: 7, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 3},
+				{Week: 8, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 4},
 			},
 			Referrals: []Referral{},
 		},
@@ -122,10 +121,10 @@ func TestReferrals(t *testing.T) {
 				{ID: "User2", Address: mkAddr(1), Code: "2", CodeUsed: ""},
 			},
 			Rewards: []Reward{
-				{Week: 5, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 1},
-				{Week: 6, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 2},
-				{Week: 7, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 3},
-				{Week: 8, DeviceID: "Dev1", UserID: "User1", Earning: true, ConnectionStreak: 4},
+				{Week: 5, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 1},
+				{Week: 6, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 2},
+				{Week: 7, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 3},
+				{Week: 8, DeviceID: "Dev1", UserID: "User1", ConnectionStreak: 4},
 			},
 			Referrals: []Referral{},
 		},
@@ -155,9 +154,7 @@ func TestReferrals(t *testing.T) {
 					IssuanceWeekID:   lst.Week,
 					ConnectionStreak: lst.ConnectionStreak,
 				}
-				if lst.Earning {
-					r.Tokens = types.NewNullDecimal(decimal.New(100, 0))
-				}
+
 				for _, u := range scen.Users {
 					if u.ID == lst.UserID {
 						r.UserEthereumAddress = null.StringFrom(u.Address.Hex())
