@@ -26,8 +26,6 @@ import (
 // Reward is an object representing the database table.
 type Reward struct {
 	IssuanceWeekID                   int               `boil:"issuance_week_id" json:"issuance_week_id" toml:"issuance_week_id" yaml:"issuance_week_id"`
-	UserDeviceID                     string            `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
-	UserID                           string            `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
 	ConnectionStreak                 int               `boil:"connection_streak" json:"connection_streak" toml:"connection_streak" yaml:"connection_streak"`
 	DisconnectionStreak              int               `boil:"disconnection_streak" json:"disconnection_streak" toml:"disconnection_streak" yaml:"disconnection_streak"`
 	StreakPoints                     int               `boil:"streak_points" json:"streak_points" toml:"streak_points" yaml:"streak_points"`
@@ -37,7 +35,7 @@ type Reward struct {
 	UpdatedAt                        time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	Tokens                           types.NullDecimal `boil:"tokens" json:"tokens,omitempty" toml:"tokens" yaml:"tokens,omitempty"`
 	UserEthereumAddress              null.String       `boil:"user_ethereum_address" json:"user_ethereum_address,omitempty" toml:"user_ethereum_address" yaml:"user_ethereum_address,omitempty"`
-	UserDeviceTokenID                types.NullDecimal `boil:"user_device_token_id" json:"user_device_token_id,omitempty" toml:"user_device_token_id" yaml:"user_device_token_id,omitempty"`
+	UserDeviceTokenID                int               `boil:"user_device_token_id" json:"user_device_token_id" toml:"user_device_token_id" yaml:"user_device_token_id"`
 	TransferMetaTransactionRequestID null.String       `boil:"transfer_meta_transaction_request_id" json:"transfer_meta_transaction_request_id,omitempty" toml:"transfer_meta_transaction_request_id" yaml:"transfer_meta_transaction_request_id,omitempty"`
 	TransferSuccessful               null.Bool         `boil:"transfer_successful" json:"transfer_successful,omitempty" toml:"transfer_successful" yaml:"transfer_successful,omitempty"`
 	TransferFailureReason            null.String       `boil:"transfer_failure_reason" json:"transfer_failure_reason,omitempty" toml:"transfer_failure_reason" yaml:"transfer_failure_reason,omitempty"`
@@ -56,8 +54,6 @@ type Reward struct {
 
 var RewardColumns = struct {
 	IssuanceWeekID                   string
-	UserDeviceID                     string
-	UserID                           string
 	ConnectionStreak                 string
 	DisconnectionStreak              string
 	StreakPoints                     string
@@ -81,8 +77,6 @@ var RewardColumns = struct {
 	StreakTokens                     string
 }{
 	IssuanceWeekID:                   "issuance_week_id",
-	UserDeviceID:                     "user_device_id",
-	UserID:                           "user_id",
 	ConnectionStreak:                 "connection_streak",
 	DisconnectionStreak:              "disconnection_streak",
 	StreakPoints:                     "streak_points",
@@ -108,8 +102,6 @@ var RewardColumns = struct {
 
 var RewardTableColumns = struct {
 	IssuanceWeekID                   string
-	UserDeviceID                     string
-	UserID                           string
 	ConnectionStreak                 string
 	DisconnectionStreak              string
 	StreakPoints                     string
@@ -133,8 +125,6 @@ var RewardTableColumns = struct {
 	StreakTokens                     string
 }{
 	IssuanceWeekID:                   "rewards.issuance_week_id",
-	UserDeviceID:                     "rewards.user_device_id",
-	UserID:                           "rewards.user_id",
 	ConnectionStreak:                 "rewards.connection_streak",
 	DisconnectionStreak:              "rewards.disconnection_streak",
 	StreakPoints:                     "rewards.streak_points",
@@ -247,8 +237,6 @@ func (w whereHelpernull_Int) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNo
 
 var RewardWhere = struct {
 	IssuanceWeekID                   whereHelperint
-	UserDeviceID                     whereHelperstring
-	UserID                           whereHelperstring
 	ConnectionStreak                 whereHelperint
 	DisconnectionStreak              whereHelperint
 	StreakPoints                     whereHelperint
@@ -258,7 +246,7 @@ var RewardWhere = struct {
 	UpdatedAt                        whereHelpertime_Time
 	Tokens                           whereHelpertypes_NullDecimal
 	UserEthereumAddress              whereHelpernull_String
-	UserDeviceTokenID                whereHelpertypes_NullDecimal
+	UserDeviceTokenID                whereHelperint
 	TransferMetaTransactionRequestID whereHelpernull_String
 	TransferSuccessful               whereHelpernull_Bool
 	TransferFailureReason            whereHelpernull_String
@@ -272,8 +260,6 @@ var RewardWhere = struct {
 	StreakTokens                     whereHelpertypes_NullDecimal
 }{
 	IssuanceWeekID:                   whereHelperint{field: "\"rewards_api\".\"rewards\".\"issuance_week_id\""},
-	UserDeviceID:                     whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_device_id\""},
-	UserID:                           whereHelperstring{field: "\"rewards_api\".\"rewards\".\"user_id\""},
 	ConnectionStreak:                 whereHelperint{field: "\"rewards_api\".\"rewards\".\"connection_streak\""},
 	DisconnectionStreak:              whereHelperint{field: "\"rewards_api\".\"rewards\".\"disconnection_streak\""},
 	StreakPoints:                     whereHelperint{field: "\"rewards_api\".\"rewards\".\"streak_points\""},
@@ -283,7 +269,7 @@ var RewardWhere = struct {
 	UpdatedAt:                        whereHelpertime_Time{field: "\"rewards_api\".\"rewards\".\"updated_at\""},
 	Tokens:                           whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"tokens\""},
 	UserEthereumAddress:              whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"user_ethereum_address\""},
-	UserDeviceTokenID:                whereHelpertypes_NullDecimal{field: "\"rewards_api\".\"rewards\".\"user_device_token_id\""},
+	UserDeviceTokenID:                whereHelperint{field: "\"rewards_api\".\"rewards\".\"user_device_token_id\""},
 	TransferMetaTransactionRequestID: whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_meta_transaction_request_id\""},
 	TransferSuccessful:               whereHelpernull_Bool{field: "\"rewards_api\".\"rewards\".\"transfer_successful\""},
 	TransferFailureReason:            whereHelpernull_String{field: "\"rewards_api\".\"rewards\".\"transfer_failure_reason\""},
@@ -353,10 +339,10 @@ func (r *rewardR) GetTransferMetaTransactionRequest() *MetaTransactionRequest {
 type rewardL struct{}
 
 var (
-	rewardAllColumns            = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
-	rewardColumnsWithoutDefault = []string{"issuance_week_id", "user_device_id", "user_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points"}
-	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
-	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_id"}
+	rewardAllColumns            = []string{"issuance_week_id", "connection_streak", "disconnection_streak", "streak_points", "integration_ids", "integration_points", "created_at", "updated_at", "tokens", "user_ethereum_address", "user_device_token_id", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
+	rewardColumnsWithoutDefault = []string{"issuance_week_id", "connection_streak", "disconnection_streak", "streak_points", "integration_points", "user_device_token_id"}
+	rewardColumnsWithDefault    = []string{"integration_ids", "created_at", "updated_at", "tokens", "user_ethereum_address", "transfer_meta_transaction_request_id", "transfer_successful", "transfer_failure_reason", "aftermarket_token_id", "rewards_receiver_ethereum_address", "synthetic_device_id", "aftermarket_device_points", "synthetic_device_points", "aftermarket_device_tokens", "synthetic_device_tokens", "streak_tokens"}
+	rewardPrimaryKeyColumns     = []string{"issuance_week_id", "user_device_token_id"}
 	rewardGeneratedColumns      = []string{}
 )
 
@@ -947,7 +933,7 @@ func (o *Reward) SetIssuanceWeek(ctx context.Context, exec boil.ContextExecutor,
 		strmangle.SetParamNames("\"", "\"", 1, []string{"issuance_week_id"}),
 		strmangle.WhereClause("\"", "\"", 2, rewardPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.IssuanceWeekID, o.UserDeviceID}
+	values := []interface{}{related.ID, o.IssuanceWeekID, o.UserDeviceTokenID}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -994,7 +980,7 @@ func (o *Reward) SetTransferMetaTransactionRequest(ctx context.Context, exec boi
 		strmangle.SetParamNames("\"", "\"", 1, []string{"transfer_meta_transaction_request_id"}),
 		strmangle.WhereClause("\"", "\"", 2, rewardPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.IssuanceWeekID, o.UserDeviceID}
+	values := []interface{}{related.ID, o.IssuanceWeekID, o.UserDeviceTokenID}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1071,7 +1057,7 @@ func Rewards(mods ...qm.QueryMod) rewardQuery {
 
 // FindReward retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindReward(ctx context.Context, exec boil.ContextExecutor, issuanceWeekID int, userDeviceID string, selectCols ...string) (*Reward, error) {
+func FindReward(ctx context.Context, exec boil.ContextExecutor, issuanceWeekID int, userDeviceTokenID int, selectCols ...string) (*Reward, error) {
 	rewardObj := &Reward{}
 
 	sel := "*"
@@ -1079,10 +1065,10 @@ func FindReward(ctx context.Context, exec boil.ContextExecutor, issuanceWeekID i
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"rewards_api\".\"rewards\" where \"issuance_week_id\"=$1 AND \"user_device_id\"=$2", sel,
+		"select %s from \"rewards_api\".\"rewards\" where \"issuance_week_id\"=$1 AND \"user_device_token_id\"=$2", sel,
 	)
 
-	q := queries.Raw(query, issuanceWeekID, userDeviceID)
+	q := queries.Raw(query, issuanceWeekID, userDeviceTokenID)
 
 	err := q.Bind(ctx, exec, rewardObj)
 	if err != nil {
@@ -1464,7 +1450,7 @@ func (o *Reward) Delete(ctx context.Context, exec boil.ContextExecutor) (int64, 
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), rewardPrimaryKeyMapping)
-	sql := "DELETE FROM \"rewards_api\".\"rewards\" WHERE \"issuance_week_id\"=$1 AND \"user_device_id\"=$2"
+	sql := "DELETE FROM \"rewards_api\".\"rewards\" WHERE \"issuance_week_id\"=$1 AND \"user_device_token_id\"=$2"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1561,7 +1547,7 @@ func (o RewardSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) (
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *Reward) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindReward(ctx, exec, o.IssuanceWeekID, o.UserDeviceID)
+	ret, err := FindReward(ctx, exec, o.IssuanceWeekID, o.UserDeviceTokenID)
 	if err != nil {
 		return err
 	}
@@ -1600,16 +1586,16 @@ func (o *RewardSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) 
 }
 
 // RewardExists checks if the Reward row exists.
-func RewardExists(ctx context.Context, exec boil.ContextExecutor, issuanceWeekID int, userDeviceID string) (bool, error) {
+func RewardExists(ctx context.Context, exec boil.ContextExecutor, issuanceWeekID int, userDeviceTokenID int) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"rewards_api\".\"rewards\" where \"issuance_week_id\"=$1 AND \"user_device_id\"=$2 limit 1)"
+	sql := "select exists(select 1 from \"rewards_api\".\"rewards\" where \"issuance_week_id\"=$1 AND \"user_device_token_id\"=$2 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, issuanceWeekID, userDeviceID)
+		fmt.Fprintln(writer, issuanceWeekID, userDeviceTokenID)
 	}
-	row := exec.QueryRowContext(ctx, sql, issuanceWeekID, userDeviceID)
+	row := exec.QueryRowContext(ctx, sql, issuanceWeekID, userDeviceTokenID)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -1621,5 +1607,5 @@ func RewardExists(ctx context.Context, exec boil.ContextExecutor, issuanceWeekID
 
 // Exists checks if the Reward row exists.
 func (o *Reward) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return RewardExists(ctx, exec, o.IssuanceWeekID, o.UserDeviceID)
+	return RewardExists(ctx, exec, o.IssuanceWeekID, o.UserDeviceTokenID)
 }

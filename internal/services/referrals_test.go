@@ -153,8 +153,6 @@ func TestReferrals(t *testing.T) {
 
 				r := models.Reward{
 					IssuanceWeekID:   lst.Week,
-					UserDeviceID:     lst.DeviceID,
-					UserID:           lst.UserID,
 					ConnectionStreak: lst.ConnectionStreak,
 				}
 				if lst.Earning {
@@ -167,7 +165,7 @@ func TestReferrals(t *testing.T) {
 				}
 				for _, d := range scen.Devices {
 					if d.ID == lst.DeviceID {
-						r.UserDeviceTokenID = types.NewNullDecimal(decimal.New(int64(d.TokenID), 0))
+						r.UserDeviceTokenID = d.TokenID
 					}
 				}
 
