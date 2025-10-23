@@ -51,7 +51,7 @@ type maxWeek struct {
 func (s *rewardsService) GetTotalPoints(ctx context.Context, _ *emptypb.Empty) (*pb.GetTotalPointsResponse, error) {
 	tp := new(totalResp)
 	query := models.NewQuery(
-		qm.Select("sum("+models.RewardColumns.StreakPoints+" + "+models.RewardColumns.IntegrationPoints+") as total_points"),
+		qm.Select("sum("+models.RewardColumns.StreakPoints+" + "+models.RewardColumns.AftermarketDevicePoints+" + "+models.RewardColumns.SyntheticDevicePoints+") as total_points"),
 		qm.From(models.TableNames.Rewards),
 	)
 	if err := query.Bind(ctx, s.dbs.DBS().Reader, tp); err != nil {
