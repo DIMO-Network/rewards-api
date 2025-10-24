@@ -79,6 +79,7 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 		qmhelper.Where("timestamp", qmhelper.LT, end),
 		qm.WhereNotIn("name NOT IN ?", constantSignals...),
 		qm.GroupBy("token_id"),
+		qm.OrderBy("token_id DESC"),
 	)
 	query, args := queries.BuildQuery(q)
 	rows, err := s.conn.Query(ctx, query, args...)

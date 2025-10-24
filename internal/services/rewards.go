@@ -8,7 +8,6 @@ import (
 	"slices"
 	"time"
 
-	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/constants"
@@ -28,14 +27,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type BaselineClient struct {
 	TransferService    *TransferService
 	DataService        DeviceActivityClient
 	DevicesClient      DevicesClient
-	DefsClient         IntegrationsGetter
 	ContractAddress    common.Address
 	Week               int
 	Logger             *zerolog.Logger
@@ -52,10 +49,6 @@ type DeviceActivityClient interface {
 	DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*ch.Vehicle, error)
 }
 
-type IntegrationsGetter interface {
-	GetIntegrations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*pb_defs.GetIntegrationResponse, error)
-}
-
 type DevicesClient interface {
 	GetVehicleByTokenIdFast(ctx context.Context, in *pb_devices.GetVehicleByTokenIdFastRequest, opts ...grpc.CallOption) (*pb_devices.GetVehicleByTokenIdFastResponse, error)
 }
@@ -65,21 +58,21 @@ func NewBaselineRewardService(
 	transferService *TransferService,
 	dataService DeviceActivityClient,
 	devicesClient DevicesClient,
-	defsClient IntegrationsGetter,
 	stakeChecker IdentityClient,
 	week int,
 	logger *zerolog.Logger,
+	teslaOracle pb_tesla.TeslaOracleClient,
 ) *BaselineClient {
 	return &BaselineClient{
 		TransferService:    transferService,
 		DataService:        dataService,
 		DevicesClient:      devicesClient,
-		DefsClient:         defsClient,
 		ContractAddress:    common.HexToAddress(settings.IssuanceContractAddress),
 		Week:               week,
 		Logger:             logger,
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
 		IdentityClient:     stakeChecker,
+		teslaOracle:        teslaOracle,
 	}
 }
 
@@ -125,24 +118,6 @@ func (t *BaselineClient) assignPoints() error {
 
 	t.Logger.Info().Msgf("Activity query took %s.", time.Since(activityQueryStart))
 
-	allIntegrations, err := t.DefsClient.GetIntegrations(ctx, &emptypb.Empty{})
-	if err != nil {
-		return err
-	}
-
-	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
-	swIntegrsByTokenID := make(map[uint64]*pb_defs.Integration)
-
-	for _, integr := range allIntegrations.Integrations {
-		if integr.ManufacturerTokenId == 0 {
-			// Must be a software integration.
-			swIntegrsByTokenID[integr.TokenId] = integr
-		} else {
-			// Must be the integration associated with a manufacturer.
-			amMfrTokenToIntegration[integr.ManufacturerTokenId] = integr
-		}
-	}
-
 	lastWeekRewards, err := models.Rewards(models.RewardWhere.IssuanceWeekID.EQ(issuanceWeek-1)).All(ctx, t.TransferService.db.DBS().Reader)
 	if err != nil {
 		return err
@@ -160,6 +135,7 @@ func (t *BaselineClient) assignPoints() error {
 		if err != nil {
 			if errors.Is(err, identity.ErrNotFound) {
 				logger.Info().Msg("Vehicle was active during the week but was later deleted.")
+				continue
 			}
 			return fmt.Errorf("failed to describe vehicle %d: %w", device.TokenID, err)
 		}
@@ -190,7 +166,7 @@ func (t *BaselineClient) assignPoints() error {
 				thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(ad.Beneficiary.Hex())
 
 				if vd.Owner != ad.Beneficiary {
-					logger.Info().Msgf("Sending tokens to beneficiary %s.")
+					logger.Info().Msgf("Sending tokens to beneficiary %s.", ad.Beneficiary)
 				}
 
 				thisWeek.AftermarketTokenID = types.NewNullDecimal(decimal.New(int64(ad.TokenID), 0)) //new(decimal.Big).SetUint64(uint64(ad.TokenID)))

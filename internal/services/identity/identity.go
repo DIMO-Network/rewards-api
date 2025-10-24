@@ -222,7 +222,7 @@ func (c *Client) DescribeVehicle(vehicleID uint64) (*VehicleDescription, error) 
 			oneError := resBody.Errors[0]
 			if slices.Equal([]string{"vehicle"}, oneError.Path) && oneError.Extensions.Code == "NOT_FOUND" {
 				// This is actually kinda bad. Why can't we find the vehicle?
-				return nil, err
+				return nil, ErrNotFound
 			}
 		}
 

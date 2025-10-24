@@ -17,7 +17,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/pkg/db"
-	"github.com/DIMO-Network/shared/pkg/set"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -117,9 +116,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		// If the vehicle has no signals this week then this will return the
 		// nil slice and everything is fine.
-		vehicleIntegsWithSignals := sourcesByTokenID[uint64(device.TokenID)]
+		// vehicleIntegsWithSignals := sourcesByTokenID[uint64(device.TokenID)]
 
-		integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
+		// integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
 
 		if ad := device.AftermarketDevice; ad != nil {
 			conn, ok := constants.ConnsByMfrId[ad.Manufacturer.TokenID]
@@ -153,10 +152,10 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					OnChainPairingStatus: "Paired",
 				}
 
-				if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
-					uri.Points = int(integr.Points)
-					uri.DataThisWeek = true
-				}
+				// if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
+				// 	uri.Points = int(integr.Points)
+				// 	uri.DataThisWeek = true
+				// }
 
 				outInts = append(outInts, uri)
 			}
@@ -214,7 +213,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			Level:                *getLevelResp(lvl),
 			Minted:               true,
 			OptedIn:              true,
-			VINConfirmed:         device.VinConfirmed,
+			// VINConfirmed:         device.VinConfirmed,
 		})
 	}
 

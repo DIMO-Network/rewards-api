@@ -97,7 +97,7 @@ func (c *CHTestSuite) Test_DescribeActiveDevices() {
 
 	vehicleIDToIntegrations := make(map[int64][]string)
 	for _, r := range resp {
-		vehicleIDToIntegrations[r.TokenID] = r.Integrations
+		vehicleIDToIntegrations[r.TokenID] = r.Sources
 	}
 
 	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
@@ -113,7 +113,7 @@ func (c *CHTestSuite) Test_GetIntegrations() {
 
 	vehicleIDToIntegrations := make(map[int64][]string)
 	for _, r := range resp {
-		vehicleIDToIntegrations[r.TokenID] = r.Integrations
+		vehicleIDToIntegrations[r.TokenID] = r.Sources
 	}
 
 	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})

@@ -52,7 +52,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 		{
 			name: "Single confirmed vehicle",
 			vehicles: []*ch.Vehicle{
-				{TokenID: 1, Integrations: []string{"integration1"}},
+				{TokenID: 1, Sources: []string{"integration1"}},
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// Create valid credential
@@ -77,8 +77,8 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 		{
 			name: "Multiple vehicles, one confirmed",
 			vehicles: []*ch.Vehicle{
-				{TokenID: 1, Integrations: []string{"integration1"}},
-				{TokenID: 2, Integrations: []string{"integration2"}},
+				{TokenID: 1, Sources: []string{"integration1"}},
+				{TokenID: 2, Sources: []string{"integration2"}},
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// First vehicle has valid VC
@@ -123,8 +123,8 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 		{
 			name: "Duplicate VINs",
 			vehicles: []*ch.Vehicle{
-				{TokenID: 1, Integrations: []string{"integration1"}},
-				{TokenID: 2, Integrations: []string{"integration2"}},
+				{TokenID: 1, Sources: []string{"integration1"}},
+				{TokenID: 2, Sources: []string{"integration2"}},
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// Both vehicles point to same VIN
@@ -159,8 +159,8 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 		{
 			name: "Duplicate VINs Same RecordedAt",
 			vehicles: []*ch.Vehicle{
-				{TokenID: 1, Integrations: []string{"integration1"}},
-				{TokenID: 2, Integrations: []string{"integration2"}},
+				{TokenID: 1, Sources: []string{"integration1"}},
+				{TokenID: 2, Sources: []string{"integration2"}},
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// Both vehicles point to same VIN
@@ -190,7 +190,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 		{
 			name: "Fetch API not found error",
 			vehicles: []*ch.Vehicle{
-				{TokenID: 1, Integrations: []string{"integration1"}},
+				{TokenID: 1, Sources: []string{"integration1"}},
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				m.EXPECT().
@@ -202,7 +202,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 		{
 			name: "Invalid credential JSON",
 			vehicles: []*ch.Vehicle{
-				{TokenID: 1, Integrations: []string{"integration1"}},
+				{TokenID: 1, Sources: []string{"integration1"}},
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// Return invalid JSON data
@@ -223,7 +223,7 @@ func TestGetConfirmedVINVCs(t *testing.T) {
 		{
 			name: "Empty VIN",
 			vehicles: []*ch.Vehicle{
-				{TokenID: 1, Integrations: []string{"integration1"}},
+				{TokenID: 1, Sources: []string{"integration1"}},
 			},
 			setupMock: func(m *MockFetchAPIService) {
 				// Create credential with empty VIN
