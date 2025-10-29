@@ -38,7 +38,7 @@ type BaselineClient struct {
 	Logger             *zerolog.Logger
 	FirstAutomatedWeek int
 	IdentityClient     IdentityClient
-	teslaOracle        pb_tesla.TeslaOracleClient
+	teslaOracle        TeslaClient
 }
 
 type IdentityClient interface {
@@ -53,6 +53,10 @@ type DevicesClient interface {
 	GetVehicleByTokenIdFast(ctx context.Context, in *pb_devices.GetVehicleByTokenIdFastRequest, opts ...grpc.CallOption) (*pb_devices.GetVehicleByTokenIdFastResponse, error)
 }
 
+type TeslaClient interface {
+	GetVinByTokenId(ctx context.Context, in *pb_tesla.GetVinByTokenIdRequest, opts ...grpc.CallOption) (*pb_tesla.GetVinByTokenIdResponse, error)
+}
+
 func NewBaselineRewardService(
 	settings *config.Settings,
 	transferService *TransferService,
@@ -61,7 +65,7 @@ func NewBaselineRewardService(
 	stakeChecker IdentityClient,
 	week int,
 	logger *zerolog.Logger,
-	teslaOracle pb_tesla.TeslaOracleClient,
+	teslaOracle TeslaClient,
 ) *BaselineClient {
 	return &BaselineClient{
 		TransferService:    transferService,
@@ -139,15 +143,6 @@ func (t *BaselineClient) assignPoints() error {
 			}
 			return fmt.Errorf("failed to describe vehicle %d: %w", device.TokenID, err)
 		}
-
-		// ud, err := t.DevicesClient.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{TokenId: device.TokenID})
-		// if err != nil {
-		// 	if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-		// 		logger.Info().Msg("Device was active during the week but was later deleted.")
-		// 		continue
-		// 	}
-		// 	return err
-		// }
 
 		vOwner := vd.Owner
 
@@ -239,7 +234,7 @@ func (t *BaselineClient) assignPoints() error {
 		streak := ComputeStreak(streakInput)
 
 		stakePoints := 0
-		if vd.Stake != nil {
+		if vd.Stake != nil && weekEnd.Before(vd.Stake.EndsAt) {
 			stakePoints = vd.Stake.Points
 			logger.Info().Msgf("Adding %d points from staking.", stakePoints)
 		}

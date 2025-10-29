@@ -14,90 +14,51 @@ import (
 	reflect "reflect"
 	time "time"
 
-	grpc "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
-	grpc0 "github.com/DIMO-Network/devices-api/pkg/grpc"
+	grpc "github.com/DIMO-Network/devices-api/pkg/grpc"
 	ch "github.com/DIMO-Network/rewards-api/internal/services/ch"
+	identity "github.com/DIMO-Network/rewards-api/internal/services/identity"
+	grpc0 "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
 	gomock "go.uber.org/mock/gomock"
 	grpc1 "google.golang.org/grpc"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
-// MockStakeChecker is a mock of StakeChecker interface.
-type MockStakeChecker struct {
+// MockIdentityClient is a mock of IdentityClient interface.
+type MockIdentityClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockStakeCheckerMockRecorder
+	recorder *MockIdentityClientMockRecorder
 	isgomock struct{}
 }
 
-// MockStakeCheckerMockRecorder is the mock recorder for MockStakeChecker.
-type MockStakeCheckerMockRecorder struct {
-	mock *MockStakeChecker
+// MockIdentityClientMockRecorder is the mock recorder for MockIdentityClient.
+type MockIdentityClientMockRecorder struct {
+	mock *MockIdentityClient
 }
 
-// NewMockStakeChecker creates a new mock instance.
-func NewMockStakeChecker(ctrl *gomock.Controller) *MockStakeChecker {
-	mock := &MockStakeChecker{ctrl: ctrl}
-	mock.recorder = &MockStakeCheckerMockRecorder{mock}
+// NewMockIdentityClient creates a new mock instance.
+func NewMockIdentityClient(ctrl *gomock.Controller) *MockIdentityClient {
+	mock := &MockIdentityClient{ctrl: ctrl}
+	mock.recorder = &MockIdentityClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockStakeChecker) EXPECT() *MockStakeCheckerMockRecorder {
+func (m *MockIdentityClient) EXPECT() *MockIdentityClientMockRecorder {
 	return m.recorder
 }
 
-// GetVehicleStakePoints mocks base method.
-func (m *MockStakeChecker) GetVehicleStakePoints(vehicleID uint64) (int, error) {
+// DescribeVehicle mocks base method.
+func (m *MockIdentityClient) DescribeVehicle(vehicleID uint64) (*identity.VehicleDescription, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetVehicleStakePoints", vehicleID)
-	ret0, _ := ret[0].(int)
+	ret := m.ctrl.Call(m, "DescribeVehicle", vehicleID)
+	ret0, _ := ret[0].(*identity.VehicleDescription)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetVehicleStakePoints indicates an expected call of GetVehicleStakePoints.
-func (mr *MockStakeCheckerMockRecorder) GetVehicleStakePoints(vehicleID any) *gomock.Call {
+// DescribeVehicle indicates an expected call of DescribeVehicle.
+func (mr *MockIdentityClientMockRecorder) DescribeVehicle(vehicleID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVehicleStakePoints", reflect.TypeOf((*MockStakeChecker)(nil).GetVehicleStakePoints), vehicleID)
-}
-
-// MockVINVCService is a mock of VINVCService interface.
-type MockVINVCService struct {
-	ctrl     *gomock.Controller
-	recorder *MockVINVCServiceMockRecorder
-	isgomock struct{}
-}
-
-// MockVINVCServiceMockRecorder is the mock recorder for MockVINVCService.
-type MockVINVCServiceMockRecorder struct {
-	mock *MockVINVCService
-}
-
-// NewMockVINVCService creates a new mock instance.
-func NewMockVINVCService(ctrl *gomock.Controller) *MockVINVCService {
-	mock := &MockVINVCService{ctrl: ctrl}
-	mock.recorder = &MockVINVCServiceMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockVINVCService) EXPECT() *MockVINVCServiceMockRecorder {
-	return m.recorder
-}
-
-// GetConfirmedVINVCs mocks base method.
-func (m *MockVINVCService) GetConfirmedVINVCs(ctx context.Context, activeTokenIds []*ch.Vehicle, weekNum int) (map[int64]struct{}, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConfirmedVINVCs", ctx, activeTokenIds, weekNum)
-	ret0, _ := ret[0].(map[int64]struct{})
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetConfirmedVINVCs indicates an expected call of GetConfirmedVINVCs.
-func (mr *MockVINVCServiceMockRecorder) GetConfirmedVINVCs(ctx, activeTokenIds, weekNum any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfirmedVINVCs", reflect.TypeOf((*MockVINVCService)(nil).GetConfirmedVINVCs), ctx, activeTokenIds, weekNum)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVehicle", reflect.TypeOf((*MockIdentityClient)(nil).DescribeVehicle), vehicleID)
 }
 
 // MockDeviceActivityClient is a mock of DeviceActivityClient interface.
@@ -139,50 +100,6 @@ func (mr *MockDeviceActivityClientMockRecorder) DescribeActiveDevices(ctx, start
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeActiveDevices", reflect.TypeOf((*MockDeviceActivityClient)(nil).DescribeActiveDevices), ctx, start, end)
 }
 
-// MockIntegrationsGetter is a mock of IntegrationsGetter interface.
-type MockIntegrationsGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockIntegrationsGetterMockRecorder
-	isgomock struct{}
-}
-
-// MockIntegrationsGetterMockRecorder is the mock recorder for MockIntegrationsGetter.
-type MockIntegrationsGetterMockRecorder struct {
-	mock *MockIntegrationsGetter
-}
-
-// NewMockIntegrationsGetter creates a new mock instance.
-func NewMockIntegrationsGetter(ctrl *gomock.Controller) *MockIntegrationsGetter {
-	mock := &MockIntegrationsGetter{ctrl: ctrl}
-	mock.recorder = &MockIntegrationsGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockIntegrationsGetter) EXPECT() *MockIntegrationsGetterMockRecorder {
-	return m.recorder
-}
-
-// GetIntegrations mocks base method.
-func (m *MockIntegrationsGetter) GetIntegrations(ctx context.Context, in *emptypb.Empty, opts ...grpc1.CallOption) (*grpc.GetIntegrationResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, in}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetIntegrations", varargs...)
-	ret0, _ := ret[0].(*grpc.GetIntegrationResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetIntegrations indicates an expected call of GetIntegrations.
-func (mr *MockIntegrationsGetterMockRecorder) GetIntegrations(ctx, in any, opts ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, in}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIntegrations", reflect.TypeOf((*MockIntegrationsGetter)(nil).GetIntegrations), varargs...)
-}
-
 // MockDevicesClient is a mock of DevicesClient interface.
 type MockDevicesClient struct {
 	ctrl     *gomock.Controller
@@ -207,22 +124,66 @@ func (m *MockDevicesClient) EXPECT() *MockDevicesClientMockRecorder {
 	return m.recorder
 }
 
-// GetUserDeviceByTokenId mocks base method.
-func (m *MockDevicesClient) GetUserDeviceByTokenId(ctx context.Context, in *grpc0.GetUserDeviceByTokenIdRequest, opts ...grpc1.CallOption) (*grpc0.UserDevice, error) {
+// GetVehicleByTokenIdFast mocks base method.
+func (m *MockDevicesClient) GetVehicleByTokenIdFast(ctx context.Context, in *grpc.GetVehicleByTokenIdFastRequest, opts ...grpc1.CallOption) (*grpc.GetVehicleByTokenIdFastResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "GetUserDeviceByTokenId", varargs...)
-	ret0, _ := ret[0].(*grpc0.UserDevice)
+	ret := m.ctrl.Call(m, "GetVehicleByTokenIdFast", varargs...)
+	ret0, _ := ret[0].(*grpc.GetVehicleByTokenIdFastResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetUserDeviceByTokenId indicates an expected call of GetUserDeviceByTokenId.
-func (mr *MockDevicesClientMockRecorder) GetUserDeviceByTokenId(ctx, in any, opts ...any) *gomock.Call {
+// GetVehicleByTokenIdFast indicates an expected call of GetVehicleByTokenIdFast.
+func (mr *MockDevicesClientMockRecorder) GetVehicleByTokenIdFast(ctx, in any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, in}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserDeviceByTokenId", reflect.TypeOf((*MockDevicesClient)(nil).GetUserDeviceByTokenId), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVehicleByTokenIdFast", reflect.TypeOf((*MockDevicesClient)(nil).GetVehicleByTokenIdFast), varargs...)
+}
+
+// MockTeslaClient is a mock of TeslaClient interface.
+type MockTeslaClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockTeslaClientMockRecorder
+	isgomock struct{}
+}
+
+// MockTeslaClientMockRecorder is the mock recorder for MockTeslaClient.
+type MockTeslaClientMockRecorder struct {
+	mock *MockTeslaClient
+}
+
+// NewMockTeslaClient creates a new mock instance.
+func NewMockTeslaClient(ctrl *gomock.Controller) *MockTeslaClient {
+	mock := &MockTeslaClient{ctrl: ctrl}
+	mock.recorder = &MockTeslaClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockTeslaClient) EXPECT() *MockTeslaClientMockRecorder {
+	return m.recorder
+}
+
+// GetVinByTokenId mocks base method.
+func (m *MockTeslaClient) GetVinByTokenId(ctx context.Context, in *grpc0.GetVinByTokenIdRequest, opts ...grpc1.CallOption) (*grpc0.GetVinByTokenIdResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetVinByTokenId", varargs...)
+	ret0, _ := ret[0].(*grpc0.GetVinByTokenIdResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVinByTokenId indicates an expected call of GetVinByTokenId.
+func (mr *MockTeslaClientMockRecorder) GetVinByTokenId(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVinByTokenId", reflect.TypeOf((*MockTeslaClient)(nil).GetVinByTokenId), varargs...)
 }

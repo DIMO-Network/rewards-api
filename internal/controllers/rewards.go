@@ -1,11 +1,15 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
@@ -17,6 +21,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/pkg/db"
+	pb_tesla "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -32,6 +37,7 @@ type RewardsController struct {
 	DevicesClient     pb_devices.UserDeviceServiceClient
 	IdentClient       *identity.Client
 	Settings          *config.Settings
+	teslaOracle       TeslaClient
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -39,6 +45,10 @@ func getUserID(c *fiber.Ctx) string {
 	claims := token.Claims.(jwt.MapClaims)
 	userID := claims["sub"].(string)
 	return userID
+}
+
+type TeslaClient interface {
+	GetVinByTokenId(ctx context.Context, in *pb_tesla.GetVinByTokenIdRequest, opts ...grpc.CallOption) (*pb_tesla.GetVinByTokenIdResponse, error)
 }
 
 var zeroAddr common.Address
@@ -112,13 +122,9 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 	for _, device := range vehicleDescrs {
 		dlog := logger.With().Int("vehicleId", device.TokenID).Logger()
 
-		outInts := []UserResponseIntegration{}
+		outInts := []*UserResponseIntegration{}
 
-		// If the vehicle has no signals this week then this will return the
-		// nil slice and everything is fine.
-		// vehicleIntegsWithSignals := sourcesByTokenID[uint64(device.TokenID)]
-
-		// integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
+		var vin string
 
 		if ad := device.AftermarketDevice; ad != nil {
 			conn, ok := constants.ConnsByMfrId[ad.Manufacturer.TokenID]
@@ -131,14 +137,13 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					OnChainPairingStatus: "Paired",
 				}
 
-				// if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
-				// 	uri.Points = int(integr.Points)
-				// 	uri.DataThisWeek = true
-				// }
+				if slices.Contains(sourcesByTokenID[uint64(device.TokenID)], conn.Address.Hex()) {
+					uri.DataThisWeek = true
+					uri.Points = int(conn.Points)
+				}
 
-				outInts = append(outInts, uri)
+				outInts = append(outInts, &uri)
 			}
-
 		}
 
 		if sd := device.SyntheticDevice; sd != nil {
@@ -152,14 +157,46 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					OnChainPairingStatus: "Paired",
 				}
 
-				// if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
-				// 	uri.Points = int(integr.Points)
-				// 	uri.DataThisWeek = true
-				// }
+				if conn.LegacyVendor == "Tesla" {
+					vti, err := r.teslaOracle.GetVinByTokenId(c.Context(), &pb_tesla.GetVinByTokenIdRequest{TokenId: uint32(sd.TokenID)})
+					if err != nil {
+						if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+							logger.Error().Msg("Tesla has signals and is paired, but not in oracle.")
+						}
+						return fmt.Errorf("failed to grab Tesla: %w", err)
+					} else {
+						vin = vti.Vin
+					}
+				}
 
-				outInts = append(outInts, uri)
+				if slices.Contains(sourcesByTokenID[uint64(device.TokenID)], conn.Address.Hex()) {
+					uri.DataThisWeek = true
+					uri.Points = int(conn.Points)
+				}
+
+				outInts = append(outInts, &uri)
 			}
+		}
 
+		if vin == "" && len(outInts) != 0 {
+			vtf, err := r.DevicesClient.GetVehicleByTokenIdFast(c.Context(), &pb_devices.GetVehicleByTokenIdFastRequest{
+				TokenId: uint32(device.TokenID),
+			})
+			if err != nil {
+				if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+					logger.Error().Msg("Vehicle has signals and is paired, but not in devices-api.")
+				}
+				return fmt.Errorf("failed to grab vehicle: %w", err)
+			} else {
+				vin = vtf.Vin
+			}
+		}
+
+		if vin == "" {
+			for _, oi := range outInts {
+				oi.DataThisWeek = false
+				oi.Points = 0
+			}
 		}
 
 		rewards, err := models.Rewards(
@@ -205,7 +242,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			TokenID:              &tokTemp,
 			Points:               pts,
 			Tokens:               tkns,
-			ConnectedThisWeek:    slices.ContainsFunc(outInts, func(uri UserResponseIntegration) bool { return uri.Points > 0 }),
+			ConnectedThisWeek:    slices.ContainsFunc(outInts, func(uri *UserResponseIntegration) bool { return uri.Points > 0 }),
 			IntegrationsThisWeek: outInts,
 			LastActive:           nil, // Unused, we think.
 			ConnectionStreak:     connectionStreak,
@@ -275,7 +312,7 @@ type UserResponseDevice struct {
 	// week.
 	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
 	// IntegrationsThisWeek details the integrations we've seen active this week.
-	IntegrationsThisWeek []UserResponseIntegration `json:"integrationsThisWeek"`
+	IntegrationsThisWeek []*UserResponseIntegration `json:"integrationsThisWeek"`
 	// LastActive is the last time we saw activity from the vehicle.
 	LastActive *time.Time `json:"lastActive,omitempty" example:"2022-04-12T09:23:01Z"`
 	// ConnectionStreak is what we consider the streak of the device to be. This may not literally
