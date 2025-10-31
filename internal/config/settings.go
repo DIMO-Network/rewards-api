@@ -35,4 +35,5 @@ type Settings struct {
 	MobileAPIBaseURL           string          `yaml:"MOBILE_API_BASE_URL"`
 	StorageNodeDevLicense      common.Address  `yaml:"STORAGE_NODE_DEV_LICENSE"`
 	VINVCConcurrencyLimit      int             `yaml:"VINVC_CONCURRENCY_LIMIT"`
+	TeslaOracleGRPCAddr        string          `yaml:"TESLA_ORACLE_GRPC_ADDR"`
 }

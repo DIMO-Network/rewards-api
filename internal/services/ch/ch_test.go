@@ -18,25 +18,18 @@ type CHTestSuite struct {
 	container *container.Container
 }
 
-var Integrations = struct {
-	Macaron  string
-	AutoPi   string
-	Smartcar string
-	Tesla    string
-	Ruptela  string
-}{
-	"2ULfuC8U9dOqRshZBAi0lMM1Rrx", // Macaron
-	"27qftVRWQYpVDcO5DltO5Ojbjxk", // AutoPi
-	"22N2xaPOq2WW2gAHBHd0Ikn4Zob", // Smartcar
-	"26A5Dk3vvvQutjSyF0Jka2DP5lg", // Tesla
-	"2lcaMFuCO0HJIUfdq8o780Kx5n3", // Ruptela
-}
-
 func TestCHService(t *testing.T) {
 	suite.Run(t, new(CHTestSuite))
 }
 
 const day = 24 * time.Hour
+
+const (
+	macaron = "0x4c674ddE8189aEF6e3b58F5a36d7438b2b1f6Bc2"
+	tesla   = "0xc4035Fecb1cc906130423EF05f9C20977F643722"
+	autoPi  = "0x5e31bBc786D7bEd95216383787deA1ab0f1c1897"
+	ruptela = "0xF26421509Efe92861a587482100c6d728aBf1CD0"
+)
 
 var weekEnd = time.Date(2024, 10, 14, 5, 0, 0, 0, time.UTC)
 
@@ -62,14 +55,15 @@ func (c *CHTestSuite) SetupSuite() {
 		c.Require().NoError(err)
 	}
 
-	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
-	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 65})
-	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-day), Name: "xdd", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 10.2})
-	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-2 * day), Name: "xdd2", Source: "dimo/integration/" + Integrations.Macaron, ValueNumber: 10.55})
-	mustAppend(&vss.Signal{TokenID: 5, Timestamp: weekEnd.Add(-3 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
-	mustAppend(&vss.Signal{TokenID: 7, Timestamp: weekEnd.Add(-10 * day), Name: "xdd3", Source: "dimo/integration/" + Integrations.Tesla, ValueNumber: 10.55})
-	mustAppend(&vss.Signal{TokenID: 11, Timestamp: weekEnd.Add(-4 * day), Name: "xdd", Source: "0xF26421509Efe92861a587482100c6d728aBf1CD0", ValueNumber: 7.5})
-	mustAppend(&vss.Signal{TokenID: 13, Timestamp: weekEnd.Add(-3 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: "dimo/integration/" + Integrations.Smartcar, ValueNumber: 75.0})
+	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-10 * day), Name: "xdd", Source: ruptela, ValueNumber: 10.2})
+	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-11 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: tesla, ValueNumber: 65})
+	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-day), Name: "xdd", Source: ruptela, ValueNumber: 10.2})
+	mustAppend(&vss.Signal{TokenID: 3, Timestamp: weekEnd.Add(-2 * day), Name: "xdd2", Source: ruptela, ValueNumber: 10.55})
+	mustAppend(&vss.Signal{TokenID: 5, Timestamp: weekEnd.Add(-3 * day), Name: "xdd3", Source: tesla, ValueNumber: 10.55})
+	mustAppend(&vss.Signal{TokenID: 5, Timestamp: weekEnd.Add(-4 * day), Name: "xdd3", Source: ruptela, ValueNumber: 11.55})
+	mustAppend(&vss.Signal{TokenID: 7, Timestamp: weekEnd.Add(-10 * day), Name: "xdd3", Source: tesla, ValueNumber: 10.55})
+	mustAppend(&vss.Signal{TokenID: 11, Timestamp: weekEnd.Add(-4 * day), Name: "xdd", Source: macaron, ValueNumber: 7.5})
+	mustAppend(&vss.Signal{TokenID: 13, Timestamp: weekEnd.Add(-3 * day), Name: "powertrainTractionBatteryGrossCapacity", Source: ruptela, ValueNumber: 75.0})
 
 	c.Require().NoError(err, "Failed to append struct")
 
@@ -97,25 +91,25 @@ func (c *CHTestSuite) Test_DescribeActiveDevices() {
 
 	vehicleIDToIntegrations := make(map[int64][]string)
 	for _, r := range resp {
-		vehicleIDToIntegrations[r.TokenID] = r.Integrations
+		vehicleIDToIntegrations[r.TokenID] = r.Sources
 	}
 
-	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
-	c.Require().ElementsMatch(vehicleIDToIntegrations[5], []string{Integrations.Tesla})
-	c.Require().ElementsMatch(vehicleIDToIntegrations[11], []string{Integrations.Ruptela})
+	c.Require().ElementsMatch([]string{ruptela}, vehicleIDToIntegrations[3], "Mismatch for vehicle 3.")
+	c.Require().ElementsMatch([]string{tesla, ruptela}, vehicleIDToIntegrations[5], "Mismatch for vehicle 5.")
+	c.Require().ElementsMatch([]string{macaron}, vehicleIDToIntegrations[11], "Mismatch for vehicle 11.")
 }
 
 func (c *CHTestSuite) Test_GetIntegrations() {
-	resp, err := c.chClient.GetIntegrationsForVehicles(context.TODO(), []uint64{3, 7, 11, 13}, weekEnd.Add(-7*day), weekEnd)
+	resp, err := c.chClient.GetSourcesForVehicles(context.TODO(), []uint64{3, 7, 11, 13}, weekEnd.Add(-7*day), weekEnd)
 	c.Require().NoError(err)
 
 	c.Len(resp, 2)
 
 	vehicleIDToIntegrations := make(map[int64][]string)
 	for _, r := range resp {
-		vehicleIDToIntegrations[r.TokenID] = r.Integrations
+		vehicleIDToIntegrations[r.TokenID] = r.Sources
 	}
 
-	c.Require().ElementsMatch(vehicleIDToIntegrations[3], []string{Integrations.Smartcar, Integrations.Macaron})
-	c.Require().ElementsMatch(vehicleIDToIntegrations[11], []string{Integrations.Ruptela})
+	c.Require().ElementsMatch([]string{ruptela}, vehicleIDToIntegrations[3], "Mismatch for vehicle 3.")
+	c.Require().ElementsMatch([]string{macaron}, vehicleIDToIntegrations[11], "Mismatch for vehicle 5.")
 }
