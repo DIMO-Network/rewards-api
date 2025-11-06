@@ -9,7 +9,6 @@ require (
 	github.com/DIMO-Network/attestation-api v0.1.9
 	github.com/DIMO-Network/clickhouse-infra v0.0.7
 	github.com/DIMO-Network/cloudevent v0.1.4
-	github.com/DIMO-Network/device-definitions-api v1.5.8
 	github.com/DIMO-Network/devices-api v1.41.8
 	github.com/DIMO-Network/fetch-api v0.0.14
 	github.com/DIMO-Network/model-garage v0.7.4
@@ -51,6 +50,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/ClickHouse/ch-go v0.68.0 // indirect
 	github.com/DIMO-Network/yaml v0.1.0 // indirect
+	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
@@ -195,6 +195,7 @@ require (
 	golang.org/x/net v0.45.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250908214217-97024824d090 // indirect
