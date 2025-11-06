@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/constants"
@@ -30,14 +29,13 @@ import (
 )
 
 type RewardsController struct {
-	DB                db.Store
-	Logger            *zerolog.Logger
-	ChClient          *ch.Client
-	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
-	DevicesClient     pb_devices.UserDeviceServiceClient
-	IdentClient       *identity.Client
-	Settings          *config.Settings
-	TeslaOracle       TeslaClient
+	DB            db.Store
+	Logger        *zerolog.Logger
+	ChClient      *ch.Client
+	DevicesClient pb_devices.UserDeviceServiceClient
+	IdentClient   *identity.Client
+	Settings      *config.Settings
+	TeslaOracle   TeslaClient
 }
 
 func getUserID(c *fiber.Ctx) string {

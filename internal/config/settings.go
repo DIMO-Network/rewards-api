@@ -14,8 +14,6 @@ type Settings struct {
 	DB                         db.Settings     `yaml:"DB"`
 	JWTKeySetURL               string          `yaml:"JWT_KEY_SET_URL"`
 	GRPCPort                   string          `yaml:"GRPC_PORT"`
-	DevicesAPIGRPCAddr         string          `yaml:"DEVICES_API_GRPC_ADDR"`
-	DefinitionsAPIGRPCAddr     string          `yaml:"DEFINITIONS_API_GRPC_ADDR"`
 	FetchAPIGRPCAddr           string          `yaml:"FETCH_API_GRPC_ADDR"`
 	KafkaBrokers               string          `yaml:"KAFKA_BROKERS"`
 	MetaTransactionSendTopic   string          `yaml:"META_TRANSACTION_SEND_TOPIC"`
@@ -35,5 +33,8 @@ type Settings struct {
 	MobileAPIBaseURL           string          `yaml:"MOBILE_API_BASE_URL"`
 	StorageNodeDevLicense      common.Address  `yaml:"STORAGE_NODE_DEV_LICENSE"`
 	VINVCConcurrencyLimit      int             `yaml:"VINVC_CONCURRENCY_LIMIT"`
-	TeslaOracleGRPCAddr        string          `yaml:"TESLA_ORACLE_GRPC_ADDR"`
+
+	// These two are back-ups for VIN VCs.
+	DevicesAPIGRPCAddr  string `yaml:"DEVICES_API_GRPC_ADDR"`
+	TeslaOracleGRPCAddr string `yaml:"TESLA_ORACLE_GRPC_ADDR"`
 }

@@ -15,7 +15,6 @@ import (
 
 	_ "github.com/lib/pq"
 
-	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"
@@ -96,13 +95,6 @@ func main() {
 		}
 		defer devicesConn.Close()
 
-		definitionsConn, err := grpc.NewClient(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
-		}
-		defer definitionsConn.Close()
-
-		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
 		chClient, err := ch.NewClient(&settings)
 		if err != nil {
@@ -118,12 +110,11 @@ func main() {
 		teslaClient := pb_tesla.NewTeslaOracleClient(teslaConn)
 
 		rewardsController := controllers.RewardsController{
-			DB:                pdb,
-			Logger:            &logger,
-			DefinitionsClient: definitionsClient,
-			DevicesClient:     deviceClient,
-			ChClient:          chClient,
-			Settings:          &settings,
+			DB:            pdb,
+			Logger:        &logger,
+			DevicesClient: deviceClient,
+			ChClient:      chClient,
+			Settings:      &settings,
 			IdentClient: &identity.Client{
 				QueryURL: settings.IdentityQueryURL,
 				Client:   &http.Client{},
