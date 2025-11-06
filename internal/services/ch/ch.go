@@ -46,7 +46,7 @@ func NewClient(settings *config.Settings) (*Client, error) {
 }
 
 // DescribeActiveDevices returns a list of vehicles and associated integrations KSUIDs that have signals
-// in ClickHouse during specified time period.
+// in ClickHouse during specified time period. The vehicles are sorted by token id, descending.
 func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time) ([]*Vehicle, error) {
 	q := &queries.Query{}
 	queries.SetDialect(q, &dialect)

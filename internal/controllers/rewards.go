@@ -250,7 +250,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			Level:                *getLevelResp(lvl),
 			Minted:               true,
 			OptedIn:              true,
-			// VINConfirmed:         device.VinConfirmed,
+			VINConfirmed:         vin != "",
 		})
 	}
 
