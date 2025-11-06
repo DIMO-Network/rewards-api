@@ -33,6 +33,7 @@ env:
   VEHICLE_NFT_ADDRESS: '0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF'
   MOBILE_API_BASE_URL: https://api.dimo.co
   STORAGE_NODE_DEV_LICENSE: '0x49eAf63eD94FEf3d40692862Eee2C8dB416B1a5f'
+  TESLA_ORACLE_GRPC_ADDR: tesla-oracle-prod:8086
 ingress:
   enabled: true
   className: nginx
