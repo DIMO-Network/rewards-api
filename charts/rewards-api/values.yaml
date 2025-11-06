@@ -63,6 +63,7 @@ env:
   MOBILE_API_BASE_URL: https://dimo-app-backend-development.up.railway.app
   STORAGE_NODE_DEV_LICENSE: '0x52fD9Dc294066792785CcD85eFB9A0Bd48DE01E4'
   VINVC_CONCURRENCY_LIMIT: 5
+  TESLA_ORACLE_GRPC_ADDR: tesla-oracle-dev:8086
 service:
   type: ClusterIP
   ports:

@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -19,13 +21,13 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/api"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
+	pb_tesla "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
+
 	"github.com/DIMO-Network/rewards-api/internal/database"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
-	"github.com/DIMO-Network/rewards-api/internal/services/fetchapi"
 	"github.com/DIMO-Network/rewards-api/internal/services/identity"
 	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
-	"github.com/DIMO-Network/rewards-api/internal/services/vinvc"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/pkg/db"
@@ -229,13 +231,6 @@ func main() {
 
 		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
 
-		definitionsConn, err := grpc.NewClient(settings.DefinitionsAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create device-definitions-api connection.")
-		}
-		defer definitionsConn.Close()
-
-		definitionsClient := pb_defs.NewDeviceDefinitionServiceClient(definitionsConn)
 		chClient, err := ch.NewClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
@@ -245,12 +240,16 @@ func main() {
 			QueryURL: settings.IdentityQueryURL,
 			Client:   &http.Client{},
 		}
-		fetchapiSrv, err := fetchapi.New(&settings, &logger)
+
+		teslaConn, err := grpc.NewClient(settings.TeslaOracleGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create Fetch API service.")
+			logger.Fatal().Err(err).Msg("Failed to create devices-api connection.")
 		}
-		vinvcSrv := vinvc.New(fetchapiSrv, &settings, &logger)
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, definitionsClient, identClient, vinvcSrv, week, &logger)
+		defer teslaConn.Close()
+
+		teslaClient := pb_tesla.NewTeslaOracleClient(teslaConn)
+
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, identClient, week, &logger, teslaClient)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
@@ -306,6 +305,52 @@ func main() {
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to transfer referral bonuses.")
 		}
+	case "describe":
+		tokenID, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Couldn't parse vehicle token id.")
+		}
+
+		identClient := &identity.Client{
+			QueryURL: settings.IdentityQueryURL,
+			Client:   &http.Client{},
+		}
+
+		vehDesc, err := identClient.DescribeVehicle(uint64(tokenID))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to describe vehicle.")
+		}
+
+		b, err := json.MarshalIndent(vehDesc, "", "  ")
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to marshal vehicle description.")
+		}
+
+		fmt.Println(string(b))
+	case "owner":
+		ok := common.IsHexAddress(os.Args[2])
+		if !ok {
+			logger.Fatal().Msg("Couldn't parse owner address.")
+		}
+
+		owner := common.HexToAddress(os.Args[2])
+
+		identClient := &identity.Client{
+			QueryURL: settings.IdentityQueryURL,
+			Client:   &http.Client{},
+		}
+
+		vehDesc, err := identClient.GetVehicles(owner)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to describe vehicle.")
+		}
+
+		b, err := json.MarshalIndent(vehDesc, "", "  ")
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to marshal vehicle description.")
+		}
+
+		fmt.Println(string(b))
 	default:
 		logger.Fatal().Msgf("Unrecognized sub-command %s.", subCommand)
 	}

@@ -1,22 +1,27 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	pb_defs "github.com/DIMO-Network/device-definitions-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
+	"github.com/DIMO-Network/rewards-api/internal/constants"
 	"github.com/DIMO-Network/rewards-api/internal/services"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
+	"github.com/DIMO-Network/rewards-api/internal/services/identity"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/pkg/db"
-	"github.com/DIMO-Network/shared/pkg/set"
+	pb_tesla "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -30,7 +35,9 @@ type RewardsController struct {
 	ChClient          *ch.Client
 	DefinitionsClient pb_defs.DeviceDefinitionServiceClient
 	DevicesClient     pb_devices.UserDeviceServiceClient
+	IdentClient       *identity.Client
 	Settings          *config.Settings
+	teslaOracle       TeslaClient
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -38,6 +45,10 @@ func getUserID(c *fiber.Ctx) string {
 	claims := token.Claims.(jwt.MapClaims)
 	userID := claims["sub"].(string)
 	return userID
+}
+
+type TeslaClient interface {
+	GetVinByTokenId(ctx context.Context, in *pb_tesla.GetVinByTokenIdRequest, opts ...grpc.CallOption) (*pb_tesla.GetVinByTokenIdResponse, error)
 }
 
 var zeroAddr common.Address
@@ -83,128 +94,113 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 	addrBalance := big.NewInt(0)
 
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), &pb_devices.ListUserDevicesForUserRequest{
-		UserId:          userID, // Unclear that we need to keep including this.
-		EthereumAddress: userAddr.Hex(),
-	})
+	vehicleDescrs, err := r.IdentClient.GetVehicles(userAddr)
 	if err != nil {
 		return err
-	}
-
-	allIntegrations, err := r.DefinitionsClient.GetIntegrations(c.Context(), &emptypb.Empty{})
-	if err != nil {
-		return opaqueInternalError
 	}
 
 	var vehicleIDs []uint64
-
-	for _, ud := range devices.UserDevices {
-		if ud.TokenId != nil {
-			vehicleIDs = append(vehicleIDs, *ud.TokenId)
-		}
+	for _, ud := range vehicleDescrs {
+		vehicleIDs = append(vehicleIDs, uint64(ud.TokenID))
 	}
 
-	integrationsByTokenID := make(map[uint64][]string)
+	sourcesByTokenID := make(map[uint64][]string)
 
-	vehicles, err := r.ChClient.GetIntegrationsForVehicles(c.Context(), vehicleIDs, weekStart, now)
+	vehicleSources, err := r.ChClient.GetSourcesForVehicles(c.Context(), vehicleIDs, weekStart, now)
 	if err != nil {
 		return err
 	}
 
-	for _, v := range vehicles {
-		integrationsByTokenID[uint64(v.TokenID)] = v.Integrations
+	for _, v := range vehicleSources {
+		sourcesByTokenID[uint64(v.TokenID)] = v.Sources
 	}
 
-	amMfrTokenToIntegration := make(map[uint64]*pb_defs.Integration)
-	swIntegrsByTokenID := make(map[uint64]*pb_defs.Integration)
-
-	for _, intDesc := range allIntegrations.Integrations {
-		if intDesc.ManufacturerTokenId == 0 {
-			// Must be a software integration. Sort after this loop.
-			swIntegrsByTokenID[intDesc.TokenId] = intDesc
-		} else {
-			// Must be the integration associated with a manufacturer.
-			amMfrTokenToIntegration[intDesc.ManufacturerTokenId] = intDesc
-		}
-	}
-
-	outLi := make([]*UserResponseDevice, 0, len(devices.UserDevices))
+	outLi := make([]*UserResponseDevice, 0, len(vehicleDescrs))
 	userPts := 0
 	userTokens := big.NewInt(0)
 
-	for _, device := range devices.UserDevices {
-		if device.TokenId == nil {
-			continue
-		}
+	for _, device := range vehicleDescrs {
+		dlog := logger.With().Int("vehicleId", device.TokenID).Logger()
 
-		dlog := logger.With().Str("userDeviceId", device.Id).Logger()
+		outInts := []*UserResponseIntegration{}
 
-		outInts := []UserResponseIntegration{}
-
-		vehicleMinted := true
-
-		// If the vehicle has no signals this week then this will return the
-		// nil slice and everything is fine.
-		vehicleIntegsWithSignals := integrationsByTokenID[*device.TokenId]
-
-		integSignalsThisWeek := set.New(vehicleIntegsWithSignals...)
+		var vin string
 
 		if ad := device.AftermarketDevice; ad != nil {
-			// Want to see if this kind (right manufacturer) of device transmitted for this vehicle
-			// this week.
-			if ad.ManufacturerTokenId == 0 {
-				return fmt.Errorf("aftermarket device %d does not have a manufacturer", ad.TokenId)
-			}
+			conn, ok := constants.ConnsByMfrId[ad.Manufacturer.TokenID]
+			if ok {
+				uri := UserResponseIntegration{
+					ID:                   conn.LegacyID,
+					Vendor:               conn.LegacyVendor,
+					DataThisWeek:         false,
+					Points:               0,
+					OnChainPairingStatus: "Paired",
+				}
 
-			integr, ok := amMfrTokenToIntegration[ad.ManufacturerTokenId]
-			if !ok {
-				return fmt.Errorf("aftermarket device manufacturer %d does not have an associated integration", ad.ManufacturerTokenId)
-			}
+				if slices.Contains(sourcesByTokenID[uint64(device.TokenID)], conn.Address.Hex()) {
+					uri.DataThisWeek = true
+					uri.Points = int(conn.Points)
+				}
 
-			uri := UserResponseIntegration{
-				ID:                   integr.Id,
-				Vendor:               integr.Vendor,
-				DataThisWeek:         false,
-				Points:               0,
-				OnChainPairingStatus: "Paired",
+				outInts = append(outInts, &uri)
 			}
-
-			if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
-				uri.Points = int(integr.Points)
-				uri.DataThisWeek = true
-			}
-
-			outInts = append(outInts, uri)
 		}
 
 		if sd := device.SyntheticDevice; sd != nil {
-			if sd.IntegrationTokenId == 0 {
-				return fmt.Errorf("synthetic device %d does not have an integration", sd.IntegrationTokenId)
-			}
+			conn, ok := constants.ConnsByAddr[sd.Connection.Address]
+			if ok {
+				uri := UserResponseIntegration{
+					ID:                   conn.LegacyID,
+					Vendor:               conn.LegacyVendor,
+					DataThisWeek:         false,
+					Points:               0,
+					OnChainPairingStatus: "Paired",
+				}
 
-			integr, ok := swIntegrsByTokenID[sd.IntegrationTokenId]
-			if !ok {
-				return fmt.Errorf("synthetic device %d has integration %d without metadata", sd.TokenId, sd.IntegrationTokenId)
-			}
+				if conn.LegacyVendor == "Tesla" {
+					vti, err := r.teslaOracle.GetVinByTokenId(c.Context(), &pb_tesla.GetVinByTokenIdRequest{TokenId: uint32(sd.TokenID)})
+					if err != nil {
+						if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+							logger.Error().Msg("Tesla has signals and is paired, but not in oracle.")
+						}
+						return fmt.Errorf("failed to grab Tesla: %w", err)
+					} else {
+						vin = vti.Vin
+					}
+				}
 
-			uri := UserResponseIntegration{
-				ID:                   integr.Id,
-				Vendor:               integr.Vendor,
-				DataThisWeek:         false,
-				Points:               0,
-				OnChainPairingStatus: "Paired",
-			}
+				if slices.Contains(sourcesByTokenID[uint64(device.TokenID)], conn.Address.Hex()) {
+					uri.DataThisWeek = true
+					uri.Points = int(conn.Points)
+				}
 
-			if device.VinConfirmed && integSignalsThisWeek.Contains(integr.Id) {
-				uri.Points = int(integr.Points)
-				uri.DataThisWeek = true
+				outInts = append(outInts, &uri)
 			}
+		}
 
-			outInts = append(outInts, uri)
+		if vin == "" && len(outInts) != 0 {
+			vtf, err := r.DevicesClient.GetVehicleByTokenIdFast(c.Context(), &pb_devices.GetVehicleByTokenIdFastRequest{
+				TokenId: uint32(device.TokenID),
+			})
+			if err != nil {
+				if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+					logger.Error().Msg("Vehicle has signals and is paired, but not in devices-api.")
+				}
+				return fmt.Errorf("failed to grab vehicle: %w", err)
+			} else {
+				vin = vtf.Vin
+			}
+		}
+
+		if vin == "" {
+			for _, oi := range outInts {
+				oi.DataThisWeek = false
+				oi.Points = 0
+			}
 		}
 
 		rewards, err := models.Rewards(
-			models.RewardWhere.UserDeviceTokenID.EQ(int(*device.TokenId)),
+			models.RewardWhere.UserDeviceTokenID.EQ(device.TokenID),
 			qm.OrderBy(models.RewardColumns.IssuanceWeekID+" DESC"),
 		).All(c.Context(), r.DB.DBS().Reader.DB)
 		if err != nil {
@@ -240,20 +236,21 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			disconnectionStreak = rewards[0].DisconnectionStreak
 		}
 
+		tokTemp := uint64(device.TokenID)
+
 		outLi = append(outLi, &UserResponseDevice{
-			ID:                   device.Id,
-			TokenID:              device.TokenId,
+			TokenID:              &tokTemp,
 			Points:               pts,
 			Tokens:               tkns,
-			ConnectedThisWeek:    slices.ContainsFunc(outInts, func(uri UserResponseIntegration) bool { return uri.Points > 0 }),
+			ConnectedThisWeek:    slices.ContainsFunc(outInts, func(uri *UserResponseIntegration) bool { return uri.Points > 0 }),
 			IntegrationsThisWeek: outInts,
 			LastActive:           nil, // Unused, we think.
 			ConnectionStreak:     connectionStreak,
 			DisconnectionStreak:  disconnectionStreak,
 			Level:                *getLevelResp(lvl),
-			Minted:               vehicleMinted,
+			Minted:               true,
 			OptedIn:              true,
-			VINConfirmed:         device.VinConfirmed,
+			VINConfirmed:         vin != "",
 		})
 	}
 
@@ -315,7 +312,7 @@ type UserResponseDevice struct {
 	// week.
 	ConnectedThisWeek bool `json:"connectedThisWeek" example:"true"`
 	// IntegrationsThisWeek details the integrations we've seen active this week.
-	IntegrationsThisWeek []UserResponseIntegration `json:"integrationsThisWeek"`
+	IntegrationsThisWeek []*UserResponseIntegration `json:"integrationsThisWeek"`
 	// LastActive is the last time we saw activity from the vehicle.
 	LastActive *time.Time `json:"lastActive,omitempty" example:"2022-04-12T09:23:01Z"`
 	// ConnectionStreak is what we consider the streak of the device to be. This may not literally
