@@ -37,7 +37,7 @@ type RewardsController struct {
 	DevicesClient     pb_devices.UserDeviceServiceClient
 	IdentClient       *identity.Client
 	Settings          *config.Settings
-	teslaOracle       TeslaClient
+	TeslaOracle       TeslaClient
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -158,7 +158,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 				}
 
 				if conn.LegacyVendor == "Tesla" {
-					vti, err := r.teslaOracle.GetVinByTokenId(c.Context(), &pb_tesla.GetVinByTokenIdRequest{TokenId: uint32(sd.TokenID)})
+					vti, err := r.TeslaOracle.GetVinByTokenId(c.Context(), &pb_tesla.GetVinByTokenIdRequest{TokenId: uint32(sd.TokenID)})
 					if err != nil {
 						if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
 							logger.Error().Msg("Tesla has signals and is paired, but not in oracle.")

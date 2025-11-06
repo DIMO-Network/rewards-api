@@ -109,6 +109,14 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
 		}
 
+		teslaConn, err := grpc.NewClient(settings.TeslaOracleGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create devices-api connection.")
+		}
+		defer teslaConn.Close()
+
+		teslaClient := pb_tesla.NewTeslaOracleClient(teslaConn)
+
 		rewardsController := controllers.RewardsController{
 			DB:                pdb,
 			Logger:            &logger,
@@ -120,6 +128,7 @@ func main() {
 				QueryURL: settings.IdentityQueryURL,
 				Client:   &http.Client{},
 			},
+			TeslaOracle: teslaClient,
 		}
 
 		deviceController := controllers.DeviceController{
