@@ -116,6 +116,10 @@ func main() {
 			DevicesClient:     deviceClient,
 			ChClient:          chClient,
 			Settings:          &settings,
+			IdentClient: &identity.Client{
+				QueryURL: settings.IdentityQueryURL,
+				Client:   &http.Client{},
+			},
 		}
 
 		deviceController := controllers.DeviceController{
