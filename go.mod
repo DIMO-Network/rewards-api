@@ -6,13 +6,12 @@ replace github.com/ericlagergren/decimal => github.com/ericlagergren/decimal v0.
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.40.3
-	github.com/DIMO-Network/attestation-api v0.1.9
+	github.com/DIMO-Network/attestation-api v0.1.10
 	github.com/DIMO-Network/clickhouse-infra v0.0.7
 	github.com/DIMO-Network/cloudevent v0.1.4
 	github.com/DIMO-Network/devices-api v1.41.8
 	github.com/DIMO-Network/fetch-api v0.0.14
 	github.com/DIMO-Network/model-garage v0.7.4
-	github.com/DIMO-Network/set v0.0.0-20250627202730-1145b5cbaecb
 	github.com/DIMO-Network/shared v1.0.7
 	github.com/DIMO-Network/tesla-oracle v0.4.18
 	github.com/IBM/sarama v1.46.1

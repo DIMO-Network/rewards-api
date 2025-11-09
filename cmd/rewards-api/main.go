@@ -15,11 +15,15 @@ import (
 
 	_ "github.com/lib/pq"
 
+	pb_att "github.com/DIMO-Network/attestation-api/pkg/grpc"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
+	pb_fetch "github.com/DIMO-Network/fetch-api/pkg/grpc"
+
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/controllers"
+
 	pb_tesla "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
 
 	"github.com/DIMO-Network/rewards-api/internal/database"
@@ -27,6 +31,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/services/identity"
 	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
+	"github.com/DIMO-Network/rewards-api/internal/services/vinvc"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/pkg/db"
@@ -193,6 +198,29 @@ func main() {
 		if err := database.MigrateDatabase(logger, &settings.DB, command, "migrations"); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to run migration.")
 		}
+	case "ensure-vin":
+
+		chClient, err := ch.NewClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
+		}
+		attConn, err := grpc.NewClient(settings.AttestationGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create fetch-api connection.")
+		}
+		defer attConn.Close()
+
+		attClient := pb_att.NewAttestationServiceClient(attConn)
+		client := &vinvc.EnsureClient{
+			AttClient: attClient,
+			CHClient:  chClient,
+			Logger:    &logger,
+		}
+		err = client.EnsureAll()
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to ensure.")
+
+		}
 	case "calculate":
 		var week int
 		if len(os.Args) == 2 {
@@ -253,7 +281,23 @@ func main() {
 
 		teslaClient := pb_tesla.NewTeslaOracleClient(teslaConn)
 
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, identClient, week, &logger, teslaClient)
+		attConn, err := grpc.NewClient(settings.AttestationGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create fetch-api connection.")
+		}
+		defer attConn.Close()
+
+		attClient := pb_att.NewAttestationServiceClient(attConn)
+
+		fetchConn, err := grpc.NewClient(settings.FetchAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create devices-api connection.")
+		}
+		defer fetchConn.Close()
+
+		fetchClient := pb_fetch.NewFetchServiceClient(fetchConn)
+
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, identClient, week, &logger, teslaClient, attClient, fetchClient)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")
