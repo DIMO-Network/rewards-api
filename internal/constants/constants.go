@@ -37,4 +37,10 @@ var ConnsByAddr = map[common.Address]ConnectionConfig{
 		Address:      common.HexToAddress("0xc4035Fecb1cc906130423EF05f9C20977F643722"),
 		Points:       6000,
 	},
+	common.HexToAddress("0x8D8cDB2B26423c8fDbb27321aF20b4659Ce919fD"): {
+		LegacyID:     "359fmv4U6YGP74oM5C4OBvVe0WK",
+		LegacyVendor: "Kaufmann",
+		Address:      common.HexToAddress("0x8D8cDB2B26423c8fDbb27321aF20b4659Ce919fD"),
+		Points:       6000,
+	},
 }

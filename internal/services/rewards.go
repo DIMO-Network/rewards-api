@@ -3,12 +3,23 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"slices"
 	"time"
 
+	pb_att "github.com/DIMO-Network/attestation-api/pkg/grpc"
+	att_types "github.com/DIMO-Network/attestation-api/pkg/types"
+	"github.com/DIMO-Network/cloudevent"
+
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
+	"google.golang.org/grpc/status"
+
+	pb_fetch "github.com/DIMO-Network/fetch-api/pkg/grpc"
+	"google.golang.org/grpc/codes"
+
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/constants"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
@@ -16,7 +27,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
-	"github.com/DIMO-Network/set"
 	pb_tesla "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
@@ -25,8 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type BaselineClient struct {
@@ -39,6 +48,8 @@ type BaselineClient struct {
 	FirstAutomatedWeek int
 	IdentityClient     IdentityClient
 	teslaOracle        TeslaClient
+	fetchClient        pb_fetch.FetchServiceClient
+	attClient          pb_att.AttestationServiceClient
 }
 
 type IdentityClient interface {
@@ -66,6 +77,8 @@ func NewBaselineRewardService(
 	week int,
 	logger *zerolog.Logger,
 	teslaOracle TeslaClient,
+	attClient pb_att.AttestationServiceClient,
+	fetchClient pb_fetch.FetchServiceClient,
 ) *BaselineClient {
 	return &BaselineClient{
 		TransferService:    transferService,
@@ -77,6 +90,8 @@ func NewBaselineRewardService(
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
 		IdentityClient:     stakeChecker,
 		teslaOracle:        teslaOracle,
+		attClient:          attClient,
+		fetchClient:        fetchClient,
 	}
 }
 
@@ -87,7 +102,7 @@ func (t *BaselineClient) assignPoints() error {
 	weekStart := date.NumToWeekStart(issuanceWeek)
 	weekEnd := date.NumToWeekEnd(issuanceWeek)
 
-	var vinsUsed set.Set[string]
+	vinUsedBy := make(map[string]int64)
 
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
@@ -138,7 +153,7 @@ func (t *BaselineClient) assignPoints() error {
 		vd, err := t.IdentityClient.DescribeVehicle(uint64(device.TokenID))
 		if err != nil {
 			if errors.Is(err, identity.ErrNotFound) {
-				logger.Info().Msg("Vehicle was active during the week but was later deleted.")
+				logger.Info().Msg("Vehicle was active during the week but was later burned.")
 				continue
 			}
 			return fmt.Errorf("failed to describe vehicle %d: %w", device.TokenID, err)
@@ -153,72 +168,77 @@ func (t *BaselineClient) assignPoints() error {
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
 
-		vin := ""
-
 		if ad := vd.AftermarketDevice; ad != nil {
-			conn, ok := constants.ConnsByMfrId[ad.Manufacturer.TokenID]
-			if ok && slices.Contains(device.Sources, conn.Address.Hex()) {
+			if conn, ok := constants.ConnsByMfrId[ad.Manufacturer.TokenID]; !ok {
+				logger.Warn().Msgf("Unrecognized aftermarket device manufacturer %d.", ad.Manufacturer.TokenID)
+			} else if slices.Contains(device.Sources, conn.Address.Hex()) {
 				thisWeek.RewardsReceiverEthereumAddress = null.StringFrom(ad.Beneficiary.Hex())
-
-				if vd.Owner != ad.Beneficiary {
-					logger.Info().Msgf("Sending tokens to beneficiary %s.", ad.Beneficiary)
-				}
-
-				thisWeek.AftermarketTokenID = types.NewNullDecimal(decimal.New(int64(ad.TokenID), 0)) //new(decimal.Big).SetUint64(uint64(ad.TokenID)))
+				thisWeek.AftermarketTokenID = types.NewNullDecimal(decimal.New(int64(ad.TokenID), 0))
 				thisWeek.AftermarketDevicePoints = int(conn.Points)
 				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, conn.LegacyID)
 			}
 		}
 
 		if sd := vd.SyntheticDevice; sd != nil {
-			conn, ok := constants.ConnsByAddr[sd.Connection.Address]
-			if ok && slices.Contains(device.Sources, conn.Address.Hex()) {
+			if conn, ok := constants.ConnsByAddr[sd.Connection.Address]; !ok {
+				logger.Warn().Msgf("Unrecognized synthetic device connection %s.", sd.Connection.Address.Hex())
+			} else if slices.Contains(device.Sources, conn.Address.Hex()) {
 				thisWeek.SyntheticDeviceID = null.IntFrom(sd.TokenID)
 				thisWeek.SyntheticDevicePoints = int(conn.Points)
 				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, conn.LegacyID)
-
-				// Yes, this is bad. Temporary.
-				if conn.LegacyVendor == "Tesla" {
-					vti, err := t.teslaOracle.GetVinByTokenId(ctx, &pb_tesla.GetVinByTokenIdRequest{TokenId: uint32(sd.TokenID)})
-					if err != nil {
-						if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-							// logger.Info().Msg("Device was active during the week but was later deleted.")
-							continue
-						}
-						return err
-					}
-					vin = vti.Vin
-				}
 			}
-
 		}
 
 		if len(thisWeek.IntegrationIds) == 0 {
-			logger.Warn().Msg("All integrations sending signals failed on-chain checks.")
+			logger.Warn().Msg("All devices sending signals failed onchain checks.")
 			continue
 		}
 
-		if vin == "" {
-			vv, err := t.DevicesClient.GetVehicleByTokenIdFast(ctx, &pb_devices.GetVehicleByTokenIdFastRequest{TokenId: uint32(device.TokenID)})
-			if err != nil {
-				if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-					// logger.Info().Msg("Device was active during the week but was later deleted.")
-					continue
-				}
-				return err
-			}
-			if vv.Vin == "" {
+		if _, err := t.attClient.EnsureVinVc(ctx, &pb_att.EnsureVinVcRequest{
+			TokenId: uint32(device.TokenID),
+		}); err != nil {
+			// TODO(elffjs): Hard to determined the nature of errors, they're all code = Unknown.
+			logger.Err(err).Msgf("Failed to ensure VIN attestation.")
+			continue
+		}
+
+		ce, err := t.fetchClient.GetLatestCloudEvent(ctx, &pb_fetch.GetLatestCloudEventRequest{
+			Options: &pb_fetch.SearchOptions{
+				Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
+				DataVersion: &wrapperspb.StringValue{Value: "vin/v1.0"},
+				Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: 137, ContractAddress: common.HexToAddress("0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF"), TokenID: big.NewInt(device.TokenID)}.String()},
+			},
+		})
+		if err != nil {
+			if status.Code(err) == codes.NotFound {
+				logger.Warn().Msg("No VIN attestation for vehicle.")
 				continue
 			}
-			vin = vv.Vin
+
+			return fmt.Errorf("failed to get fetch VIN attestation for vehicle %d: %w", device.TokenID, err)
 		}
 
-		if vinsUsed.Contains(vin) {
-			logger.Info().Msg("VIN already used in this rewards period.")
+		var cred att_types.Credential
+		if err := json.Unmarshal(ce.CloudEvent.Data, &cred); err != nil {
+			logger.Err(err).Msg("Couldn't parse VIN attestation data.")
 			continue
 		}
 
-		vinsUsed.Add(vin)
+		var vs att_types.VINSubject
+		if err := json.Unmarshal(cred.CredentialSubject, &vs); err != nil {
+			logger.Err(err).Msg("Couldn't parse VIN attestation subject.")
+			continue
+		}
+
+		vin := vs.VehicleIdentificationNumber
+		logger.Info().Msgf("VIN is %s.", vin)
+
+		if vehicleID, ok := vinUsedBy[vin]; ok {
+			logger.Warn().Msgf("VIN already used by vehicle %d in this rewards period.", vehicleID)
+			continue
+		}
+
+		vinUsedBy[vin] = device.TokenID
 
 		// Streak rewards.
 		streakInput := StreakInput{
@@ -236,7 +256,6 @@ func (t *BaselineClient) assignPoints() error {
 		stakePoints := 0
 		if vd.Stake != nil && weekEnd.Before(vd.Stake.EndsAt) {
 			stakePoints = vd.Stake.Points
-			logger.Info().Msgf("Adding %d points from staking.", stakePoints)
 		}
 
 		setStreakFields(thisWeek, streak, stakePoints)

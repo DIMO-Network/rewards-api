@@ -33,6 +33,7 @@ type Settings struct {
 	MobileAPIBaseURL           string          `yaml:"MOBILE_API_BASE_URL"`
 	StorageNodeDevLicense      common.Address  `yaml:"STORAGE_NODE_DEV_LICENSE"`
 	VINVCConcurrencyLimit      int             `yaml:"VINVC_CONCURRENCY_LIMIT"`
+	AttestationGRPCAddr        string          `yaml:"ATTESTATION_GRPC_ADDR"`
 
 	// These two are back-ups for VIN VCs.
 	DevicesAPIGRPCAddr  string `yaml:"DEVICES_API_GRPC_ADDR"`
