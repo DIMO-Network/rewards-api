@@ -31,6 +31,7 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
 	"github.com/DIMO-Network/rewards-api/internal/services/identity"
 	"github.com/DIMO-Network/rewards-api/internal/services/mobileapi"
+	"github.com/DIMO-Network/rewards-api/internal/services/vinvc"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	pb_rewards "github.com/DIMO-Network/shared/api/rewards"
 	"github.com/DIMO-Network/shared/pkg/db"
@@ -196,6 +197,29 @@ func main() {
 		}
 		if err := database.MigrateDatabase(logger, &settings.DB, command, "migrations"); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to run migration.")
+		}
+	case "ensure-vin":
+
+		chClient, err := ch.NewClient(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
+		}
+		attConn, err := grpc.NewClient(settings.AttestationGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create fetch-api connection.")
+		}
+		defer attConn.Close()
+
+		attClient := pb_att.NewAttestationServiceClient(attConn)
+		client := &vinvc.EnsureClient{
+			AttClient: attClient,
+			CHClient:  chClient,
+			Logger:    &logger,
+		}
+		err = client.EnsureAll()
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to ensure.")
+
 		}
 	case "calculate":
 		var week int
