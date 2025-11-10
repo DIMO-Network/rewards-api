@@ -30,11 +30,13 @@ var ConnsByMfrId = map[int]ConnectionConfig{
 	},
 }
 
+var teslaAddr = common.HexToAddress("0xc4035Fecb1cc906130423EF05f9C20977F643722")
+
 var ConnsByAddr = map[common.Address]ConnectionConfig{
-	common.HexToAddress("0xc4035Fecb1cc906130423EF05f9C20977F643722"): {
+	teslaAddr: {
 		LegacyID:     "26A5Dk3vvvQutjSyF0Jka2DP5lg",
 		LegacyVendor: "Tesla",
-		Address:      common.HexToAddress("0xc4035Fecb1cc906130423EF05f9C20977F643722"),
+		Address:      teslaAddr,
 		Points:       6000,
 	},
 }

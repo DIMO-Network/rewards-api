@@ -16,6 +16,7 @@ import (
 	_ "github.com/lib/pq"
 
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
+	pb_fetch "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"
 	"github.com/DIMO-Network/rewards-api/internal/config"
@@ -253,7 +254,15 @@ func main() {
 
 		teslaClient := pb_tesla.NewTeslaOracleClient(teslaConn)
 
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, identClient, week, &logger, teslaClient)
+		fetchConn, err := grpc.NewClient(settings.FetchAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create devices-api connection.")
+		}
+		defer fetchConn.Close()
+
+		fetchClient := pb_fetch.NewFetchServiceClient(fetchConn)
+
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, identClient, week, &logger, teslaClient, fetchClient)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")

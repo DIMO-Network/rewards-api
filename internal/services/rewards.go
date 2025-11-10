@@ -3,12 +3,17 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"slices"
 	"time"
 
+	att_types "github.com/DIMO-Network/attestation-api/pkg/types"
+	"github.com/DIMO-Network/cloudevent"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
+	pb_fetch "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/constants"
 	"github.com/DIMO-Network/rewards-api/internal/services/ch"
@@ -27,6 +32,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type BaselineClient struct {
@@ -39,6 +45,7 @@ type BaselineClient struct {
 	FirstAutomatedWeek int
 	IdentityClient     IdentityClient
 	teslaOracle        TeslaClient
+	fetchClient        pb_fetch.FetchServiceClient
 }
 
 type IdentityClient interface {
@@ -66,6 +73,7 @@ func NewBaselineRewardService(
 	week int,
 	logger *zerolog.Logger,
 	teslaOracle TeslaClient,
+	fetchClient pb_fetch.FetchServiceClient,
 ) *BaselineClient {
 	return &BaselineClient{
 		TransferService:    transferService,
@@ -77,6 +85,7 @@ func NewBaselineRewardService(
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
 		IdentityClient:     stakeChecker,
 		teslaOracle:        teslaOracle,
+		fetchClient:        fetchClient,
 	}
 }
 
@@ -201,17 +210,51 @@ func (t *BaselineClient) assignPoints() error {
 		if vin == "" {
 			vv, err := t.DevicesClient.GetVehicleByTokenIdFast(ctx, &pb_devices.GetVehicleByTokenIdFastRequest{TokenId: uint32(device.TokenID)})
 			if err != nil {
-				if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-					// logger.Info().Msg("Device was active during the week but was later deleted.")
+				if s, ok := status.FromError(err); !ok || s.Code() != codes.NotFound {
+					return err
+				}
+			} else {
+				// This could still be the empty string!
+				vin = vv.Vin
+			}
+		}
+
+		if vin == "" {
+			// One last attempt, try the VIN VC.
+			ce, err := t.fetchClient.GetLatestCloudEvent(ctx, &pb_fetch.GetLatestCloudEventRequest{
+				Options: &pb_fetch.SearchOptions{
+					Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
+					DataVersion: &wrapperspb.StringValue{Value: "vin/v1.0"},
+					Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: 137, ContractAddress: common.HexToAddress("0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF"), TokenID: big.NewInt(device.TokenID)}.String()},
+					Source:      &wrapperspb.StringValue{Value: common.HexToAddress("0x4F098Ea7cAd393365b4d251Dd109e791e6190239").Hex()},
+				},
+			})
+			if err != nil {
+				if status.Code(err) == codes.NotFound {
+					logger.Warn().Msg("No VIN attestation for vehicle.")
 					continue
 				}
 				return err
 			}
-			if vv.Vin == "" {
+
+			var cred att_types.Credential
+			if err := json.Unmarshal(ce.CloudEvent.Data, &cred); err != nil {
+				logger.Err(err).Msg("Couldn't parse VIN attestation data.")
 				continue
 			}
-			vin = vv.Vin
+
+			var vs att_types.VINSubject
+			if err := json.Unmarshal(cred.CredentialSubject, &vs); err != nil {
+				logger.Err(err).Msg("Couldn't parse VIN attestation subject.")
+				continue
+			}
+
+			vin = vs.VehicleIdentificationNumber
+
+			logger.Info().Msg("Had to use VIN VC.")
 		}
+
+		logger.Info().Msgf("VIN is %s.", vin)
 
 		if vinsUsed.Contains(vin) {
 			logger.Info().Msg("VIN already used in this rewards period.")
