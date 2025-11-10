@@ -191,7 +191,7 @@ func (t *BaselineClient) assignPoints() error {
 					vti, err := t.teslaOracle.GetVinByTokenId(ctx, &pb_tesla.GetVinByTokenIdRequest{TokenId: uint32(sd.TokenID)})
 					if err != nil {
 						if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-							// logger.Info().Msg("Device was active during the week but was later deleted.")
+							logger.Info().Msg("Tesla vehicle not known to Oracle.")
 							continue
 						}
 						return err
@@ -226,7 +226,7 @@ func (t *BaselineClient) assignPoints() error {
 					Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
 					DataVersion: &wrapperspb.StringValue{Value: "vin/v1.0"},
 					Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: 137, ContractAddress: common.HexToAddress("0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF"), TokenID: big.NewInt(device.TokenID)}.String()},
-					Source:      &wrapperspb.StringValue{Value: common.HexToAddress("0x4F098Ea7cAd393365b4d251Dd109e791e6190239").Hex()},
+					Source:      &wrapperspb.StringValue{Value: common.HexToAddress("0x49eAf63eD94FEf3d40692862Eee2C8dB416B1a5f").Hex()},
 				},
 			})
 			if err != nil {
