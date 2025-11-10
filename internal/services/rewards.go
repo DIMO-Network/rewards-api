@@ -254,8 +254,6 @@ func (t *BaselineClient) assignPoints() error {
 			logger.Info().Msg("Had to use VIN VC.")
 		}
 
-		logger.Info().Msgf("VIN is %s.", vin)
-
 		if vinsUsed.Contains(vin) {
 			logger.Info().Msg("VIN already used in this rewards period.")
 			continue
@@ -279,7 +277,7 @@ func (t *BaselineClient) assignPoints() error {
 		stakePoints := 0
 		if vd.Stake != nil && weekEnd.Before(vd.Stake.EndsAt) {
 			stakePoints = vd.Stake.Points
-			logger.Info().Msgf("Adding %d points from staking.", stakePoints)
+			logger.Debug().Msgf("Adding %d points from staking.", stakePoints)
 		}
 
 		setStreakFields(thisWeek, streak, stakePoints)
