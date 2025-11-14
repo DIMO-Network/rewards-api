@@ -1,17 +1,20 @@
 package controllers
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	att_types "github.com/DIMO-Network/attestation-api/pkg/types"
+	"github.com/DIMO-Network/cloudevent"
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
+	pb_fetch "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/constants"
 	"github.com/DIMO-Network/rewards-api/internal/services"
@@ -20,7 +23,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/pkg/db"
-	pb_tesla "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -35,7 +37,7 @@ type RewardsController struct {
 	DevicesClient pb_devices.UserDeviceServiceClient
 	IdentClient   *identity.Client
 	Settings      *config.Settings
-	TeslaOracle   TeslaClient
+	FetchClient   pb_fetch.FetchServiceClient
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -43,10 +45,6 @@ func getUserID(c *fiber.Ctx) string {
 	claims := token.Claims.(jwt.MapClaims)
 	userID := claims["sub"].(string)
 	return userID
-}
-
-type TeslaClient interface {
-	GetVinByTokenId(ctx context.Context, in *pb_tesla.GetVinByTokenIdRequest, opts ...grpc.CallOption) (*pb_tesla.GetVinByTokenIdResponse, error)
 }
 
 var zeroAddr common.Address
@@ -122,8 +120,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 
 		outInts := []*UserResponseIntegration{}
 
-		var vin string
-
 		if ad := device.AftermarketDevice; ad != nil {
 			conn, ok := constants.ConnsByMfrId[ad.Manufacturer.TokenID]
 			if ok {
@@ -155,18 +151,6 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 					OnChainPairingStatus: "Paired",
 				}
 
-				if conn.LegacyVendor == "Tesla" {
-					vti, err := r.TeslaOracle.GetVinByTokenId(c.Context(), &pb_tesla.GetVinByTokenIdRequest{TokenId: uint32(sd.TokenID)})
-					if err != nil {
-						if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-							logger.Error().Msg("Tesla has signals and is paired, but not in oracle.")
-						}
-						return fmt.Errorf("failed to grab Tesla: %w", err)
-					} else {
-						vin = vti.Vin
-					}
-				}
-
 				if slices.Contains(sourcesByTokenID[uint64(device.TokenID)], conn.Address.Hex()) {
 					uri.DataThisWeek = true
 					uri.Points = int(conn.Points)
@@ -176,21 +160,45 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			}
 		}
 
-		if vin == "" && len(outInts) != 0 {
-			vtf, err := r.DevicesClient.GetVehicleByTokenIdFast(c.Context(), &pb_devices.GetVehicleByTokenIdFastRequest{
-				TokenId: uint32(device.TokenID),
-			})
-			if err != nil {
-				if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-					logger.Error().Msg("Vehicle has signals and is paired, but not in devices-api.")
+		vinConfirmed := false
+
+		// One last attempt, try the VIN VC.
+		ce, err := r.FetchClient.GetLatestCloudEvent(c.Context(), &pb_fetch.GetLatestCloudEventRequest{
+			Options: &pb_fetch.SearchOptions{
+				Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
+				DataVersion: &wrapperspb.StringValue{Value: "vin/v1.0"},
+				Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: 137, ContractAddress: common.HexToAddress("0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF"), TokenID: big.NewInt(int64(device.TokenID))}.String()},
+				Source:      &wrapperspb.StringValue{Value: common.HexToAddress("0x49eAf63eD94FEf3d40692862Eee2C8dB416B1a5f").Hex()},
+			},
+		})
+		if err != nil {
+			if status.Code(err) == codes.NotFound {
+				vtf, err := r.DevicesClient.GetVehicleByTokenIdFast(c.Context(), &pb_devices.GetVehicleByTokenIdFastRequest{
+					TokenId: uint32(device.TokenID),
+				})
+				if err != nil {
+					if status.Code(err) != codes.NotFound {
+						// Some intermittent error.
+						return fmt.Errorf("failed to grab vehicle %d: %w", device.TokenID, err)
+					}
+					// Otherwise, just leave vinConfirmed as false.
+				} else if vtf.Vin != "" {
+					vinConfirmed = true
 				}
-				return fmt.Errorf("failed to grab vehicle: %w", err)
 			} else {
-				vin = vtf.Vin
+				return fmt.Errorf("failed to retrieve VIN attestation for vehicle %d: %w", device.TokenID, err)
+			}
+		} else {
+			var cred att_types.Credential
+			if err := json.Unmarshal(ce.CloudEvent.Data, &cred); err == nil {
+				var vs att_types.VINSubject
+				if err := json.Unmarshal(cred.CredentialSubject, &vs); err == nil {
+					vinConfirmed = true
+				}
 			}
 		}
 
-		if vin == "" {
+		if !vinConfirmed {
 			for _, oi := range outInts {
 				oi.DataThisWeek = false
 				oi.Points = 0
@@ -248,7 +256,7 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			Level:                *getLevelResp(lvl),
 			Minted:               true,
 			OptedIn:              true,
-			VINConfirmed:         vin != "",
+			VINConfirmed:         vinConfirmed,
 		})
 	}
 
