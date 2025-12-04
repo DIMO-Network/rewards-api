@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/rewards-api
   pullPolicy: IfNotPresent
-  tag: d6958af
+  tag: 6cdd33c
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
@@ -19,7 +19,7 @@ securityContext:
   allowPrivilegeEscalation: false
   capabilities:
     drop:
-    - all
+      - all
 rewardsCronJob:
   enabled: true
   schedule: 0 5 * * 1
@@ -80,15 +80,15 @@ service:
       targetPort: grpc
       protocol: TCP
 ports:
-- name: mon-http
-  containerPort: 8888
-  protocol: TCP
-- name: http
-  containerPort: 8080
-  protocol: TCP
-- name: grpc
-  containerPort: 8086
-  protocol: TCP
+  - name: mon-http
+    containerPort: 8888
+    protocol: TCP
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+  - name: grpc
+    containerPort: 8086
+    protocol: TCP
 ingress:
   enabled: true
   className: nginx
@@ -100,10 +100,10 @@ ingress:
     nginx.ingress.kubernetes.io/limit-rps: '3'
     external-dns.alpha.kubernetes.io/hostname: rewards-api.dev.dimo.zone
   hosts:
-  - host: rewards-api.dev.dimo.zone
-    paths:
-    - path: /
-      pathType: ImplementationSpecific
+    - host: rewards-api.dev.dimo.zone
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
   tls: []
 resources:
   limits:
