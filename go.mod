@@ -22,7 +22,7 @@ require (
 	github.com/burdiyan/kafkautil v0.0.0-20240215092415-7e6d3d0fc870
 	github.com/docker/go-connections v0.6.0
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
-	github.com/ethereum/go-ethereum v1.16.7
+	github.com/ethereum/go-ethereum v1.16.8
 	github.com/friendsofgo/errors v0.9.2
 	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/gofiber/fiber/v2 v2.52.9
