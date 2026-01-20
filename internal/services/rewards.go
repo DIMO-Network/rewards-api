@@ -22,7 +22,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/set"
-	pb_tesla "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/types"
@@ -44,7 +43,6 @@ type BaselineClient struct {
 	Logger             *zerolog.Logger
 	FirstAutomatedWeek int
 	IdentityClient     IdentityClient
-	teslaOracle        TeslaClient
 	fetchClient        pb_fetch.FetchServiceClient
 }
 
@@ -60,10 +58,6 @@ type DevicesClient interface {
 	GetVehicleByTokenIdFast(ctx context.Context, in *pb_devices.GetVehicleByTokenIdFastRequest, opts ...grpc.CallOption) (*pb_devices.GetVehicleByTokenIdFastResponse, error)
 }
 
-type TeslaClient interface {
-	GetVinByTokenId(ctx context.Context, in *pb_tesla.GetVinByTokenIdRequest, opts ...grpc.CallOption) (*pb_tesla.GetVinByTokenIdResponse, error)
-}
-
 func NewBaselineRewardService(
 	settings *config.Settings,
 	transferService *TransferService,
@@ -72,7 +66,6 @@ func NewBaselineRewardService(
 	stakeChecker IdentityClient,
 	week int,
 	logger *zerolog.Logger,
-	teslaOracle TeslaClient,
 	fetchClient pb_fetch.FetchServiceClient,
 ) *BaselineClient {
 	return &BaselineClient{
@@ -84,7 +77,6 @@ func NewBaselineRewardService(
 		Logger:             logger,
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
 		IdentityClient:     stakeChecker,
-		teslaOracle:        teslaOracle,
 		fetchClient:        fetchClient,
 	}
 }
@@ -185,19 +177,6 @@ func (t *BaselineClient) assignPoints() error {
 				thisWeek.SyntheticDeviceID = null.IntFrom(sd.TokenID)
 				thisWeek.SyntheticDevicePoints = int(conn.Points)
 				thisWeek.IntegrationIds = append(thisWeek.IntegrationIds, conn.LegacyID)
-
-				// Yes, this is bad. Temporary.
-				if conn.LegacyVendor == "Tesla" {
-					vti, err := t.teslaOracle.GetVinByTokenId(ctx, &pb_tesla.GetVinByTokenIdRequest{TokenId: uint32(sd.TokenID)})
-					if err != nil {
-						if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
-							logger.Info().Msg("Tesla vehicle not known to Oracle.")
-							continue
-						}
-						return err
-					}
-					vin = vti.Vin
-				}
 			}
 
 		}

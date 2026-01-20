@@ -15,7 +15,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
 	"github.com/DIMO-Network/shared/pkg/settings"
-	pb_tesla "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/aarondl/sqlboiler/v4/types"
@@ -393,7 +392,6 @@ func TestStreak(t *testing.T) {
 			chClient := NewMockDeviceActivityClient(ctrl)
 			devicesClient := NewMockDevicesClient(ctrl)
 			identClient := NewMockIdentityClient(ctrl)
-			teslaClient := NewMockTeslaClient(ctrl)
 
 			var devices []*ch.Vehicle
 
@@ -415,14 +413,6 @@ func TestStreak(t *testing.T) {
 								"address": v.SDConnAddr,
 							},
 						}
-
-						if v.SDConnAddr == teslaConn {
-							teslaClient.EXPECT().GetVinByTokenId(gomock.Any(), &pb_tesla.GetVinByTokenIdRequest{
-								TokenId: uint32(v.SDTokenID),
-							}).Return(&pb_tesla.GetVinByTokenIdResponse{
-								Vin: v.VIN,
-							}, nil)
-						}
 					}
 					if v.AMTokenID != 0 {
 						m["aftermarketDevice"] = map[string]any{
@@ -438,14 +428,6 @@ func TestStreak(t *testing.T) {
 						}).Return(&pb_devices.GetVehicleByTokenIdFastResponse{
 							Vin: v.VIN,
 						}, nil)
-
-						if v.SDConnAddr == teslaConn {
-							teslaClient.EXPECT().GetVinByTokenId(gomock.Any(), &pb_tesla.GetVinByTokenIdRequest{
-								TokenId: uint32(v.SDTokenID),
-							}).Return(&pb_tesla.GetVinByTokenIdResponse{
-								Vin: v.VIN,
-							}, nil)
-						}
 					}
 
 					var vd identity.VehicleDescription
@@ -456,7 +438,7 @@ func TestStreak(t *testing.T) {
 
 			chClient.EXPECT().DescribeActiveDevices(gomock.Any(), date.NumToWeekStart(issuanceWeek), date.NumToWeekEnd(issuanceWeek)).Return(devices, nil)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, chClient, devicesClient, identClient, issuanceWeek, &logger, teslaClient)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, chClient, devicesClient, identClient, issuanceWeek, &logger)
 
 			err = rwBonusService.assignPoints()
 			if err != nil {
