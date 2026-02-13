@@ -14,7 +14,6 @@ require (
 	github.com/DIMO-Network/model-garage v0.7.4
 	github.com/DIMO-Network/set v0.0.0-20250627202730-1145b5cbaecb
 	github.com/DIMO-Network/shared v1.0.7
-	github.com/DIMO-Network/tesla-oracle v0.4.18
 	github.com/IBM/sarama v1.46.1
 	github.com/aarondl/null/v8 v8.1.3
 	github.com/aarondl/sqlboiler/v4 v4.19.5
@@ -185,6 +184,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.37.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

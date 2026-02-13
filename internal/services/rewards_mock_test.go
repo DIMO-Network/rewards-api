@@ -17,9 +17,8 @@ import (
 	grpc "github.com/DIMO-Network/devices-api/pkg/grpc"
 	ch "github.com/DIMO-Network/rewards-api/internal/services/ch"
 	identity "github.com/DIMO-Network/rewards-api/internal/services/identity"
-	grpc0 "github.com/DIMO-Network/tesla-oracle/pkg/grpc"
 	gomock "go.uber.org/mock/gomock"
-	grpc1 "google.golang.org/grpc"
+	grpc0 "google.golang.org/grpc"
 )
 
 // MockIdentityClient is a mock of IdentityClient interface.
@@ -125,7 +124,7 @@ func (m *MockDevicesClient) EXPECT() *MockDevicesClientMockRecorder {
 }
 
 // GetVehicleByTokenIdFast mocks base method.
-func (m *MockDevicesClient) GetVehicleByTokenIdFast(ctx context.Context, in *grpc.GetVehicleByTokenIdFastRequest, opts ...grpc1.CallOption) (*grpc.GetVehicleByTokenIdFastResponse, error) {
+func (m *MockDevicesClient) GetVehicleByTokenIdFast(ctx context.Context, in *grpc.GetVehicleByTokenIdFastRequest, opts ...grpc0.CallOption) (*grpc.GetVehicleByTokenIdFastResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, in}
 	for _, a := range opts {
@@ -142,48 +141,4 @@ func (mr *MockDevicesClientMockRecorder) GetVehicleByTokenIdFast(ctx, in any, op
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, in}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVehicleByTokenIdFast", reflect.TypeOf((*MockDevicesClient)(nil).GetVehicleByTokenIdFast), varargs...)
-}
-
-// MockTeslaClient is a mock of TeslaClient interface.
-type MockTeslaClient struct {
-	ctrl     *gomock.Controller
-	recorder *MockTeslaClientMockRecorder
-	isgomock struct{}
-}
-
-// MockTeslaClientMockRecorder is the mock recorder for MockTeslaClient.
-type MockTeslaClientMockRecorder struct {
-	mock *MockTeslaClient
-}
-
-// NewMockTeslaClient creates a new mock instance.
-func NewMockTeslaClient(ctrl *gomock.Controller) *MockTeslaClient {
-	mock := &MockTeslaClient{ctrl: ctrl}
-	mock.recorder = &MockTeslaClientMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockTeslaClient) EXPECT() *MockTeslaClientMockRecorder {
-	return m.recorder
-}
-
-// GetVinByTokenId mocks base method.
-func (m *MockTeslaClient) GetVinByTokenId(ctx context.Context, in *grpc0.GetVinByTokenIdRequest, opts ...grpc1.CallOption) (*grpc0.GetVinByTokenIdResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, in}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetVinByTokenId", varargs...)
-	ret0, _ := ret[0].(*grpc0.GetVinByTokenIdResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetVinByTokenId indicates an expected call of GetVinByTokenId.
-func (mr *MockTeslaClientMockRecorder) GetVinByTokenId(ctx, in any, opts ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, in}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVinByTokenId", reflect.TypeOf((*MockTeslaClient)(nil).GetVinByTokenId), varargs...)
 }
