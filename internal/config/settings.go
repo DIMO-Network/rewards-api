@@ -34,7 +34,6 @@ type Settings struct {
 	StorageNodeDevLicense      common.Address  `yaml:"STORAGE_NODE_DEV_LICENSE"`
 	VINVCConcurrencyLimit      int             `yaml:"VINVC_CONCURRENCY_LIMIT"`
 
-	// These two are back-ups for VIN VCs.
-	DevicesAPIGRPCAddr  string `yaml:"DEVICES_API_GRPC_ADDR"`
-	TeslaOracleGRPCAddr string `yaml:"TESLA_ORACLE_GRPC_ADDR"`
+	// Back-up for VIN VCs. Get rid of this.
+	DevicesAPIGRPCAddr string `yaml:"DEVICES_API_GRPC_ADDR"`
 }
