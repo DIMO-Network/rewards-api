@@ -21,10 +21,10 @@ require (
 	github.com/burdiyan/kafkautil v0.0.0-20240215092415-7e6d3d0fc870
 	github.com/docker/go-connections v0.6.0
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
-	github.com/ethereum/go-ethereum v1.16.7
+	github.com/ethereum/go-ethereum v1.16.8
 	github.com/friendsofgo/errors v0.9.2
 	github.com/go-viper/mapstructure/v2 v2.4.0
-	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/gofiber/fiber/v2 v2.52.11
 	github.com/gofiber/jwt/v3 v3.3.10
 	github.com/gofiber/swagger v1.1.1
 	github.com/golang-jwt/jwt/v4 v4.5.2
@@ -39,7 +39,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.39.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/exp v0.0.0-20250911091902-df9299821621
-	golang.org/x/sync v0.17.0
+	golang.org/x/sync v0.18.0
 	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.10
 )
@@ -190,13 +190,13 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.43.0 // indirect
-	golang.org/x/mod v0.28.0 // indirect
-	golang.org/x/net v0.45.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/mod v0.29.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.37.0 // indirect
+	golang.org/x/tools v0.38.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250908214217-97024824d090 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250908214217-97024824d090 // indirect
