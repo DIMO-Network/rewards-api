@@ -13,7 +13,6 @@ import (
 
 	att_types "github.com/DIMO-Network/attestation-api/pkg/types"
 	"github.com/DIMO-Network/cloudevent"
-	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	pb_fetch "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/DIMO-Network/rewards-api/internal/constants"
@@ -31,13 +30,12 @@ import (
 )
 
 type RewardsController struct {
-	DB            db.Store
-	Logger        *zerolog.Logger
-	ChClient      *ch.Client
-	DevicesClient pb_devices.UserDeviceServiceClient
-	IdentClient   *identity.Client
-	Settings      *config.Settings
-	FetchClient   pb_fetch.FetchServiceClient
+	DB          db.Store
+	Logger      *zerolog.Logger
+	ChClient    *ch.Client
+	IdentClient *identity.Client
+	Settings    *config.Settings
+	FetchClient pb_fetch.FetchServiceClient
 }
 
 func getUserID(c *fiber.Ctx) string {
@@ -172,22 +170,10 @@ func (r *RewardsController) GetUserRewards(c *fiber.Ctx) error {
 			},
 		})
 		if err != nil {
-			if status.Code(err) == codes.NotFound {
-				vtf, err := r.DevicesClient.GetVehicleByTokenIdFast(c.Context(), &pb_devices.GetVehicleByTokenIdFastRequest{
-					TokenId: uint32(device.TokenID),
-				})
-				if err != nil {
-					if status.Code(err) != codes.NotFound {
-						// Some intermittent error.
-						return fmt.Errorf("failed to grab vehicle %d: %w", device.TokenID, err)
-					}
-					// Otherwise, just leave vinConfirmed as false.
-				} else if vtf.Vin != "" {
-					vinConfirmed = true
-				}
-			} else {
+			if status.Code(err) != codes.NotFound {
 				return fmt.Errorf("failed to retrieve VIN attestation for vehicle %d: %w", device.TokenID, err)
 			}
+			// Otherwise, we just don't have something. That's fine.
 		} else {
 			var cred att_types.Credential
 			if err := json.Unmarshal(ce.CloudEvent.Data, &cred); err == nil {
@@ -375,72 +361,7 @@ type UserResponseIntegration struct {
 // @Security     BearerAuth
 // @Router       /user/history [get]
 func (r *RewardsController) GetUserRewardsHistory(c *fiber.Ctx) error {
-	userID := getUserID(c)
-	logger := r.Logger.With().Str("userId", userID).Logger()
-
-	userAddr, err := GetTokenEthAddr(c)
-	if err != nil {
-		return err
-	}
-
-	devicesReq := &pb_devices.ListUserDevicesForUserRequest{
-		UserId:          userID,
-		EthereumAddress: userAddr.Hex(),
-	}
-
-	devices, err := r.DevicesClient.ListUserDevicesForUser(c.Context(), devicesReq)
-	if err != nil {
-		logger.Err(err).Msg("Failed to retrieve user's devices.")
-		return opaqueInternalError
-	}
-
-	vehicleTokenIDs := make([]int, 0, len(devices.UserDevices))
-	for _, ud := range devices.UserDevices {
-		if ud.TokenId != nil {
-			vehicleTokenIDs = append(vehicleTokenIDs, int(*ud.TokenId))
-		}
-	}
-
-	rs, err := models.Rewards(
-		models.RewardWhere.UserDeviceTokenID.IN(vehicleTokenIDs),
-		qm.OrderBy(models.RewardColumns.IssuanceWeekID+" ASC"),
-	).All(c.Context(), r.DB.DBS().Reader)
-	if err != nil {
-		logger.Err(err).Msg("Database failure retrieving rewards.")
-		return opaqueInternalError
-	}
-
-	if len(rs) == 0 {
-		return c.JSON(HistoryResponse{Weeks: []HistoryResponseWeek{}})
-	}
-
-	minWeek := rs[0].IssuanceWeekID
-	maxWeek := rs[len(rs)-1].IssuanceWeekID
-
-	weeks := make([]HistoryResponseWeek, maxWeek-minWeek+1)
-	for i := range weeks {
-		weekNum := maxWeek - i
-		weeks[i].Start = date.NumToWeekStart(weekNum)
-		weeks[i].End = date.NumToWeekEnd(weekNum)
-		weeks[i].Tokens = big.NewInt(0)
-	}
-
-	for _, r := range rs {
-		weeks[maxWeek-r.IssuanceWeekID].Points += r.StreakPoints + r.AftermarketDevicePoints + r.SyntheticDevicePoints
-
-		if r.AftermarketDeviceTokens.IsZero() && r.SyntheticDeviceTokens.IsZero() && r.StreakTokens.IsZero() {
-			continue
-		}
-
-		tkns := big.NewInt(0)
-		tkns.Add(tkns, r.StreakTokens.Int(nil))
-		tkns.Add(tkns, r.SyntheticDeviceTokens.Int(nil))
-		tkns.Add(tkns, r.AftermarketDeviceTokens.Int(nil))
-
-		weeks[maxWeek-r.IssuanceWeekID].Tokens.Add(weeks[maxWeek-r.IssuanceWeekID].Tokens, tkns)
-	}
-
-	return c.JSON(HistoryResponse{Weeks: weeks})
+	return c.JSON(HistoryResponse{Weeks: make([]HistoryResponseWeek, 0)})
 }
 
 type HistoryResponse struct {

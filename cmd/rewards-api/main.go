@@ -15,7 +15,6 @@ import (
 
 	_ "github.com/lib/pq"
 
-	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	pb_fetch "github.com/DIMO-Network/fetch-api/pkg/grpc"
 	_ "github.com/DIMO-Network/rewards-api/docs"
 	"github.com/DIMO-Network/rewards-api/internal/api"
@@ -89,13 +88,6 @@ func main() {
 			return c.SendStatus(fiber.StatusOK)
 		})
 
-		devicesConn, err := grpc.NewClient(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create devices API client.")
-		}
-		defer devicesConn.Close()
-
-		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
 		chClient, err := ch.NewClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
@@ -110,11 +102,10 @@ func main() {
 		fetchClient := pb_fetch.NewFetchServiceClient(fetchConn)
 
 		rewardsController := controllers.RewardsController{
-			DB:            pdb,
-			Logger:        &logger,
-			DevicesClient: deviceClient,
-			ChClient:      chClient,
-			Settings:      &settings,
+			DB:       pdb,
+			Logger:   &logger,
+			ChClient: chClient,
+			Settings: &settings,
 			IdentClient: &identity.Client{
 				QueryURL: settings.IdentityQueryURL,
 				Client:   &http.Client{},
@@ -227,14 +218,6 @@ func main() {
 
 		transferService := services.NewTokenTransferService(&settings, producer, pdb)
 
-		devicesConn, err := grpc.NewClient(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create devices-api connection.")
-		}
-		defer devicesConn.Close()
-
-		deviceClient := pb_devices.NewUserDeviceServiceClient(devicesConn)
-
 		chClient, err := ch.NewClient(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create ClickHouse client.")
@@ -253,7 +236,7 @@ func main() {
 
 		fetchClient := pb_fetch.NewFetchServiceClient(fetchConn)
 
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, deviceClient, identClient, week, &logger, fetchClient)
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, identClient, week, &logger, fetchClient)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")

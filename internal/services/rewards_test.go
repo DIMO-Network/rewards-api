@@ -438,7 +438,7 @@ func TestStreak(t *testing.T) {
 
 			chClient.EXPECT().DescribeActiveDevices(gomock.Any(), date.NumToWeekStart(issuanceWeek), date.NumToWeekEnd(issuanceWeek)).Return(devices, nil)
 
-			rwBonusService := NewBaselineRewardService(&settings, transferService, chClient, devicesClient, identClient, issuanceWeek, &logger)
+			rwBonusService := NewBaselineRewardService(&settings, transferService, chClient, identClient, issuanceWeek, &logger, nil)
 
 			err = rwBonusService.assignPoints()
 			if err != nil {

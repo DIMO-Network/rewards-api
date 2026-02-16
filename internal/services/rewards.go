@@ -37,7 +37,6 @@ import (
 type BaselineClient struct {
 	TransferService    *TransferService
 	DataService        DeviceActivityClient
-	DevicesClient      DevicesClient
 	ContractAddress    common.Address
 	Week               int
 	Logger             *zerolog.Logger
@@ -62,7 +61,6 @@ func NewBaselineRewardService(
 	settings *config.Settings,
 	transferService *TransferService,
 	dataService DeviceActivityClient,
-	devicesClient DevicesClient,
 	stakeChecker IdentityClient,
 	week int,
 	logger *zerolog.Logger,
@@ -71,7 +69,6 @@ func NewBaselineRewardService(
 	return &BaselineClient{
 		TransferService:    transferService,
 		DataService:        dataService,
-		DevicesClient:      devicesClient,
 		ContractAddress:    common.HexToAddress(settings.IssuanceContractAddress),
 		Week:               week,
 		Logger:             logger,
@@ -154,8 +151,6 @@ func (t *BaselineClient) assignPoints() error {
 			RewardsReceiverEthereumAddress: null.StringFrom(vOwner.Hex()),
 		}
 
-		vin := ""
-
 		if ad := vd.AftermarketDevice; ad != nil {
 			conn, ok := constants.ConnsByMfrId[ad.Manufacturer.TokenID]
 			if ok && slices.Contains(device.Sources, conn.Address.Hex()) {
@@ -186,52 +181,38 @@ func (t *BaselineClient) assignPoints() error {
 			continue
 		}
 
-		if vin == "" {
-			vv, err := t.DevicesClient.GetVehicleByTokenIdFast(ctx, &pb_devices.GetVehicleByTokenIdFastRequest{TokenId: uint32(device.TokenID)})
-			if err != nil {
-				if s, ok := status.FromError(err); !ok || s.Code() != codes.NotFound {
-					return err
-				}
-			} else {
-				// This could still be the empty string!
-				vin = vv.Vin
-			}
-		}
-
-		if vin == "" {
-			// One last attempt, try the VIN VC.
-			ce, err := t.fetchClient.GetLatestCloudEvent(ctx, &pb_fetch.GetLatestCloudEventRequest{
-				Options: &pb_fetch.SearchOptions{
-					Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
-					DataVersion: &wrapperspb.StringValue{Value: "vin/v1.0"},
-					Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: 137, ContractAddress: common.HexToAddress("0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF"), TokenID: big.NewInt(device.TokenID)}.String()},
-					Source:      &wrapperspb.StringValue{Value: common.HexToAddress("0x49eAf63eD94FEf3d40692862Eee2C8dB416B1a5f").Hex()},
-				},
-			})
-			if err != nil {
-				if status.Code(err) == codes.NotFound {
-					logger.Warn().Msg("No VIN attestation for vehicle.")
-					continue
-				}
-				return err
-			}
-
-			var cred att_types.Credential
-			if err := json.Unmarshal(ce.CloudEvent.Data, &cred); err != nil {
-				logger.Err(err).Msg("Couldn't parse VIN attestation data.")
+		// One last attempt, try the VIN VC.
+		ce, err := t.fetchClient.GetLatestCloudEvent(ctx, &pb_fetch.GetLatestCloudEventRequest{
+			Options: &pb_fetch.SearchOptions{
+				Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
+				DataVersion: &wrapperspb.StringValue{Value: "vin/v1.0"},
+				Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: 137, ContractAddress: common.HexToAddress("0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF"), TokenID: big.NewInt(device.TokenID)}.String()},
+				Source:      &wrapperspb.StringValue{Value: common.HexToAddress("0x49eAf63eD94FEf3d40692862Eee2C8dB416B1a5f").Hex()},
+			},
+		})
+		if err != nil {
+			if status.Code(err) == codes.NotFound {
+				logger.Warn().Msg("No VIN attestation for vehicle.")
 				continue
 			}
-
-			var vs att_types.VINSubject
-			if err := json.Unmarshal(cred.CredentialSubject, &vs); err != nil {
-				logger.Err(err).Msg("Couldn't parse VIN attestation subject.")
-				continue
-			}
-
-			vin = vs.VehicleIdentificationNumber
-
-			logger.Info().Msg("Had to use VIN VC.")
+			return err
 		}
+
+		var cred att_types.Credential
+		if err := json.Unmarshal(ce.CloudEvent.Data, &cred); err != nil {
+			logger.Err(err).Msg("Couldn't parse VIN attestation data.")
+			continue
+		}
+
+		var vs att_types.VINSubject
+		if err := json.Unmarshal(cred.CredentialSubject, &vs); err != nil {
+			logger.Err(err).Msg("Couldn't parse VIN attestation subject.")
+			continue
+		}
+
+		vin := vs.VehicleIdentificationNumber
+
+		logger.Info().Msg("Had to use VIN VC.")
 
 		if vinsUsed.Contains(vin) {
 			logger.Info().Msg("VIN already used in this rewards period.")
