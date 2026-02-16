@@ -41,7 +41,6 @@ env:
   GRPC_PORT: '8086'
   JWT_KEY_SET_URL: https://auth.dev.dimo.zone/keys
   AWS_REGION: us-east-2
-  DEVICES_API_GRPC_ADDR: devices-api-dev:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-dev:8086
   FETCH_API_GRPC_ADDR: fetch-api-dev:8086
   META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send

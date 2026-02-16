@@ -17,7 +17,6 @@ env:
   CLICKHOUSE_READ_TIMEOUT: 30m
   CLICKHOUSE_DIAL_TIMEOUT: 5m
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys
-  DEVICES_API_GRPC_ADDR: devices-api-prod:8086
   DEFINITIONS_API_GRPC_ADDR: device-definitions-api-prod:8086
   FETCH_API_GRPC_ADDR: fetch-api-prod:8086
   META_TRANSACTION_SEND_TOPIC: topic.transaction.request.send
