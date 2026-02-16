@@ -85,6 +85,8 @@ func (t *BaselineClient) assignPoints() error {
 	weekStart := date.NumToWeekStart(issuanceWeek)
 	weekEnd := date.NumToWeekEnd(issuanceWeek)
 
+	// Make sure a VIN isn't used twice.
+	// TODO(elffjs): Maybe say which vehicle caused the conflict?
 	var vinsUsed set.Set[string]
 
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
@@ -181,7 +183,7 @@ func (t *BaselineClient) assignPoints() error {
 			continue
 		}
 
-		// One last attempt, try the VIN VC.
+		// Get VINs from dimo.attestation events.
 		ce, err := t.fetchClient.GetLatestCloudEvent(ctx, &pb_fetch.GetLatestCloudEventRequest{
 			Options: &pb_fetch.SearchOptions{
 				Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
@@ -211,8 +213,6 @@ func (t *BaselineClient) assignPoints() error {
 		}
 
 		vin := vs.VehicleIdentificationNumber
-
-		logger.Info().Msg("Had to use VIN VC.")
 
 		if vinsUsed.Contains(vin) {
 			logger.Info().Msg("VIN already used in this rewards period.")
