@@ -42,7 +42,7 @@ var ConnsByAddr = map[common.Address]ConnectionConfig{
 		Points:       6000,
 	},
 	kaufmannAddr: {
-		LegacyID:     "3A3FA183nPtoo4IX6mYPagzUepo",
+		LegacyID:     "3A3FA183nPtoo4IX6mYPagzUepo", // Made up and not used anywhere else. Need to get rid of this.
 		LegacyVendor: "Kaufmann",
 		Address:      kaufmannAddr,
 		Points:       6000,
