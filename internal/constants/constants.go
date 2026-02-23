@@ -32,11 +32,19 @@ var ConnsByMfrId = map[int]ConnectionConfig{
 
 var teslaAddr = common.HexToAddress("0xc4035Fecb1cc906130423EF05f9C20977F643722")
 
+var kaufmannAddr = common.HexToAddress("0x8D8cDB2B26423c8fDbb27321aF20b4659Ce919fD")
+
 var ConnsByAddr = map[common.Address]ConnectionConfig{
 	teslaAddr: {
 		LegacyID:     "26A5Dk3vvvQutjSyF0Jka2DP5lg",
 		LegacyVendor: "Tesla",
 		Address:      teslaAddr,
+		Points:       6000,
+	},
+	kaufmannAddr: {
+		LegacyID:     "3A3FA183nPtoo4IX6mYPagzUepo",
+		LegacyVendor: "Kaufmann",
+		Address:      kaufmannAddr,
 		Points:       6000,
 	},
 }
