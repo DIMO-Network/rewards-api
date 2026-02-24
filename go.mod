@@ -24,7 +24,7 @@ require (
 	github.com/ethereum/go-ethereum v1.17.0
 	github.com/friendsofgo/errors v0.9.2
 	github.com/go-viper/mapstructure/v2 v2.4.0
-	github.com/gofiber/fiber/v2 v2.52.11
+	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/gofiber/jwt/v3 v3.3.10
 	github.com/gofiber/swagger v1.1.1
 	github.com/golang-jwt/jwt/v4 v4.5.2
