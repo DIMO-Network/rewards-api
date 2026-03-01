@@ -10,6 +10,7 @@ var TableNames = struct {
 	Overrides               string
 	Referrals               string
 	Rewards                 string
+	VinOverrides            string
 	Vins                    string
 }{
 	Blacklist:               "blacklist",
@@ -18,5 +19,6 @@ var TableNames = struct {
 	Overrides:               "overrides",
 	Referrals:               "referrals",
 	Rewards:                 "rewards",
+	VinOverrides:            "vin_overrides",
 	Vins:                    "vins",
 }

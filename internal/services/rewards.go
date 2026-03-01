@@ -85,9 +85,21 @@ func (t *BaselineClient) assignPoints() error {
 	weekStart := date.NumToWeekStart(issuanceWeek)
 	weekEnd := date.NumToWeekEnd(issuanceWeek)
 
-	// Make sure a VIN isn't used twice.
-	// TODO(elffjs): Maybe say which vehicle caused the conflict?
+	// Make sure a VIN isn't used twice. When a conflict arises, the car minted most recently wins.
 	vinUsedBy := make(map[string]int64)
+
+	// Override the VIN attestations in specific cases. These are typically old devices that have
+	// been plugged into several vehicles without re-pairing, and only some of these got VIN.
+	overrideRows, err := models.VinOverrides().All(ctx, t.TransferService.db.DBS().Reader)
+	if err != nil {
+		return fmt.Errorf("failed to load VIN overrides: %w", err)
+	}
+
+	vinOverrides := make(map[int64]string, len(overrideRows))
+	for _, row := range overrideRows {
+		vinOverrides[int64(row.TokenID)] = row.Vin
+	}
+	t.Logger.Info().Msgf("Loaded %d VIN overrides.", len(vinOverrides))
 
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
@@ -183,37 +195,44 @@ func (t *BaselineClient) assignPoints() error {
 			continue
 		}
 
-		// Get VINs from dimo.attestation events.
-		ce, err := t.fetchClient.GetLatestCloudEvent(ctx, &pb_fetch.GetLatestCloudEventRequest{
-			Options: &pb_fetch.SearchOptions{
-				Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
-				DataVersion: &wrapperspb.StringValue{Value: "vin/v1.0"},
-				Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: 137, ContractAddress: common.HexToAddress("0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF"), TokenID: big.NewInt(device.TokenID)}.String()},
-				Source:      &wrapperspb.StringValue{Value: common.HexToAddress("0x49eAf63eD94FEf3d40692862Eee2C8dB416B1a5f").Hex()},
-			},
-		})
-		if err != nil {
-			st := status.Convert(err)
-			if st.Code() == codes.NotFound || (st.Code() == codes.Internal && strings.Contains(st.Message(), "NoSuchKey")) {
-				logger.Warn().Msg("No VIN attestation for vehicle.")
+		var vin string
+
+		if overrideVIN, ok := vinOverrides[device.TokenID]; ok {
+			logger.Info().Msg("Using VIN override.")
+			vin = overrideVIN
+		} else {
+			// Get VINs from dimo.attestation events.
+			ce, err := t.fetchClient.GetLatestCloudEvent(ctx, &pb_fetch.GetLatestCloudEventRequest{
+				Options: &pb_fetch.SearchOptions{
+					Type:        &wrapperspb.StringValue{Value: cloudevent.TypeAttestation},
+					DataVersion: &wrapperspb.StringValue{Value: "vin/v1.0"},
+					Subject:     &wrapperspb.StringValue{Value: cloudevent.ERC721DID{ChainID: 137, ContractAddress: common.HexToAddress("0xbA5738a18d83D41847dfFbDC6101d37C69c9B0cF"), TokenID: big.NewInt(device.TokenID)}.String()},
+					Source:      &wrapperspb.StringValue{Value: common.HexToAddress("0x49eAf63eD94FEf3d40692862Eee2C8dB416B1a5f").Hex()},
+				},
+			})
+			if err != nil {
+				st := status.Convert(err)
+				if st.Code() == codes.NotFound || (st.Code() == codes.Internal && strings.Contains(st.Message(), "NoSuchKey")) {
+					logger.Warn().Msg("No VIN attestation for vehicle.")
+					continue
+				}
+				return fmt.Errorf("failed to retrieve VIN attestation for vehicle %d: %w", device.TokenID, err)
+			}
+
+			var cred att_types.Credential
+			if err := json.Unmarshal(ce.CloudEvent.Data, &cred); err != nil {
+				logger.Err(err).Msg("Couldn't parse VIN attestation data.")
 				continue
 			}
-			return err
-		}
 
-		var cred att_types.Credential
-		if err := json.Unmarshal(ce.CloudEvent.Data, &cred); err != nil {
-			logger.Err(err).Msg("Couldn't parse VIN attestation data.")
-			continue
-		}
+			var vs att_types.VINSubject
+			if err := json.Unmarshal(cred.CredentialSubject, &vs); err != nil {
+				logger.Err(err).Msg("Couldn't parse VIN attestation subject.")
+				continue
+			}
 
-		var vs att_types.VINSubject
-		if err := json.Unmarshal(cred.CredentialSubject, &vs); err != nil {
-			logger.Err(err).Msg("Couldn't parse VIN attestation subject.")
-			continue
+			vin = vs.VehicleIdentificationNumber
 		}
-
-		vin := vs.VehicleIdentificationNumber
 
 		if claimer, ok := vinUsedBy[vin]; ok {
 			logger.Info().Msgf("VIN already used in this rewards period by %d.", claimer)

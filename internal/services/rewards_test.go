@@ -82,10 +82,6 @@ type RewardEvent struct {
 	VehicleID *big.Int
 }
 
-var mkID = func(i int) string {
-	return fmt.Sprintf("% 27d", i)
-}
-
 var mkAddr = func(i int) common.Address {
 	return common.BigToAddress(big.NewInt(int64(i)))
 }
@@ -977,5 +973,3 @@ type Device struct {
 	SDTokenID           uint64
 	SDConnAddr          common.Address
 }
-
-var zeroAddr common.Address
