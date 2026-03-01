@@ -85,20 +85,21 @@ func (t *BaselineClient) assignPoints() error {
 	weekStart := date.NumToWeekStart(issuanceWeek)
 	weekEnd := date.NumToWeekEnd(issuanceWeek)
 
-	// Make sure a VIN isn't used twice.
-	// TODO(elffjs): Maybe say which vehicle caused the conflict?
+	// Make sure a VIN isn't used twice. When a conflict arises, the car minted most recently wins.
 	vinUsedBy := make(map[string]int64)
 
-	// Load VIN overrides to bypass gRPC fetch for known shared-VIN cases.
+	// Override the VIN attestations in specific cases. These are typically old devices that have
+	// been plugged into several vehicles without re-pairing, and only some of these got VIN.
 	overrideRows, err := models.VinOverrides().All(ctx, t.TransferService.db.DBS().Reader)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load VIN overrides: %w", err)
 	}
+
 	vinOverrides := make(map[int64]string, len(overrideRows))
 	for _, row := range overrideRows {
 		vinOverrides[int64(row.TokenID)] = row.Vin
 	}
-	t.Logger.Info().Int("count", len(vinOverrides)).Msg("Loaded VIN overrides.")
+	t.Logger.Info().Msgf("Loaded %d VIN overrides.", len(vinOverrides))
 
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
@@ -197,7 +198,7 @@ func (t *BaselineClient) assignPoints() error {
 		var vin string
 
 		if overrideVIN, ok := vinOverrides[device.TokenID]; ok {
-			logger.Info().Str("vin", overrideVIN).Msg("Using VIN override, skipping gRPC fetch.")
+			logger.Info().Msg("Using VIN override.")
 			vin = overrideVIN
 		} else {
 			// Get VINs from dimo.attestation events.
@@ -215,7 +216,7 @@ func (t *BaselineClient) assignPoints() error {
 					logger.Warn().Msg("No VIN attestation for vehicle.")
 					continue
 				}
-				return err
+				return fmt.Errorf("failed to retrieve VIN attestation for vehicle %d: %w", device.TokenID, err)
 			}
 
 			var cred att_types.Credential
