@@ -12,7 +12,6 @@ require (
 	github.com/DIMO-Network/devices-api v1.41.8
 	github.com/DIMO-Network/fetch-api v0.0.14
 	github.com/DIMO-Network/model-garage v0.7.4
-	github.com/DIMO-Network/set v0.0.0-20250627202730-1145b5cbaecb
 	github.com/DIMO-Network/shared v1.0.7
 	github.com/IBM/sarama v1.46.1
 	github.com/aarondl/null/v8 v8.1.3
