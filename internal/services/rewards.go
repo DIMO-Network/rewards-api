@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
+	"strings"
 	"time"
 
 	att_types "github.com/DIMO-Network/attestation-api/pkg/types"
@@ -21,7 +22,6 @@ import (
 	"github.com/DIMO-Network/rewards-api/internal/storage"
 	"github.com/DIMO-Network/rewards-api/models"
 	"github.com/DIMO-Network/rewards-api/pkg/date"
-	"github.com/DIMO-Network/set"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/types"
@@ -87,7 +87,7 @@ func (t *BaselineClient) assignPoints() error {
 
 	// Make sure a VIN isn't used twice.
 	// TODO(elffjs): Maybe say which vehicle caused the conflict?
-	var vinsUsed set.Set[string]
+	vinUsedBy := make(map[string]int64)
 
 	t.Logger.Info().Msgf("Running job for issuance week %d, running from %s to %s", issuanceWeek, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339))
 
@@ -193,7 +193,8 @@ func (t *BaselineClient) assignPoints() error {
 			},
 		})
 		if err != nil {
-			if status.Code(err) == codes.NotFound {
+			st := status.Convert(err)
+			if st.Code() == codes.NotFound || (st.Code() == codes.Internal && strings.Contains(st.Message(), "NoSuchKey")) {
 				logger.Warn().Msg("No VIN attestation for vehicle.")
 				continue
 			}
@@ -214,12 +215,12 @@ func (t *BaselineClient) assignPoints() error {
 
 		vin := vs.VehicleIdentificationNumber
 
-		if vinsUsed.Contains(vin) {
-			logger.Info().Msg("VIN already used in this rewards period.")
+		if claimer, ok := vinUsedBy[vin]; ok {
+			logger.Info().Msgf("VIN already used in this rewards period by %d.", claimer)
 			continue
 		}
 
-		vinsUsed.Add(vin)
+		vinUsedBy[vin] = device.TokenID
 
 		// Streak rewards.
 		streakInput := StreakInput{
