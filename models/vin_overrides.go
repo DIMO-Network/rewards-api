@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -24,10 +23,9 @@ import (
 
 // VinOverride is an object representing the database table.
 type VinOverride struct {
-	TokenID   int         `boil:"token_id" json:"token_id" toml:"token_id" yaml:"token_id"`
-	Vin       string      `boil:"vin" json:"vin" toml:"vin" yaml:"vin"`
-	Note      null.String `boil:"note" json:"note,omitempty" toml:"note" yaml:"note,omitempty"`
-	CreatedAt time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	TokenID   int       `boil:"token_id" json:"token_id" toml:"token_id" yaml:"token_id"`
+	Vin       string    `boil:"vin" json:"vin" toml:"vin" yaml:"vin"`
+	CreatedAt time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
 	R *vinOverrideR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L vinOverrideL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -36,24 +34,20 @@ type VinOverride struct {
 var VinOverrideColumns = struct {
 	TokenID   string
 	Vin       string
-	Note      string
 	CreatedAt string
 }{
 	TokenID:   "token_id",
 	Vin:       "vin",
-	Note:      "note",
 	CreatedAt: "created_at",
 }
 
 var VinOverrideTableColumns = struct {
 	TokenID   string
 	Vin       string
-	Note      string
 	CreatedAt string
 }{
 	TokenID:   "vin_overrides.token_id",
 	Vin:       "vin_overrides.vin",
-	Note:      "vin_overrides.note",
 	CreatedAt: "vin_overrides.created_at",
 }
 
@@ -62,12 +56,10 @@ var VinOverrideTableColumns = struct {
 var VinOverrideWhere = struct {
 	TokenID   whereHelperint
 	Vin       whereHelperstring
-	Note      whereHelpernull_String
 	CreatedAt whereHelpertime_Time
 }{
 	TokenID:   whereHelperint{field: "\"rewards_api\".\"vin_overrides\".\"token_id\""},
 	Vin:       whereHelperstring{field: "\"rewards_api\".\"vin_overrides\".\"vin\""},
-	Note:      whereHelpernull_String{field: "\"rewards_api\".\"vin_overrides\".\"note\""},
 	CreatedAt: whereHelpertime_Time{field: "\"rewards_api\".\"vin_overrides\".\"created_at\""},
 }
 
@@ -88,8 +80,8 @@ func (*vinOverrideR) NewStruct() *vinOverrideR {
 type vinOverrideL struct{}
 
 var (
-	vinOverrideAllColumns            = []string{"token_id", "vin", "note", "created_at"}
-	vinOverrideColumnsWithoutDefault = []string{"token_id", "vin", "note"}
+	vinOverrideAllColumns            = []string{"token_id", "vin", "created_at"}
+	vinOverrideColumnsWithoutDefault = []string{"token_id", "vin"}
 	vinOverrideColumnsWithDefault    = []string{"created_at"}
 	vinOverridePrimaryKeyColumns     = []string{"token_id"}
 	vinOverrideGeneratedColumns      = []string{}
