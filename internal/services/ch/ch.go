@@ -1,12 +1,15 @@
 package ch
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/DIMO-Network/clickhouse-infra/pkg/connect"
+	"github.com/DIMO-Network/cloudevent"
 	"github.com/DIMO-Network/model-garage/pkg/vss"
 	"github.com/DIMO-Network/rewards-api/internal/config"
 	"github.com/aarondl/sqlboiler/v4/drivers"
@@ -51,13 +54,12 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 	q := &queries.Query{}
 	queries.SetDialect(q, &dialect)
 	qm.Apply(q,
-		qm.Select("token_id", "groupUniqArray(source)"),
+		qm.Select("subject", "groupUniqArray(source)"),
 		qm.From("signal"),
 		qmhelper.Where("timestamp", qmhelper.GTE, start),
 		qmhelper.Where("timestamp", qmhelper.LT, end),
 		qm.WhereNotIn("name NOT IN ?", constantSignals...),
-		qm.GroupBy("token_id"),
-		qm.OrderBy("token_id DESC"),
+		qm.GroupBy("subject"),
 	)
 	query, args := queries.BuildQuery(q)
 	rows, err := s.conn.Query(ctx, query, args...)
@@ -68,14 +70,23 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 
 	var vehicles []*Vehicle
 	for rows.Next() {
-		var tokenID uint32
+		var subject string
 		var sources []string
-		if err := rows.Scan(&tokenID, &sources); err != nil {
+		if err := rows.Scan(&subject, &sources); err != nil {
 			return nil, fmt.Errorf("failed to scan rows: %w", err)
 		}
 
+		did, err := cloudevent.DecodeERC721DID(subject)
+		if err != nil {
+			continue
+		}
+
+		if !did.TokenID.IsInt64() {
+			continue
+		}
+
 		vehicles = append(vehicles, &Vehicle{
-			TokenID: int64(tokenID),
+			TokenID: did.TokenID.Int64(),
 			Sources: sources,
 		})
 	}
@@ -83,6 +94,10 @@ func (s *Client) DescribeActiveDevices(ctx context.Context, start, end time.Time
 	if rows.Err() != nil {
 		return nil, fmt.Errorf("clickhouse row error: %w", rows.Err())
 	}
+
+	slices.SortFunc(vehicles, func(v1, v2 *Vehicle) int {
+		return cmp.Compare(v2.TokenID, v1.TokenID)
+	})
 
 	return vehicles, nil
 }
