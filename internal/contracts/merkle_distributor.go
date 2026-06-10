@@ -29,9 +29,18 @@ var (
 	_ = abi.ConvertType
 )
 
+// MerkleDistributorPool is an auto generated low-level Go binding around an user-defined struct.
+type MerkleDistributorPool struct {
+	Token       common.Address
+	Admin       common.Address
+	WeeklyLimit *big.Int
+	Balance     *big.Int
+	Committed   *big.Int
+}
+
 // MerkleDistributorMetaData contains all meta data concerning the MerkleDistributor contract.
 var MerkleDistributorMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"AllocationExceeded\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadyClaimed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ArrayLengthMismatch\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InsufficientPoolBalance\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotPoolAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotRootSetter\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"PoolDoesNotExist\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RootImmutableAfterClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RootNotSet\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Sanctioned\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SweepExceedsUncommitted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"WeeklyLimitExceeded\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAllocation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAmount\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Claimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Funded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"weeklyLimit\",\"type\":\"uint256\"}],\"name\":\"PoolCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"allocation\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"proofsURI\",\"type\":\"string\"}],\"name\":\"RootSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"setter\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"RootSetterSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newBalance\",\"type\":\"uint256\"}],\"name\":\"Swept\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"limit\",\"type\":\"uint256\"}],\"name\":\"WeeklyLimitSet\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"UPGRADER_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"allocations\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"claim\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"weeks_\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"proofs\",\"type\":\"bytes32[][]\"}],\"name\":\"claimBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"claimed\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"claimedTotals\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"weeklyLimit\",\"type\":\"uint256\"}],\"name\":\"createPool\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"fund\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sanctionsList_\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256[]\",\"name\":\"weeks_\",\"type\":\"uint256[]\"}],\"name\":\"isClaimedBatch\",\"outputs\":[{\"internalType\":\"bool[]\",\"name\":\"statuses\",\"type\":\"bool[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"isRootSetter\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"poolCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"pools\",\"outputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"weeklyLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"committed\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"proofsURIs\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"roots\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sanctionsList\",\"outputs\":[{\"internalType\":\"contractISanctionsList\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"allocation\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"proofsURI\",\"type\":\"string\"}],\"name\":\"setRoot\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"setter\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setRootSetter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"limit\",\"type\":\"uint256\"}],\"name\":\"setWeeklyLimit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"sweep\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"claimedTotal\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"allocation\",\"type\":\"uint256\"}],\"name\":\"AllocationExceeded\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadyClaimed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ArrayLengthMismatch\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"required\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"available\",\"type\":\"uint256\"}],\"name\":\"InsufficientPoolBalance\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProof\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotPoolAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotRootSetter\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"}],\"name\":\"PoolDoesNotExist\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RootImmutableAfterClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RootNotSet\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Sanctioned\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"requested\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"available\",\"type\":\"uint256\"}],\"name\":\"SweepExceedsUncommitted\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"allocation\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"limit\",\"type\":\"uint256\"}],\"name\":\"WeeklyLimitExceeded\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAllocation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAmount\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Claimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Funded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"PoolAdminSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"weeklyLimit\",\"type\":\"uint256\"}],\"name\":\"PoolCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"allocation\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"proofsURI\",\"type\":\"string\"}],\"name\":\"RootSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"setter\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"RootSetterSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sanctionsList\",\"type\":\"address\"}],\"name\":\"SanctionsListSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newBalance\",\"type\":\"uint256\"}],\"name\":\"Swept\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"limit\",\"type\":\"uint256\"}],\"name\":\"WeeklyLimitSet\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"UPGRADER_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"allocations\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"}],\"name\":\"claim\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"weeks_\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"proofs\",\"type\":\"bytes32[][]\"}],\"name\":\"claimBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"claimed\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"claimedTotals\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"weeklyLimit\",\"type\":\"uint256\"}],\"name\":\"createPool\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"fund\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"}],\"name\":\"getPool\",\"outputs\":[{\"components\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"weeklyLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"committed\",\"type\":\"uint256\"}],\"internalType\":\"structMerkleDistributor.Pool\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sanctionsList_\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256[]\",\"name\":\"weeks_\",\"type\":\"uint256[]\"}],\"name\":\"isClaimedBatch\",\"outputs\":[{\"internalType\":\"bool[]\",\"name\":\"statuses\",\"type\":\"bool[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"isRootSetter\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"poolCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"pools\",\"outputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"weeklyLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"committed\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"proofsURIs\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"roots\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sanctionsList\",\"outputs\":[{\"internalType\":\"contractISanctionsList\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"setPoolAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"week\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"allocation\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"proofsURI\",\"type\":\"string\"}],\"name\":\"setRoot\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"setter\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setRootSetter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sanctionsList_\",\"type\":\"address\"}],\"name\":\"setSanctionsList\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"limit\",\"type\":\"uint256\"}],\"name\":\"setWeeklyLimit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"poolId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"sweep\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
 }
 
 // MerkleDistributorABI is the input ABI used to generate the binding from.
@@ -333,6 +342,37 @@ func (_MerkleDistributor *MerkleDistributorSession) ClaimedTotals(arg0 *big.Int,
 // Solidity: function claimedTotals(uint256 , uint256 ) view returns(uint256)
 func (_MerkleDistributor *MerkleDistributorCallerSession) ClaimedTotals(arg0 *big.Int, arg1 *big.Int) (*big.Int, error) {
 	return _MerkleDistributor.Contract.ClaimedTotals(&_MerkleDistributor.CallOpts, arg0, arg1)
+}
+
+// GetPool is a free data retrieval call binding the contract method 0x068bcd8d.
+//
+// Solidity: function getPool(uint256 poolId) view returns((address,address,uint256,uint256,uint256))
+func (_MerkleDistributor *MerkleDistributorCaller) GetPool(opts *bind.CallOpts, poolId *big.Int) (MerkleDistributorPool, error) {
+	var out []interface{}
+	err := _MerkleDistributor.contract.Call(opts, &out, "getPool", poolId)
+
+	if err != nil {
+		return *new(MerkleDistributorPool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(MerkleDistributorPool)).(*MerkleDistributorPool)
+
+	return out0, err
+
+}
+
+// GetPool is a free data retrieval call binding the contract method 0x068bcd8d.
+//
+// Solidity: function getPool(uint256 poolId) view returns((address,address,uint256,uint256,uint256))
+func (_MerkleDistributor *MerkleDistributorSession) GetPool(poolId *big.Int) (MerkleDistributorPool, error) {
+	return _MerkleDistributor.Contract.GetPool(&_MerkleDistributor.CallOpts, poolId)
+}
+
+// GetPool is a free data retrieval call binding the contract method 0x068bcd8d.
+//
+// Solidity: function getPool(uint256 poolId) view returns((address,address,uint256,uint256,uint256))
+func (_MerkleDistributor *MerkleDistributorCallerSession) GetPool(poolId *big.Int) (MerkleDistributorPool, error) {
+	return _MerkleDistributor.Contract.GetPool(&_MerkleDistributor.CallOpts, poolId)
 }
 
 // GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
@@ -925,6 +965,27 @@ func (_MerkleDistributor *MerkleDistributorTransactorSession) RevokeRole(role [3
 	return _MerkleDistributor.Contract.RevokeRole(&_MerkleDistributor.TransactOpts, role, account)
 }
 
+// SetPoolAdmin is a paid mutator transaction binding the contract method 0xaccd7c3a.
+//
+// Solidity: function setPoolAdmin(uint256 poolId, address newAdmin) returns()
+func (_MerkleDistributor *MerkleDistributorTransactor) SetPoolAdmin(opts *bind.TransactOpts, poolId *big.Int, newAdmin common.Address) (*types.Transaction, error) {
+	return _MerkleDistributor.contract.Transact(opts, "setPoolAdmin", poolId, newAdmin)
+}
+
+// SetPoolAdmin is a paid mutator transaction binding the contract method 0xaccd7c3a.
+//
+// Solidity: function setPoolAdmin(uint256 poolId, address newAdmin) returns()
+func (_MerkleDistributor *MerkleDistributorSession) SetPoolAdmin(poolId *big.Int, newAdmin common.Address) (*types.Transaction, error) {
+	return _MerkleDistributor.Contract.SetPoolAdmin(&_MerkleDistributor.TransactOpts, poolId, newAdmin)
+}
+
+// SetPoolAdmin is a paid mutator transaction binding the contract method 0xaccd7c3a.
+//
+// Solidity: function setPoolAdmin(uint256 poolId, address newAdmin) returns()
+func (_MerkleDistributor *MerkleDistributorTransactorSession) SetPoolAdmin(poolId *big.Int, newAdmin common.Address) (*types.Transaction, error) {
+	return _MerkleDistributor.Contract.SetPoolAdmin(&_MerkleDistributor.TransactOpts, poolId, newAdmin)
+}
+
 // SetRoot is a paid mutator transaction binding the contract method 0x2e3f4fc2.
 //
 // Solidity: function setRoot(uint256 poolId, uint256 week, bytes32 root, uint256 allocation, string proofsURI) returns()
@@ -965,6 +1026,27 @@ func (_MerkleDistributor *MerkleDistributorSession) SetRootSetter(poolId *big.In
 // Solidity: function setRootSetter(uint256 poolId, address setter, bool enabled) returns()
 func (_MerkleDistributor *MerkleDistributorTransactorSession) SetRootSetter(poolId *big.Int, setter common.Address, enabled bool) (*types.Transaction, error) {
 	return _MerkleDistributor.Contract.SetRootSetter(&_MerkleDistributor.TransactOpts, poolId, setter, enabled)
+}
+
+// SetSanctionsList is a paid mutator transaction binding the contract method 0x49dc5e8d.
+//
+// Solidity: function setSanctionsList(address sanctionsList_) returns()
+func (_MerkleDistributor *MerkleDistributorTransactor) SetSanctionsList(opts *bind.TransactOpts, sanctionsList_ common.Address) (*types.Transaction, error) {
+	return _MerkleDistributor.contract.Transact(opts, "setSanctionsList", sanctionsList_)
+}
+
+// SetSanctionsList is a paid mutator transaction binding the contract method 0x49dc5e8d.
+//
+// Solidity: function setSanctionsList(address sanctionsList_) returns()
+func (_MerkleDistributor *MerkleDistributorSession) SetSanctionsList(sanctionsList_ common.Address) (*types.Transaction, error) {
+	return _MerkleDistributor.Contract.SetSanctionsList(&_MerkleDistributor.TransactOpts, sanctionsList_)
+}
+
+// SetSanctionsList is a paid mutator transaction binding the contract method 0x49dc5e8d.
+//
+// Solidity: function setSanctionsList(address sanctionsList_) returns()
+func (_MerkleDistributor *MerkleDistributorTransactorSession) SetSanctionsList(sanctionsList_ common.Address) (*types.Transaction, error) {
+	return _MerkleDistributor.Contract.SetSanctionsList(&_MerkleDistributor.TransactOpts, sanctionsList_)
 }
 
 // SetWeeklyLimit is a paid mutator transaction binding the contract method 0xe8080159.
@@ -1936,6 +2018,159 @@ func (_MerkleDistributor *MerkleDistributorFilterer) ParsePaused(log types.Log) 
 	return event, nil
 }
 
+// MerkleDistributorPoolAdminSetIterator is returned from FilterPoolAdminSet and is used to iterate over the raw logs and unpacked data for PoolAdminSet events raised by the MerkleDistributor contract.
+type MerkleDistributorPoolAdminSetIterator struct {
+	Event *MerkleDistributorPoolAdminSet // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *MerkleDistributorPoolAdminSetIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(MerkleDistributorPoolAdminSet)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(MerkleDistributorPoolAdminSet)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *MerkleDistributorPoolAdminSetIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *MerkleDistributorPoolAdminSetIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// MerkleDistributorPoolAdminSet represents a PoolAdminSet event raised by the MerkleDistributor contract.
+type MerkleDistributorPoolAdminSet struct {
+	PoolId   *big.Int
+	NewAdmin common.Address
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterPoolAdminSet is a free log retrieval operation binding the contract event 0xc82d7f643542322828f782340f6385df8ec816ac42d25ea9a94338b8ad6eb50a.
+//
+// Solidity: event PoolAdminSet(uint256 indexed poolId, address indexed newAdmin)
+func (_MerkleDistributor *MerkleDistributorFilterer) FilterPoolAdminSet(opts *bind.FilterOpts, poolId []*big.Int, newAdmin []common.Address) (*MerkleDistributorPoolAdminSetIterator, error) {
+
+	var poolIdRule []interface{}
+	for _, poolIdItem := range poolId {
+		poolIdRule = append(poolIdRule, poolIdItem)
+	}
+	var newAdminRule []interface{}
+	for _, newAdminItem := range newAdmin {
+		newAdminRule = append(newAdminRule, newAdminItem)
+	}
+
+	logs, sub, err := _MerkleDistributor.contract.FilterLogs(opts, "PoolAdminSet", poolIdRule, newAdminRule)
+	if err != nil {
+		return nil, err
+	}
+	return &MerkleDistributorPoolAdminSetIterator{contract: _MerkleDistributor.contract, event: "PoolAdminSet", logs: logs, sub: sub}, nil
+}
+
+// WatchPoolAdminSet is a free log subscription operation binding the contract event 0xc82d7f643542322828f782340f6385df8ec816ac42d25ea9a94338b8ad6eb50a.
+//
+// Solidity: event PoolAdminSet(uint256 indexed poolId, address indexed newAdmin)
+func (_MerkleDistributor *MerkleDistributorFilterer) WatchPoolAdminSet(opts *bind.WatchOpts, sink chan<- *MerkleDistributorPoolAdminSet, poolId []*big.Int, newAdmin []common.Address) (event.Subscription, error) {
+
+	var poolIdRule []interface{}
+	for _, poolIdItem := range poolId {
+		poolIdRule = append(poolIdRule, poolIdItem)
+	}
+	var newAdminRule []interface{}
+	for _, newAdminItem := range newAdmin {
+		newAdminRule = append(newAdminRule, newAdminItem)
+	}
+
+	logs, sub, err := _MerkleDistributor.contract.WatchLogs(opts, "PoolAdminSet", poolIdRule, newAdminRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(MerkleDistributorPoolAdminSet)
+				if err := _MerkleDistributor.contract.UnpackLog(event, "PoolAdminSet", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParsePoolAdminSet is a log parse operation binding the contract event 0xc82d7f643542322828f782340f6385df8ec816ac42d25ea9a94338b8ad6eb50a.
+//
+// Solidity: event PoolAdminSet(uint256 indexed poolId, address indexed newAdmin)
+func (_MerkleDistributor *MerkleDistributorFilterer) ParsePoolAdminSet(log types.Log) (*MerkleDistributorPoolAdminSet, error) {
+	event := new(MerkleDistributorPoolAdminSet)
+	if err := _MerkleDistributor.contract.UnpackLog(event, "PoolAdminSet", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // MerkleDistributorPoolCreatedIterator is returned from FilterPoolCreated and is used to iterate over the raw logs and unpacked data for PoolCreated events raised by the MerkleDistributor contract.
 type MerkleDistributorPoolCreatedIterator struct {
 	Event *MerkleDistributorPoolCreated // Event containing the contract specifics and raw log
@@ -2664,8 +2899,8 @@ type MerkleDistributorRootSet struct {
 
 // FilterRootSet is a free log retrieval operation binding the contract event 0x121a417ff6acf9dc80400d2b74677426b59add2a9d014e26fa79fddd2fe44120.
 //
-// Solidity: event RootSet(uint256 indexed poolId, uint256 indexed week, bytes32 root, uint256 allocation, string proofsURI)
-func (_MerkleDistributor *MerkleDistributorFilterer) FilterRootSet(opts *bind.FilterOpts, poolId []*big.Int, week []*big.Int) (*MerkleDistributorRootSetIterator, error) {
+// Solidity: event RootSet(uint256 indexed poolId, uint256 indexed week, bytes32 indexed root, uint256 allocation, string proofsURI)
+func (_MerkleDistributor *MerkleDistributorFilterer) FilterRootSet(opts *bind.FilterOpts, poolId []*big.Int, week []*big.Int, root [][32]byte) (*MerkleDistributorRootSetIterator, error) {
 
 	var poolIdRule []interface{}
 	for _, poolIdItem := range poolId {
@@ -2675,8 +2910,12 @@ func (_MerkleDistributor *MerkleDistributorFilterer) FilterRootSet(opts *bind.Fi
 	for _, weekItem := range week {
 		weekRule = append(weekRule, weekItem)
 	}
+	var rootRule []interface{}
+	for _, rootItem := range root {
+		rootRule = append(rootRule, rootItem)
+	}
 
-	logs, sub, err := _MerkleDistributor.contract.FilterLogs(opts, "RootSet", poolIdRule, weekRule)
+	logs, sub, err := _MerkleDistributor.contract.FilterLogs(opts, "RootSet", poolIdRule, weekRule, rootRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2685,8 +2924,8 @@ func (_MerkleDistributor *MerkleDistributorFilterer) FilterRootSet(opts *bind.Fi
 
 // WatchRootSet is a free log subscription operation binding the contract event 0x121a417ff6acf9dc80400d2b74677426b59add2a9d014e26fa79fddd2fe44120.
 //
-// Solidity: event RootSet(uint256 indexed poolId, uint256 indexed week, bytes32 root, uint256 allocation, string proofsURI)
-func (_MerkleDistributor *MerkleDistributorFilterer) WatchRootSet(opts *bind.WatchOpts, sink chan<- *MerkleDistributorRootSet, poolId []*big.Int, week []*big.Int) (event.Subscription, error) {
+// Solidity: event RootSet(uint256 indexed poolId, uint256 indexed week, bytes32 indexed root, uint256 allocation, string proofsURI)
+func (_MerkleDistributor *MerkleDistributorFilterer) WatchRootSet(opts *bind.WatchOpts, sink chan<- *MerkleDistributorRootSet, poolId []*big.Int, week []*big.Int, root [][32]byte) (event.Subscription, error) {
 
 	var poolIdRule []interface{}
 	for _, poolIdItem := range poolId {
@@ -2696,8 +2935,12 @@ func (_MerkleDistributor *MerkleDistributorFilterer) WatchRootSet(opts *bind.Wat
 	for _, weekItem := range week {
 		weekRule = append(weekRule, weekItem)
 	}
+	var rootRule []interface{}
+	for _, rootItem := range root {
+		rootRule = append(rootRule, rootItem)
+	}
 
-	logs, sub, err := _MerkleDistributor.contract.WatchLogs(opts, "RootSet", poolIdRule, weekRule)
+	logs, sub, err := _MerkleDistributor.contract.WatchLogs(opts, "RootSet", poolIdRule, weekRule, rootRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2731,7 +2974,7 @@ func (_MerkleDistributor *MerkleDistributorFilterer) WatchRootSet(opts *bind.Wat
 
 // ParseRootSet is a log parse operation binding the contract event 0x121a417ff6acf9dc80400d2b74677426b59add2a9d014e26fa79fddd2fe44120.
 //
-// Solidity: event RootSet(uint256 indexed poolId, uint256 indexed week, bytes32 root, uint256 allocation, string proofsURI)
+// Solidity: event RootSet(uint256 indexed poolId, uint256 indexed week, bytes32 indexed root, uint256 allocation, string proofsURI)
 func (_MerkleDistributor *MerkleDistributorFilterer) ParseRootSet(log types.Log) (*MerkleDistributorRootSet, error) {
 	event := new(MerkleDistributorRootSet)
 	if err := _MerkleDistributor.contract.UnpackLog(event, "RootSet", log); err != nil {
@@ -2889,6 +3132,140 @@ func (_MerkleDistributor *MerkleDistributorFilterer) WatchRootSetterSet(opts *bi
 func (_MerkleDistributor *MerkleDistributorFilterer) ParseRootSetterSet(log types.Log) (*MerkleDistributorRootSetterSet, error) {
 	event := new(MerkleDistributorRootSetterSet)
 	if err := _MerkleDistributor.contract.UnpackLog(event, "RootSetterSet", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// MerkleDistributorSanctionsListSetIterator is returned from FilterSanctionsListSet and is used to iterate over the raw logs and unpacked data for SanctionsListSet events raised by the MerkleDistributor contract.
+type MerkleDistributorSanctionsListSetIterator struct {
+	Event *MerkleDistributorSanctionsListSet // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *MerkleDistributorSanctionsListSetIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(MerkleDistributorSanctionsListSet)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(MerkleDistributorSanctionsListSet)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *MerkleDistributorSanctionsListSetIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *MerkleDistributorSanctionsListSetIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// MerkleDistributorSanctionsListSet represents a SanctionsListSet event raised by the MerkleDistributor contract.
+type MerkleDistributorSanctionsListSet struct {
+	SanctionsList common.Address
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterSanctionsListSet is a free log retrieval operation binding the contract event 0x523629e0a2e306908392cb2bff4fcd26e035692d91676ecd9006cf96e87b46bd.
+//
+// Solidity: event SanctionsListSet(address sanctionsList)
+func (_MerkleDistributor *MerkleDistributorFilterer) FilterSanctionsListSet(opts *bind.FilterOpts) (*MerkleDistributorSanctionsListSetIterator, error) {
+
+	logs, sub, err := _MerkleDistributor.contract.FilterLogs(opts, "SanctionsListSet")
+	if err != nil {
+		return nil, err
+	}
+	return &MerkleDistributorSanctionsListSetIterator{contract: _MerkleDistributor.contract, event: "SanctionsListSet", logs: logs, sub: sub}, nil
+}
+
+// WatchSanctionsListSet is a free log subscription operation binding the contract event 0x523629e0a2e306908392cb2bff4fcd26e035692d91676ecd9006cf96e87b46bd.
+//
+// Solidity: event SanctionsListSet(address sanctionsList)
+func (_MerkleDistributor *MerkleDistributorFilterer) WatchSanctionsListSet(opts *bind.WatchOpts, sink chan<- *MerkleDistributorSanctionsListSet) (event.Subscription, error) {
+
+	logs, sub, err := _MerkleDistributor.contract.WatchLogs(opts, "SanctionsListSet")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(MerkleDistributorSanctionsListSet)
+				if err := _MerkleDistributor.contract.UnpackLog(event, "SanctionsListSet", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseSanctionsListSet is a log parse operation binding the contract event 0x523629e0a2e306908392cb2bff4fcd26e035692d91676ecd9006cf96e87b46bd.
+//
+// Solidity: event SanctionsListSet(address sanctionsList)
+func (_MerkleDistributor *MerkleDistributorFilterer) ParseSanctionsListSet(log types.Log) (*MerkleDistributorSanctionsListSet, error) {
+	event := new(MerkleDistributorSanctionsListSet)
+	if err := _MerkleDistributor.contract.UnpackLog(event, "SanctionsListSet", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
