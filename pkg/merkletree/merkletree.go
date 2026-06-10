@@ -106,8 +106,10 @@ func New(distributor common.Address, poolID, week *big.Int, leaves []Leaf) (*Tre
 		hashed[i] = hashedLeaf{leaf: leaf, hash: hash}
 	}
 
-	// OZ sorts leaves ascending by hash before building the tree.
-	sort.SliceStable(hashed, func(i, j int) bool {
+	// OZ sorts leaves ascending by hash before building the tree. Leaf hashes
+	// are collision-free in practice, so the order is total and sort.Slice
+	// suffices; stability would be meaningless here.
+	sort.Slice(hashed, func(i, j int) bool {
 		return bytes.Compare(hashed[i].hash[:], hashed[j].hash[:]) < 0
 	})
 

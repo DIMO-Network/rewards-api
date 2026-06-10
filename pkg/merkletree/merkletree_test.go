@@ -55,8 +55,8 @@ func buildFixtureTree(t *testing.T, fc fixtureCase) *Tree {
 }
 
 func TestGoldenRoots(t *testing.T) {
-	for _, fc := range loadFixtures(t) {
-		t.Run(fmt.Sprintf("%d_leaves", len(fc.Leaves)), func(t *testing.T) {
+	for i, fc := range loadFixtures(t) {
+		t.Run(fmt.Sprintf("case%d_%dleaves", i, len(fc.Leaves)), func(t *testing.T) {
 			tree := buildFixtureTree(t, fc)
 			assert.Equal(t, strings.ToLower(fc.Root), tree.Root().Hex())
 		})
@@ -64,8 +64,8 @@ func TestGoldenRoots(t *testing.T) {
 }
 
 func TestGoldenProofs(t *testing.T) {
-	for _, fc := range loadFixtures(t) {
-		t.Run(fmt.Sprintf("%d_leaves", len(fc.Leaves)), func(t *testing.T) {
+	for i, fc := range loadFixtures(t) {
+		t.Run(fmt.Sprintf("case%d_%dleaves", i, len(fc.Leaves)), func(t *testing.T) {
 			tree := buildFixtureTree(t, fc)
 
 			// Check every account for small cases; sample at least 200 for the
@@ -229,5 +229,19 @@ func TestUnmarshalTreeFileErrors(t *testing.T) {
 	t.Run("wrong format", func(t *testing.T) {
 		_, err := UnmarshalTreeFile([]byte(`{"format":"standard-v1"}`))
 		require.Error(t, err)
+	})
+	t.Run("negative amount", func(t *testing.T) {
+		_, err := UnmarshalTreeFile([]byte(`{
+			"format": "dimo-merkle-v1",
+			"distributor": "0x4a679253410272dd5232B3Ff7cF5dbB88f295319",
+			"poolId": "0",
+			"week": "1",
+			"root": "0x0000000000000000000000000000000000000000000000000000000000000000",
+			"leaves": [
+				{"account": "0x04Dc5Cb9DF85a4F71306919EE6Fc38b12AEC9993", "amount": "-5", "proof": []}
+			]
+		}`))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "amount in leaf 0 must be positive")
 	})
 }

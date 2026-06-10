@@ -1,6 +1,7 @@
 package merkletree
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -90,9 +91,15 @@ func UnmarshalTreeFile(data []byte) (*TreeFile, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing pool id: %w", err)
 	}
+	if poolID.Sign() < 0 {
+		return nil, fmt.Errorf("pool id must be non-negative, got %s", poolID)
+	}
 	week, err := parseDecimal(raw.Week)
 	if err != nil {
 		return nil, fmt.Errorf("parsing week: %w", err)
+	}
+	if week.Sign() < 0 {
+		return nil, fmt.Errorf("week must be non-negative, got %s", week)
 	}
 	root, err := parseHash(raw.Root)
 	if err != nil {
@@ -115,6 +122,9 @@ func UnmarshalTreeFile(data []byte) (*TreeFile, error) {
 		amount, err := parseDecimal(rawLeaf.Amount)
 		if err != nil {
 			return nil, fmt.Errorf("parsing amount in leaf %d: %w", i, err)
+		}
+		if amount.Sign() <= 0 {
+			return nil, fmt.Errorf("amount in leaf %d must be positive, got %s", i, amount)
 		}
 		proof := make([]common.Hash, len(rawLeaf.Proof))
 		for j, p := range rawLeaf.Proof {
@@ -170,11 +180,11 @@ func parseHash(s string) (common.Hash, error) {
 
 func hexDecode32(s string) ([]byte, error) {
 	if len(s) != 66 || s[:2] != "0x" {
-		return nil, fmt.Errorf("invalid 32-byte hex string %q", s)
+		return nil, fmt.Errorf("expected 0x-prefixed 64-character hex string, got %q", s)
 	}
-	b := common.FromHex(s)
-	if len(b) != 32 {
-		return nil, fmt.Errorf("invalid 32-byte hex string %q", s)
+	b, err := hex.DecodeString(s[2:])
+	if err != nil {
+		return nil, fmt.Errorf("decoding hex string %q: %w", s, err)
 	}
 	return b, nil
 }
