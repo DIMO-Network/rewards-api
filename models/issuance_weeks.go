@@ -109,22 +109,41 @@ var IssuanceWeekWhere = struct {
 
 // IssuanceWeekRels is where relationship names are stored.
 var IssuanceWeekRels = struct {
-	Referrals string
-	Rewards   string
+	MerkleRoot string
+	Referrals  string
+	Rewards    string
 }{
-	Referrals: "Referrals",
-	Rewards:   "Rewards",
+	MerkleRoot: "MerkleRoot",
+	Referrals:  "Referrals",
+	Rewards:    "Rewards",
 }
 
 // issuanceWeekR is where relationships are stored.
 type issuanceWeekR struct {
-	Referrals ReferralSlice `boil:"Referrals" json:"Referrals" toml:"Referrals" yaml:"Referrals"`
-	Rewards   RewardSlice   `boil:"Rewards" json:"Rewards" toml:"Rewards" yaml:"Rewards"`
+	MerkleRoot *MerkleRoot   `boil:"MerkleRoot" json:"MerkleRoot" toml:"MerkleRoot" yaml:"MerkleRoot"`
+	Referrals  ReferralSlice `boil:"Referrals" json:"Referrals" toml:"Referrals" yaml:"Referrals"`
+	Rewards    RewardSlice   `boil:"Rewards" json:"Rewards" toml:"Rewards" yaml:"Rewards"`
 }
 
 // NewStruct creates a new relationship struct
 func (*issuanceWeekR) NewStruct() *issuanceWeekR {
 	return &issuanceWeekR{}
+}
+
+func (o *IssuanceWeek) GetMerkleRoot() *MerkleRoot {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetMerkleRoot()
+}
+
+func (r *issuanceWeekR) GetMerkleRoot() *MerkleRoot {
+	if r == nil {
+		return nil
+	}
+
+	return r.MerkleRoot
 }
 
 func (o *IssuanceWeek) GetReferrals() ReferralSlice {
@@ -475,6 +494,17 @@ func (q issuanceWeekQuery) Exists(ctx context.Context, exec boil.ContextExecutor
 	return count > 0, nil
 }
 
+// MerkleRoot pointed to by the foreign key.
+func (o *IssuanceWeek) MerkleRoot(mods ...qm.QueryMod) merkleRootQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"issuance_week_id\" = ?", o.ID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return MerkleRoots(queryMods...)
+}
+
 // Referrals retrieves all the referral's Referrals with an executor.
 func (o *IssuanceWeek) Referrals(mods ...qm.QueryMod) referralQuery {
 	var queryMods []qm.QueryMod
@@ -501,6 +531,123 @@ func (o *IssuanceWeek) Rewards(mods ...qm.QueryMod) rewardQuery {
 	)
 
 	return Rewards(queryMods...)
+}
+
+// LoadMerkleRoot allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-1 relationship.
+func (issuanceWeekL) LoadMerkleRoot(ctx context.Context, e boil.ContextExecutor, singular bool, maybeIssuanceWeek interface{}, mods queries.Applicator) error {
+	var slice []*IssuanceWeek
+	var object *IssuanceWeek
+
+	if singular {
+		var ok bool
+		object, ok = maybeIssuanceWeek.(*IssuanceWeek)
+		if !ok {
+			object = new(IssuanceWeek)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeIssuanceWeek)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeIssuanceWeek))
+			}
+		}
+	} else {
+		s, ok := maybeIssuanceWeek.(*[]*IssuanceWeek)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeIssuanceWeek)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeIssuanceWeek))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &issuanceWeekR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &issuanceWeekR{}
+			}
+
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`rewards_api.merkle_roots`),
+		qm.WhereIn(`rewards_api.merkle_roots.issuance_week_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load MerkleRoot")
+	}
+
+	var resultSlice []*MerkleRoot
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice MerkleRoot")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for merkle_roots")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for merkle_roots")
+	}
+
+	if len(merkleRootAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.MerkleRoot = foreign
+		if foreign.R == nil {
+			foreign.R = &merkleRootR{}
+		}
+		foreign.R.IssuanceWeek = object
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.ID == foreign.IssuanceWeekID {
+				local.R.MerkleRoot = foreign
+				if foreign.R == nil {
+					foreign.R = &merkleRootR{}
+				}
+				foreign.R.IssuanceWeek = local
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 // LoadReferrals allows an eager lookup of values, cached into the
@@ -726,6 +873,56 @@ func (issuanceWeekL) LoadRewards(ctx context.Context, e boil.ContextExecutor, si
 		}
 	}
 
+	return nil
+}
+
+// SetMerkleRoot of the issuanceWeek to the related item.
+// Sets o.R.MerkleRoot to related.
+// Adds o to related.R.IssuanceWeek.
+func (o *IssuanceWeek) SetMerkleRoot(ctx context.Context, exec boil.ContextExecutor, insert bool, related *MerkleRoot) error {
+	var err error
+
+	if insert {
+		related.IssuanceWeekID = o.ID
+
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	} else {
+		updateQuery := fmt.Sprintf(
+			"UPDATE \"rewards_api\".\"merkle_roots\" SET %s WHERE %s",
+			strmangle.SetParamNames("\"", "\"", 1, []string{"issuance_week_id"}),
+			strmangle.WhereClause("\"", "\"", 2, merkleRootPrimaryKeyColumns),
+		)
+		values := []interface{}{o.ID, related.IssuanceWeekID}
+
+		if boil.IsDebug(ctx) {
+			writer := boil.DebugWriterFrom(ctx)
+			fmt.Fprintln(writer, updateQuery)
+			fmt.Fprintln(writer, values)
+		}
+		if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+			return errors.Wrap(err, "failed to update foreign table")
+		}
+
+		related.IssuanceWeekID = o.ID
+	}
+
+	if o.R == nil {
+		o.R = &issuanceWeekR{
+			MerkleRoot: related,
+		}
+	} else {
+		o.R.MerkleRoot = related
+	}
+
+	if related.R == nil {
+		related.R = &merkleRootR{
+			IssuanceWeek: o,
+		}
+	} else {
+		related.R.IssuanceWeek = o
+	}
 	return nil
 }
 
