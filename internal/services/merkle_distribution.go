@@ -255,6 +255,9 @@ func aggregateRewardLeaves(rewards models.RewardSlice, logger *zerolog.Logger) (
 
 // packSetRoot ABI-encodes a call to MerkleDistributor.setRoot.
 func packSetRoot(poolID, week int, root common.Hash, allocation *big.Int, proofsURI string) ([]byte, error) {
+	if poolID < 0 || week < 0 {
+		return nil, fmt.Errorf("pool id %d and week %d must be non-negative", poolID, week)
+	}
 	distributorABI, err := contracts.MerkleDistributorMetaData.GetAbi()
 	if err != nil {
 		return nil, err
