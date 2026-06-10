@@ -95,6 +95,7 @@ func merkleTestSettings() *config.Settings {
 		MerkleDistributorAddress: "0x00000000000000000000000000000000000000aA",
 		MerklePoolID:             0,
 		MerkleTreeBaseURI:        "https://merkle.dimo.zone/",
+		MerkleTreeS3Bucket:       "merkle-trees-test",
 		FirstMerkleWeek:          100,
 	}
 }

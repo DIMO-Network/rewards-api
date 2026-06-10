@@ -251,10 +251,6 @@ func main() {
 				logger.Fatal().Err(err).Msg("Failed to load AWS configuration.")
 			}
 
-			if settings.MerkleTreeS3Bucket == "" {
-				logger.Fatal().Msg("MERKLE_TREE_S3_BUCKET must be set when FIRST_MERKLE_WEEK is positive.")
-			}
-
 			uploader := &services.S3TreeUploader{
 				Client: s3.NewFromConfig(awsConf),
 				Bucket: settings.MerkleTreeS3Bucket,

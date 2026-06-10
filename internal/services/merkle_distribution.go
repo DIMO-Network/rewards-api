@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 )
@@ -46,6 +47,10 @@ func (u *S3TreeUploader) Upload(ctx context.Context, key string, body []byte) er
 		Key:         aws.String(key),
 		Body:        bytes.NewReader(body),
 		ContentType: aws.String("application/json"),
+		// Tree files are write-once: the key embeds the pool and week, and the
+		// contents never change after the root is set, so clients may cache them
+		// indefinitely.
+		CacheControl: aws.String("public, max-age=31536000, immutable"),
 	})
 	return err
 }
@@ -80,6 +85,9 @@ func NewMerkleDistributionService(
 	if settings.MerkleTreeBaseURI == "" {
 		return nil, errors.New("MERKLE_TREE_BASE_URI must be set")
 	}
+	if settings.MerkleTreeS3Bucket == "" {
+		return nil, errors.New("MERKLE_TREE_S3_BUCKET must be set")
+	}
 
 	return &MerkleDistributionService{
 		TransferService:    transferService,
@@ -104,11 +112,11 @@ func (m *MerkleDistributionService) DistributeWeek(ctx context.Context, week int
 	}
 	if existing != nil {
 		if existing.SetSuccessful {
-			logger.Info().Msg("Merkle root already set successfully for this week. Nothing to do.")
+			logger.Info().Str("root", hexutil.Encode(existing.Root)).Msg("Merkle root already set successfully for this week. Nothing to do.")
 			return nil
 		}
 		if existing.MetaTransactionRequestID.Valid {
-			logger.Info().Str("requestId", existing.MetaTransactionRequestID.String).Msg("Merkle root meta-transaction still pending for this week. Nothing to do.")
+			logger.Info().Str("root", hexutil.Encode(existing.Root)).Str("requestId", existing.MetaTransactionRequestID.String).Msg("Merkle root meta-transaction still pending for this week. Nothing to do.")
 			return nil
 		}
 	}

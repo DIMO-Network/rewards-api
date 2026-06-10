@@ -296,6 +296,10 @@ func (s *TransferStatusProcessor) processMerkleRootEvent(event cloudevent.CloudE
 		}
 	case event.Data.Type == models.MetaTransactionRequestStatusFailed,
 		event.Data.Type == models.MetaTransactionRequestStatusConfirmed && !rootSet:
+		s.Logger.Error().
+			Str("requestId", event.Data.RequestID).
+			Str("status", event.Data.Type).
+			Msg("setRoot meta-transaction failed or reverted. Detaching request; the next weekly job run will retry.")
 		// Detach the failed request so that rerunning the weekly job retries setRoot.
 		_, err := models.MerkleRoots(
 			models.MerkleRootWhere.MetaTransactionRequestID.EQ(null.StringFrom(event.Data.RequestID)),
