@@ -43,6 +43,12 @@ type BaselineClient struct {
 	FirstAutomatedWeek int
 	IdentityClient     IdentityClient
 	fetchClient        pb_fetch.FetchServiceClient
+	// FirstMerkleWeek is the first issuance week distributed via Merkle claims
+	// instead of push transfers. A value of 0 disables the Merkle path.
+	FirstMerkleWeek int
+	// MerkleService submits weekly reward Merkle roots to the MerkleDistributor
+	// contract. It must be non-nil if FirstMerkleWeek is positive.
+	MerkleService *MerkleDistributionService
 }
 
 type IdentityClient interface {
@@ -65,6 +71,7 @@ func NewBaselineRewardService(
 	week int,
 	logger *zerolog.Logger,
 	fetchClient pb_fetch.FetchServiceClient,
+	merkleService *MerkleDistributionService,
 ) *BaselineClient {
 	return &BaselineClient{
 		TransferService:    transferService,
@@ -75,6 +82,8 @@ func NewBaselineRewardService(
 		FirstAutomatedWeek: settings.FirstAutomatedWeek,
 		IdentityClient:     stakeChecker,
 		fetchClient:        fetchClient,
+		FirstMerkleWeek:    settings.FirstMerkleWeek,
+		MerkleService:      merkleService,
 	}
 }
 
@@ -329,9 +338,18 @@ func (t *BaselineClient) BaselineIssuance() error {
 		return fmt.Errorf("failed to convert points into tokens: %w", err)
 	}
 
-	err = t.transferTokens(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to submit baseline token transfers: %w", err)
+	if t.FirstMerkleWeek > 0 && t.Week >= t.FirstMerkleWeek {
+		if t.MerkleService == nil {
+			return fmt.Errorf("week %d is at or after FIRST_MERKLE_WEEK %d, but the Merkle distribution service is not configured", t.Week, t.FirstMerkleWeek)
+		}
+		if err := t.MerkleService.DistributeWeek(ctx, t.Week); err != nil {
+			return fmt.Errorf("failed to submit baseline Merkle root: %w", err)
+		}
+	} else {
+		err = t.transferTokens(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to submit baseline token transfers: %w", err)
+		}
 	}
 
 	week, err := models.IssuanceWeeks(models.IssuanceWeekWhere.ID.EQ(t.Week)).One(ctx, t.TransferService.db.DBS().Writer)
