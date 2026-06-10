@@ -163,20 +163,20 @@ func (m *MerkleDistributionService) DistributeWeek(ctx context.Context, week int
 		return fmt.Errorf("failed to pack setRoot call: %w", err)
 	}
 
-	reqID := ksuid.New().String()
-	metaTxRequest := &models.MetaTransactionRequest{
-		ID:     reqID,
-		Status: models.MetaTransactionRequestStatusUnsubmitted,
-	}
-	if err := metaTxRequest.Insert(ctx, m.TransferService.db.DBS().Writer, boil.Infer()); err != nil {
-		return fmt.Errorf("failed to insert meta-transaction request: %w", err)
-	}
-
 	tx, err := m.TransferService.db.DBS().Writer.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback() //nolint
+
+	reqID := ksuid.New().String()
+	metaTxRequest := &models.MetaTransactionRequest{
+		ID:     reqID,
+		Status: models.MetaTransactionRequestStatusUnsubmitted,
+	}
+	if err := metaTxRequest.Insert(ctx, tx, boil.Infer()); err != nil {
+		return fmt.Errorf("failed to insert meta-transaction request: %w", err)
+	}
 
 	rootRow := &models.MerkleRoot{
 		IssuanceWeekID:           week,
@@ -190,6 +190,11 @@ func (m *MerkleDistributionService) DistributeWeek(ctx context.Context, week int
 		return fmt.Errorf("failed to upsert merkle root row: %w", err)
 	}
 
+	// Send the Kafka request before committing: a send failure rolls back both
+	// rows, so no orphaned pending request is left behind. The remaining crash
+	// window (send succeeds, commit fails) can produce a Kafka message with no
+	// matching rows, which is tolerated because the meta-transaction processor
+	// is idempotent by request ID and the status listener ignores unknown IDs.
 	if err := m.TransferService.sendRequest(reqID, m.DistributorAddress, calldata); err != nil {
 		return fmt.Errorf("failed to send setRoot meta-transaction request: %w", err)
 	}

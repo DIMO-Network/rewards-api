@@ -269,6 +269,37 @@ func TestMerkleDistributeWeek(t *testing.T) {
 		assert.Equal(t, expectedTree.Root().Bytes(), retried.Root)
 	})
 
+	t.Run("kafka send failure leaves no orphan rows", func(t *testing.T) {
+		const failWeek = 102
+		wk := models.IssuanceWeek{ID: failWeek, JobStatus: models.IssuanceWeeksJobStatusFinished}
+		require.NoError(t, wk.Insert(ctx, conn.DBS().Writer, boil.Infer()))
+
+		rw := models.Reward{
+			IssuanceWeekID:                 failWeek,
+			UserDeviceTokenID:              1,
+			UserEthereumAddress:            null.StringFrom(addr1.Hex()),
+			RewardsReceiverEthereumAddress: null.StringFrom(addr1.Hex()),
+			StreakTokens:                   nullDec(10),
+		}
+		require.NoError(t, rw.Insert(ctx, conn.DBS().Writer, boil.Infer()))
+
+		mtrsBefore, err := models.MetaTransactionRequests().Count(ctx, conn.DBS().Reader)
+		require.NoError(t, err)
+
+		producer.ExpectSendMessageAndFail(sarama.ErrOutOfBrokers)
+		require.Error(t, svc.DistributeWeek(ctx, failWeek))
+
+		// The transaction must roll back: no merkle root row and no orphaned
+		// meta-transaction request.
+		exists, err := models.MerkleRootExists(ctx, conn.DBS().Reader, failWeek)
+		require.NoError(t, err)
+		assert.False(t, exists)
+
+		mtrsAfter, err := models.MetaTransactionRequests().Count(ctx, conn.DBS().Reader)
+		require.NoError(t, err)
+		assert.Equal(t, mtrsBefore, mtrsAfter)
+	})
+
 	t.Run("week without rewards sets no root", func(t *testing.T) {
 		const emptyWeek = 101
 		wk := models.IssuanceWeek{ID: emptyWeek, JobStatus: models.IssuanceWeeksJobStatusFinished}
@@ -397,6 +428,28 @@ func TestMerkleRootStatusListener(t *testing.T) {
 		mtr, err := models.FindMetaTransactionRequest(ctx, conn.DBS().Reader, requestID)
 		require.NoError(t, err)
 		assert.Equal(t, models.MetaTransactionRequestStatusFailed, mtr.Status)
+	})
+
+	t.Run("confirmed with nil successful errors and leaves row for redelivery", func(t *testing.T) {
+		requestID := ksuid.New().String()
+		seed(t, 103, requestID)
+
+		err := proc.processMessage(makeMessage(t, requestID, models.MetaTransactionRequestStatusConfirmed, nil))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "missing successful field")
+
+		// Nothing must change: the root stays attached to the request and the
+		// request status stays untouched, so a Kafka redelivery can retry.
+		root, err := models.FindMerkleRoot(ctx, conn.DBS().Reader, 103)
+		require.NoError(t, err)
+		assert.False(t, root.SetSuccessful)
+		require.True(t, root.MetaTransactionRequestID.Valid)
+		assert.Equal(t, requestID, root.MetaTransactionRequestID.String)
+
+		mtr, err := models.FindMetaTransactionRequest(ctx, conn.DBS().Reader, requestID)
+		require.NoError(t, err)
+		assert.Equal(t, models.MetaTransactionRequestStatusSubmitted, mtr.Status)
+		assert.False(t, mtr.Successful.Valid)
 	})
 
 	t.Run("confirmed reverted clears request id for retry", func(t *testing.T) {

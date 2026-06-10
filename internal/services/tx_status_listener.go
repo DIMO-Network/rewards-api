@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/DIMO-Network/cloudevent"
@@ -18,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
@@ -260,7 +261,7 @@ func (s *TransferStatusProcessor) processMerkleRootEvent(event cloudevent.CloudE
 
 	defer tx.Rollback() //nolint
 
-	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB.DBS().Reader, event.Data.RequestID)
+	txnRow, err := models.FindMetaTransactionRequest(context.Background(), tx, event.Data.RequestID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil
@@ -276,6 +277,9 @@ func (s *TransferStatusProcessor) processMerkleRootEvent(event cloudevent.CloudE
 
 	rootSet := false
 	if event.Data.Type == models.MetaTransactionRequestStatusConfirmed {
+		if event.Data.Transaction.Successful == nil {
+			return fmt.Errorf("confirmed event for request %s missing successful field", event.Data.RequestID)
+		}
 		txnRow.Successful = null.BoolFrom(*event.Data.Transaction.Successful)
 		rootSet = *event.Data.Transaction.Successful
 	}
