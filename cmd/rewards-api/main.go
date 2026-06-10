@@ -32,6 +32,8 @@ import (
 	"github.com/DIMO-Network/shared/pkg/settings"
 
 	"github.com/IBM/sarama"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/burdiyan/kafkautil"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofiber/fiber/v2"
@@ -236,7 +238,35 @@ func main() {
 
 		fetchClient := pb_fetch.NewFetchServiceClient(fetchConn)
 
-		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, identClient, week, &logger, fetchClient)
+		var merkleService *services.MerkleDistributionService
+		if settings.FirstMerkleWeek > 0 {
+			// Double-pay guard: the Merkle path must not cover a week that has
+			// already been paid out via push transfers.
+			if err := services.ValidateMerkleCutover(ctx, pdb, settings.FirstMerkleWeek); err != nil {
+				logger.Fatal().Err(err).Msg("Merkle cutover validation failed.")
+			}
+
+			awsConf, err := awsconfig.LoadDefaultConfig(ctx)
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Failed to load AWS configuration.")
+			}
+
+			if settings.MerkleTreeS3Bucket == "" {
+				logger.Fatal().Msg("MERKLE_TREE_S3_BUCKET must be set when FIRST_MERKLE_WEEK is positive.")
+			}
+
+			uploader := &services.S3TreeUploader{
+				Client: s3.NewFromConfig(awsConf),
+				Bucket: settings.MerkleTreeS3Bucket,
+			}
+
+			merkleService, err = services.NewMerkleDistributionService(&settings, transferService, uploader, &logger)
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Failed to create Merkle distribution service.")
+			}
+		}
+
+		baselineRewardClient := services.NewBaselineRewardService(&settings, transferService, chClient, identClient, week, &logger, fetchClient, merkleService)
 
 		if err := baselineRewardClient.BaselineIssuance(); err != nil {
 			logger.Fatal().Err(err).Int("issuanceWeek", week).Msg("Failed to calculate and/or transfer rewards.")

@@ -33,4 +33,18 @@ type Settings struct {
 	MobileAPIBaseURL           string          `yaml:"MOBILE_API_BASE_URL"`
 	StorageNodeDevLicense      common.Address  `yaml:"STORAGE_NODE_DEV_LICENSE"`
 	VINVCConcurrencyLimit      int             `yaml:"VINVC_CONCURRENCY_LIMIT"`
+	// MerkleDistributorAddress is the address of the MerkleDistributor contract.
+	MerkleDistributorAddress string `yaml:"MERKLE_DISTRIBUTOR_ADDRESS"`
+	// MerklePoolID is the id of the pool on the MerkleDistributor contract used
+	// for baseline rewards. Defaults to 0.
+	MerklePoolID int `yaml:"MERKLE_POOL_ID"`
+	// FirstMerkleWeek is the first issuance week distributed via Merkle claims
+	// instead of push transfers. A value of 0 disables the Merkle path.
+	FirstMerkleWeek int `yaml:"FIRST_MERKLE_WEEK"`
+	// MerkleTreeS3Bucket is the S3 bucket to which weekly Merkle tree files are uploaded.
+	MerkleTreeS3Bucket string `yaml:"MERKLE_TREE_S3_BUCKET"`
+	// MerkleTreeBaseURI is the public base URI under which uploaded tree files
+	// are served, e.g. https://merkle.dimo.zone. The proofs URI passed to
+	// setRoot is MERKLE_TREE_BASE_URI/pool-{poolId}/week-{week}.json.
+	MerkleTreeBaseURI string `yaml:"MERKLE_TREE_BASE_URI"`
 }

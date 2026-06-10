@@ -120,6 +120,7 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		models.MetaTransactionRequestWhere.ID.EQ(event.Data.RequestID),
 		qm.Load(models.MetaTransactionRequestRels.TransferMetaTransactionRequestRewards),
 		qm.Load(models.MetaTransactionRequestRels.RequestReferrals),
+		qm.Load(models.MetaTransactionRequestRels.MerkleRoots),
 	).One(context.TODO(), s.DB.DBS().Reader)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -139,8 +140,13 @@ func (s *TransferStatusProcessor) processMessage(msg *sarama.ConsumerMessage) er
 		if err != nil {
 			return err
 		}
+	case len(mtr.R.MerkleRoots) != 0:
+		err := s.processMerkleRootEvent(event)
+		if err != nil {
+			return err
+		}
 	default:
-		s.Logger.Error().Msgf("Known meta-transaction %s has no associated baseline or referral batch.", event.Data.RequestID)
+		s.Logger.Error().Msgf("Known meta-transaction %s has no associated baseline, referral, or merkle root batch.", event.Data.RequestID)
 	}
 
 	return nil
@@ -240,6 +246,69 @@ func (s *TransferStatusProcessor) processBaselineEvent(event cloudevent.CloudEve
 	}
 
 	return nil
+}
+
+// processMerkleRootEvent handles status updates for setRoot meta-transactions.
+// A confirmed, successful transaction marks the merkle root row as set; a
+// failed or reverted transaction detaches the request from the row so that a
+// rerun of the weekly job can retry.
+func (s *TransferStatusProcessor) processMerkleRootEvent(event cloudevent.CloudEvent[ceData]) error {
+	tx, err := s.DB.DBS().Writer.BeginTx(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback() //nolint
+
+	txnRow, err := models.FindMetaTransactionRequest(context.Background(), s.DB.DBS().Reader, event.Data.RequestID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return err
+	}
+
+	txnRow.Status = event.Data.Type
+
+	if event.Data.Type != models.MetaTransactionRequestStatusFailed {
+		txnRow.Hash = null.StringFrom(event.Data.Transaction.Hash)
+	}
+
+	rootSet := false
+	if event.Data.Type == models.MetaTransactionRequestStatusConfirmed {
+		txnRow.Successful = null.BoolFrom(*event.Data.Transaction.Successful)
+		rootSet = *event.Data.Transaction.Successful
+	}
+
+	switch {
+	case rootSet:
+		_, err := models.MerkleRoots(
+			models.MerkleRootWhere.MetaTransactionRequestID.EQ(null.StringFrom(event.Data.RequestID)),
+		).UpdateAll(context.Background(), tx, models.M{
+			models.MerkleRootColumns.SetSuccessful: true,
+		})
+		if err != nil {
+			return err
+		}
+	case event.Data.Type == models.MetaTransactionRequestStatusFailed,
+		event.Data.Type == models.MetaTransactionRequestStatusConfirmed && !rootSet:
+		// Detach the failed request so that rerunning the weekly job retries setRoot.
+		_, err := models.MerkleRoots(
+			models.MerkleRootWhere.MetaTransactionRequestID.EQ(null.StringFrom(event.Data.RequestID)),
+		).UpdateAll(context.Background(), tx, models.M{
+			models.MerkleRootColumns.MetaTransactionRequestID: nil,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = txnRow.Update(context.TODO(), tx, boil.Infer())
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (s *TransferStatusProcessor) processReferralEvent(cloudEvent cloudevent.CloudEvent[ceData]) error {
