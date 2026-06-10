@@ -146,6 +146,25 @@ func TestNewValidation(t *testing.T) {
 	})
 }
 
+func TestMerkleTreeAccessors(t *testing.T) {
+	distributor := common.HexToAddress("0x00000000000000000000000000000000000000aA")
+	tree, err := New(distributor, big.NewInt(3), big.NewInt(125), []Leaf{
+		{Account: common.HexToAddress("0x0000000000000000000000000000000000000001"), Amount: big.NewInt(7)},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, distributor, tree.Distributor())
+	assert.Equal(t, big.NewInt(3), tree.PoolID())
+	assert.Equal(t, big.NewInt(125), tree.Week())
+
+	// The returned values are defensive copies: mutating them must not affect
+	// the tree.
+	tree.PoolID().SetInt64(99)
+	tree.Week().SetInt64(99)
+	assert.Equal(t, big.NewInt(3), tree.PoolID())
+	assert.Equal(t, big.NewInt(125), tree.Week())
+}
+
 func TestSingleLeafRootEqualsLeafHash(t *testing.T) {
 	fc := loadFixtures(t)[0]
 	require.Len(t, fc.Leaves, 1)

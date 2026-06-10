@@ -142,6 +142,21 @@ func (t *Tree) Root() common.Hash {
 	return t.nodes[0]
 }
 
+// Distributor returns the distributor contract address the tree was built for.
+func (t *Tree) Distributor() common.Address {
+	return t.distributor
+}
+
+// PoolID returns a copy of the pool id the tree was built for.
+func (t *Tree) PoolID() *big.Int {
+	return new(big.Int).Set(t.poolID)
+}
+
+// Week returns a copy of the issuance week the tree was built for.
+func (t *Tree) Week() *big.Int {
+	return new(big.Int).Set(t.week)
+}
+
 // Proof returns the Merkle proof for the leaf belonging to the given account.
 // It returns an error if the account is not in the tree.
 func (t *Tree) Proof(account common.Address) ([]common.Hash, error) {
