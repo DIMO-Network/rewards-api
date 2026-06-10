@@ -19,6 +19,7 @@ import (
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/ericlagergren/decimal"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
@@ -312,6 +313,226 @@ func TestMerkleDistributeWeek(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, exists)
 	})
+
+	require.NoError(t, producer.Close())
+}
+
+// TestMerklePushPayoutEquivalence runs both production transfer paths, the old
+// push path (transferTokens -> batchTransfer calldata) and the new Merkle path
+// (DistributeWeek -> tree file leaves), against the same seeded rewards rows
+// and asserts that they pay out exactly the same amount to every address.
+func TestMerklePushPayoutEquivalence(t *testing.T) {
+	ctx := context.Background()
+	logger := zerolog.New(os.Stdout)
+
+	cont, conn := utils.GetDbConnection(ctx, t, logger)
+	defer testcontainers.CleanupContainer(t, cont)
+
+	settings := merkleTestSettings()
+	// Force the old path to paginate so per-batch marking is exercised too.
+	settings.TransferBatchSize = 2
+
+	kafkaConfig := mocks.NewTestConfig()
+	kafkaConfig.Producer.Return.Successes = true
+	kafkaConfig.Producer.Return.Errors = true
+	producer := mocks.NewSyncProducer(t, kafkaConfig)
+
+	transferService := NewTokenTransferService(settings, producer, conn)
+
+	uploader := &fakeUploader{}
+	svc, err := NewMerkleDistributionService(settings, transferService, uploader, &logger)
+	require.NoError(t, err)
+
+	const week = 200
+
+	wk := models.IssuanceWeek{ID: week, JobStatus: models.IssuanceWeeksJobStatusFinished}
+	require.NoError(t, wk.Insert(ctx, conn.DBS().Writer, boil.Infer()))
+
+	weiDec := func(s string) types.NullDecimal {
+		d, ok := new(decimal.Big).SetString(s)
+		require.True(t, ok, "bad decimal %q", s)
+		return types.NewNullDecimal(d)
+	}
+
+	owner1 := mkAddr(1)
+	owner2 := mkAddr(2)
+	beneficiary := mkAddr(9)
+	streakOnly := mkAddr(4)
+	blacklisted := mkAddr(5)
+
+	rewards := []models.Reward{
+		// Two vehicles paying the same receiver: the Merkle path must sum them
+		// into one leaf; the push path sends two entries to the same address.
+		{
+			IssuanceWeekID:                 week,
+			UserDeviceTokenID:              1,
+			UserEthereumAddress:            null.StringFrom(owner1.Hex()),
+			RewardsReceiverEthereumAddress: null.StringFrom(owner1.Hex()),
+			AftermarketDeviceTokens:        weiDec("12345678901234567890123"),
+			StreakTokens:                   weiDec("999999999999999999999"),
+			ConnectionStreak:               4,
+		},
+		{
+			IssuanceWeekID:                 week,
+			UserDeviceTokenID:              2,
+			UserEthereumAddress:            null.StringFrom(owner1.Hex()),
+			RewardsReceiverEthereumAddress: null.StringFrom(owner1.Hex()),
+			SyntheticDeviceTokens:          weiDec("31415926535897932384"),
+			ConnectionStreak:               1,
+		},
+		// Beneficiary-resolved row: the receiver differs from the vehicle owner.
+		// Both paths must pay the receiver column, never the owner column.
+		{
+			IssuanceWeekID:                 week,
+			UserDeviceTokenID:              3,
+			UserEthereumAddress:            null.StringFrom(owner2.Hex()),
+			RewardsReceiverEthereumAddress: null.StringFrom(beneficiary.Hex()),
+			AftermarketDeviceTokens:        weiDec("271828182845904523536028"),
+			ConnectionStreak:               2,
+		},
+		// Streak tokens only.
+		{
+			IssuanceWeekID:                 week,
+			UserDeviceTokenID:              4,
+			UserEthereumAddress:            null.StringFrom(streakOnly.Hex()),
+			RewardsReceiverEthereumAddress: null.StringFrom(streakOnly.Hex()),
+			StreakTokens:                   nullDec(1000),
+			ConnectionStreak:               7,
+		},
+		// Blacklisted user: excluded by both paths.
+		{
+			IssuanceWeekID:                 week,
+			UserDeviceTokenID:              5,
+			UserEthereumAddress:            null.StringFrom(blacklisted.Hex()),
+			RewardsReceiverEthereumAddress: null.StringFrom(blacklisted.Hex()),
+			AftermarketDeviceTokens:        nullDec(777),
+			ConnectionStreak:               3,
+		},
+		// All-zero amounts: excluded by both paths.
+		{
+			IssuanceWeekID:                 week,
+			UserDeviceTokenID:              6,
+			UserEthereumAddress:            null.StringFrom(mkAddr(6).Hex()),
+			RewardsReceiverEthereumAddress: null.StringFrom(mkAddr(6).Hex()),
+			ConnectionStreak:               1,
+		},
+		// No receiver address. The Merkle path skips the row; the push path
+		// sends an entry with the zero address as the user, which Reward.sol
+		// refuses to pay (DidntQualify: the zero address is neither the vehicle
+		// owner nor an aftermarket device beneficiary). Net payout: zero on
+		// both paths.
+		{
+			IssuanceWeekID:        week,
+			UserDeviceTokenID:     7,
+			SyntheticDeviceTokens: nullDec(7),
+			ConnectionStreak:      1,
+		},
+	}
+	for i := range rewards {
+		require.NoError(t, rewards[i].Insert(ctx, conn.DBS().Writer, boil.Infer()))
+	}
+
+	bl := models.Blacklist{UserEthereumAddress: blacklisted.Hex(), Note: "test"}
+	require.NoError(t, bl.Insert(ctx, conn.DBS().Writer, boil.Infer()))
+
+	var sent []cloudevent.CloudEvent[transferData]
+	checker := func(b []byte) error {
+		var o cloudevent.CloudEvent[transferData]
+		require.NoError(t, json.Unmarshal(b, &o))
+		sent = append(sent, o)
+		return nil
+	}
+
+	// Run the Merkle path first: it does not mutate the rewards rows.
+	producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
+	require.NoError(t, svc.DistributeWeek(ctx, week))
+	require.Len(t, sent, 1)
+
+	treeBody, ok := uploader.uploads[TreeFileKey(settings.MerklePoolID, week)]
+	require.True(t, ok, "expected tree file upload")
+	treeFile, err := merkletree.UnmarshalTreeFile(treeBody)
+	require.NoError(t, err)
+	require.NoError(t, treeFile.VerifyRoot())
+
+	merkleTotals := make(map[common.Address]*big.Int)
+	merkleSum := big.NewInt(0)
+	for _, leaf := range treeFile.Leaves {
+		_, dup := merkleTotals[leaf.Account]
+		require.False(t, dup, "duplicate leaf for %s", leaf.Account.Hex())
+		merkleTotals[leaf.Account] = leaf.Amount
+		merkleSum.Add(merkleSum, leaf.Amount)
+	}
+
+	// The on-chain allocation passed to setRoot must equal the sum of leaves.
+	rootRow, err := models.FindMerkleRoot(ctx, conn.DBS().Reader, week)
+	require.NoError(t, err)
+	assert.Equal(t, merkleSum.String(), rootRow.TotalAllocation.String(), "setRoot allocation must equal the sum of tree leaves")
+
+	// Now run the old push path against the same rows. 5 eligible rows with a
+	// batch size of 2 means three batchTransfer messages.
+	sent = nil
+	for i := 0; i < 3; i++ {
+		producer.ExpectSendMessageWithCheckerFunctionAndSucceed(checker)
+	}
+
+	baseline := &BaselineClient{
+		TransferService: transferService,
+		ContractAddress: common.HexToAddress("0x00000000000000000000000000000000000000bB"),
+		Week:            week,
+		Logger:          &logger,
+	}
+	require.NoError(t, baseline.transferTokens(ctx))
+	require.Len(t, sent, 3)
+
+	rewardABI, err := contracts.RewardMetaData.GetAbi()
+	require.NoError(t, err)
+
+	pushTotals := make(map[common.Address]*big.Int)
+	pushSum := big.NewInt(0)
+	for _, msg := range sent {
+		calldata := []byte(msg.Data.Data)
+		method, err := rewardABI.MethodById(calldata[:4])
+		require.NoError(t, err)
+		require.Equal(t, "batchTransfer", method.Name)
+
+		args, err := method.Inputs.Unpack(calldata[4:])
+		require.NoError(t, err)
+		require.Len(t, args, 1)
+
+		transfers := *abi.ConvertType(args[0], new([]contracts.RewardTransferInfo)).(*[]contracts.RewardTransferInfo)
+		for _, tr := range transfers {
+			// Reward.sol pays user = valueFromAftermarketDevice +
+			// valueFromSyntheticDevice + valueFromStreak.
+			rowTotal := new(big.Int).Add(tr.ValueFromAftermarketDevice, new(big.Int).Add(tr.ValueFromSyntheticDevice, tr.ValueFromStreak))
+			if existing, ok := pushTotals[tr.User]; ok {
+				existing.Add(existing, rowTotal)
+			} else {
+				pushTotals[tr.User] = rowTotal
+			}
+			pushSum.Add(pushSum, rowTotal)
+		}
+	}
+
+	// The receiver-less row goes out on the push path addressed to the zero
+	// address, but Reward.sol never pays it. Remove it before comparing payouts.
+	zeroAddrAmount := big.NewInt(0)
+	if amt, ok := pushTotals[common.Address{}]; ok {
+		zeroAddrAmount = amt
+		delete(pushTotals, common.Address{})
+	}
+	assert.Equal(t, "7", zeroAddrAmount.String(), "expected the receiver-less row to be addressed to the zero address on the push path")
+
+	// Per-address totals must match exactly.
+	require.Len(t, merkleTotals, len(pushTotals), "merkle and push paths must pay the same set of addresses")
+	for addr, pushAmt := range pushTotals {
+		merkleAmt, ok := merkleTotals[addr]
+		require.True(t, ok, "address %s paid by push path but missing from merkle tree", addr.Hex())
+		assert.Zero(t, pushAmt.Cmp(merkleAmt), "payout mismatch for %s: push %s, merkle %s", addr.Hex(), pushAmt, merkleAmt)
+	}
+
+	// And the grand totals: merkle total allocation == push total minus the
+	// zero-address amount the contract would have refused.
+	assert.Zero(t, merkleSum.Cmp(new(big.Int).Sub(pushSum, zeroAddrAmount)))
 
 	require.NoError(t, producer.Close())
 }
