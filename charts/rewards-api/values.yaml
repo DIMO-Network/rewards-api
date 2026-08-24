@@ -21,10 +21,10 @@ securityContext:
     drop:
       - all
 rewardsCronJob:
-  enabled: true
+  enabled: false
   schedule: 0 5 * * 1
 referralsCronJob:
-  enabled: true
+  enabled: false
   schedule: 0 8 * * 1
 attestationsCronJob:
   enabled: true
